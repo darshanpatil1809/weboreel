@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ancestor_recipe</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-paper: #f4f1ea;
+    --ink-dark: #2c3e50;
+    --ink-faded: #7f8c8d;
+    --stain: rgba(139, 69, 19, 0.1);
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-paper); color: var(--ink-dark);
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  /* Texture */
+  .paper-texture {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 100;
+    background-image: radial-gradient(circle at 70% 30%, var(--stain) 0%, transparent 40%),
+                      radial-gradient(circle at 20% 80%, var(--stain) 0%, transparent 30%);
+    opacity: 0.6; mix-blend-mode: multiply;
+  }
+  .grain {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 99; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 200;
+    background: transparent; border: 1px solid var(--ink-faded); color: var(--ink-dark);
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Scroll Engine Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; align-items: center; width: 100%;
+    padding-top: 15vh; padding-bottom: 50vh;
+  }
+
+  /* Recipe Card Layout */
+  .recipe-book {
+    width: 90vw; max-width: 600px;
+    background: #fffdf9; box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    border-radius: 4px; border-left: 20px solid #8b3a3a;
+    padding: 40px 40px 80px 40px; position: relative;
+    box-sizing: border-box;
+  }
+  
+  /* Lined paper effect */
+  .recipe-book::before {
+    content:''; position:absolute; top:0; left:0; width:100%; height:100%;
+    background: repeating-linear-gradient(transparent, transparent 31px, #e1e8ed 31px, #e1e8ed 32px);
+    background-position: 0 60px; pointer-events:none; z-index: 0;
+  }
+
+  .content-layer { position: relative; z-index: 1; }
+
+  h1 { font-family: 'Caveat', cursive; font-size: 3.5rem; margin: 0 0 20px 0; color: #1a1a1a; transform: rotate(-2deg);}
+  
+  .ingredient-list { list-style: none; padding: 0; margin: 30px 0;}
+  .ingredient-list li {
+    font-family: 'Caveat', cursive; font-size: 1.8rem; margin-bottom: 10px;
+    display: flex; justify-content: space-between; position: relative;
+  }
+  .ingredient-list li::after { content:''; flex-grow:1; border-bottom: 1px dotted #ccc; margin: 0 10px 10px 10px;}
+  .qty { order: 2; }
+
+  .instructions { font-size: 1.4rem; line-height: 1.8; margin-top: 40px;}
+  .inst-step { margin-bottom: 25px; transition: color 0.5s; }
+  
+  /* The Translation overlay */
+  .translation {
+    display: block; font-family: 'Space Mono', monospace; font-size: 0.9rem;
+    color: #b03a2e; margin-top: 5px; opacity: 0; transform: translateY(-5px); transition: all 0.5s;
+    background: rgba(255,255,255,0.9); padding: 5px; border-radius: 3px;
+  }
+  .inst-step.active .translation { opacity: 1; transform: translateY(0); }
+  .inst-step.active { color: #aaa; } /* Fade out original cursive slightly when reading translation */
+
+  .cursive-text { font-family: 'Caveat', cursive; font-size: 2rem;}
+
+  /* Image Placeholder (CSS frame) */
+  .photo-frame {
+    width: 200px; height: 150px; background: #e8e8e8; padding: 10px 10px 30px 10px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.2); transform: rotate(4deg);
+    position: absolute; top: 20px; right: -40px; z-index: 5;
+    display: flex; justify-content: center; align-items: center; color: #999; font-family: 'Space Mono';
+  }
+
+  @media (max-width: 768px) {
+    .recipe-book { padding: 30px 20px; border-left: 10px solid #8b3a3a; }
+    h1 { font-size: 2.8rem; }
+    .photo-frame { position: static; transform: rotate(-2deg); margin: 0 auto 20px auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="paper-texture"></div>
+<div class="grain"></div>
+<button id="mute-btn">📻</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <div class="recipe-book">
+      <div class="content-layer">
+        <div class="photo-frame">[Faded Photograph]</div>
+        
+        <h1>Daal, the way Maa made it</h1>
+        
+        <ul class="ingredient-list">
+          <li><span>Lentils (yellow)</span><span class="qty">1 cup</span></li>
+          <li><span>Water</span><span class="qty">3 cups</span></li>
+          <li><span>Turmeric</span><span class="qty">a pinch</span></li>
+          <li><span>Salt</span><span class="qty">to taste</span></li>
+          <li><span>Ghee</span><span class="qty">1 spoon</span></li>
+          <li><span>Cumin seeds</span><span class="qty">some</span></li>
+        </ul>
+
+        <div class="instructions">
+          <div class="inst-step" id="step-1">
+            <span class="cursive-text">Wash the lentils until the water runs clear. Do not rush this.</span>
+            <span class="translation">"This is how you learn patience. You cannot hurry clarity."</span>
+          </div>
+          
+          <div class="inst-step" id="step-2">
+            <span class="cursive-text">Boil with water, turmeric, and salt. Watch the pot. It boils over when you turn your back.</span>
+            <span class="translation">"Things fall apart the moment you stop paying attention. Stay present."</span>
+          </div>
+
+          <div class="inst-step" id="step-3">
+            <span class="cursive-text">In a separate pan, heat the ghee. It should be hot but not smoking.</span>
+            <span class="translation">"Passion without discipline is just fire. It burns the food."</span>
+          </div>
+
+          <div class="inst-step" id="step-4">
+            <span class="cursive-text">Add the cumin seeds. Wait for them to crackle. You have to listen for it.</span>
+            <span class="translation">"Listen to what is happening, not what you expect to happen."</span>
+          </div>
+
+          <div class="inst-step" id="step-5">
+            <span class="cursive-text">Pour the temper over the lentils. It will hiss loudly. Cover it immediately to trap the smoke.</span>
+            <span class="translation">"Some pain is loud. Contain it. Let it flavor the rest of your life."</span>
+          </div>
+
+          <div class="inst-step" id="step-6">
+            <span class="cursive-text" style="font-size:2.5rem; display:block; margin-top:40px; text-align:center;">Serve warm.</span>
+            <span class="translation" style="text-align:center; margin-top:20px; font-size:1.2rem;">"I love you. I am feeding you. Survive."</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain, radioStatic, crackleOsc;
+  let isMuted = true;
+  let activeStep = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(0,0,0,0.1)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Distant, warm radio static / kitchen ambiance
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    radioStatic = audioCtx.createBufferSource();
+    radioStatic.buffer = noiseBuffer; radioStatic.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 800;
+    const sGain = audioCtx.createGain(); sGain.gain.value = 0.02;
+    
+    radioStatic.connect(filter); filter.connect(sGain); sGain.connect(masterGain);
+    radioStatic.start();
+
+    // Warm drone chord
+    const freqs = [196, 246.94, 293.66]; // G Major
+    freqs.forEach(f => {
+      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      o.connect(g); g.connect(masterGain);
+      g.gain.value = 0.03;
+      o.start();
+    });
+  }
+
+  function playTranslationSound(index) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    // A nostalgic, bell-like ping
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 523.25 + (index * 50); // C5 rising slightly
+    osc.connect(gain); gain.connect(masterGain);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+    
+    osc.start(); osc.stop(now + 2);
+
+    // Specific kitchen sounds per step
+    if(index === 3) { // crackle
+      playCrackle(now);
+    } else if(index === 4) { // hiss
+      playHiss(now);
+    }
+  }
+
+  function playCrackle(time) {
+    for(let i=0; i<5; i++) {
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.value = 1000 + Math.random()*2000;
+      osc.connect(g); g.connect(masterGain);
+      const delay = Math.random() * 0.5;
+      g.gain.setValueAtTime(0.05, time + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, time + delay + 0.05);
+      osc.start(time + delay); osc.stop(time + delay + 0.05);
+    }
+  }
+
+  function playHiss(time) {
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<buffer.length; i++) data[i] = Math.random()*2-1;
+    noise.buffer = buffer;
+    
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 3000;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(0.2, time + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 1.5);
+    
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    noise.start(time);
+  }
+
+  // Animation Loop
+  const steps = document.querySelectorAll('.inst-step');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    let foundStep = -1;
+
+    steps.forEach((step, i) => {
+      const rect = step.getBoundingClientRect();
+      const stepCenter = rect.top + currentY + rect.height/2;
+      
+      if(centerLine >= stepCenter - vh/4 && centerLine <= stepCenter + vh/4) {
+        if(!step.classList.contains('active')) {
+          step.classList.add('active');
+          foundStep = i;
+        }
+      }
+    });
+
+    if(foundStep !== -1 && foundStep !== activeStep) {
+      activeStep = foundStep;
+      playTranslationSound(activeStep);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

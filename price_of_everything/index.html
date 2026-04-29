@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>price_of_everything</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,300&family=DM+Sans:wght@400&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-dark: #080808;
+    --text-main: #f0f0f0;
+    --gold: #d4a843;
+    --red: #cc0000;
+    --green: #00cc44;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-dark); color: var(--text-main);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid #444; color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Scroll Engine Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%;
+  }
+
+  /* Structural Sections */
+  .revelation {
+    min-height: 100vh; width: 100vw; position: relative; display: flex;
+    flex-direction: column; justify-content: center; align-items: center;
+    padding: 2rem; box-sizing: border-box; overflow: hidden;
+    text-align: center;
+  }
+
+  /* Typographic Elements */
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; margin: 0 0 1rem 0; letter-spacing: 2px;}
+  .calc-build { font-family: 'Space Mono', monospace; font-size: 1.2rem; margin: 10px 0; color: #aaa;}
+  .counter { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 8vw, 8rem); margin: 20px 0; line-height: 1;}
+  
+  .context { font-family: 'DM Sans', sans-serif; font-size: 1.2rem; margin: 10px 0; max-width: 600px;}
+  .impact { font-family: 'DM Sans', sans-serif; font-size: 1.5rem; margin: 20px 0; max-width: 600px;}
+  .philosophical { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.8rem; margin: 30px 0; max-width: 700px;}
+  
+  .color-red { color: var(--red); }
+  .color-gold { color: var(--gold); }
+  .color-green { color: var(--green); }
+  
+  .isolated { display: block; margin: 40px auto;}
+
+  /* Visualizations */
+  .grid-viz {
+    display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px;
+    width: 90vw; max-width: 600px; margin: 30px 0;
+  }
+  .grid-sq { width: 100%; aspect-ratio: 1; background: #333; border-radius: 2px;}
+  .sq-spent { background: #555; }
+  .sq-phone { background: var(--red); }
+  .sq-rem { background: var(--gold); }
+
+  /* Interactive Input */
+  .input-group { margin: 30px 0; }
+  input[type="number"] {
+    background: transparent; border: none; border-bottom: 2px solid var(--gold);
+    color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 3rem;
+    width: 100px; text-align: center; outline: none;
+  }
+  
+  .breakdown-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    margin: 30px 0; text-align: center;
+  }
+  .bk-num { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--gold);}
+  .bk-label { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: #aaa; text-transform: uppercase;}
+
+  @media (max-width: 768px) {
+    h1 { font-size: 2.5rem; }
+    .philosophical { font-size: 1.4rem; }
+    .breakdown-grid { grid-template-columns: 1fr; gap: 10px; }
+    .revelation { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">⏱️</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1. COMMUTE -->
+    <section class="revelation" id="rev-1">
+      <h1>YOUR COMMUTE</h1>
+      <div class="calc-build" style="opacity:0; transition:opacity 1s;" id="calc-1">45 min/day × 5 days × 50 weeks =</div>
+      <div class="counter color-red" data-target="187" data-suffix=" HOURS / YEAR" id="count-1">0</div>
+      <div class="context" style="opacity:0; transition:opacity 1s 0.5s;" id="ctx-1a">187 hours. That's 7.8 full days per year. Awake.</div>
+      <div class="impact" style="opacity:0; transition:opacity 1s 1s;" id="ctx-1b">In 10 years: 78 days of your life in transit.</div>
+      <div class="philosophical" style="opacity:0; transition:opacity 1s 2s;" id="ctx-1c">What is your commute actually worth? What would you pay to get those 78 days back?</div>
+      <div class="context color-green" style="opacity:0; transition:opacity 1s 3s;" id="ctx-1d">Remote work, a closer apartment, carpooling — the math changes entirely.</div>
+    </section>
+
+    <!-- 2. PHONE -->
+    <section class="revelation" id="rev-2">
+      <h1>SCREEN TIME: 4.2 hours/day</h1>
+      <div class="counter color-red" data-target="1533" data-suffix=" HOURS / YEAR" id="count-2a">0</div>
+      <div class="counter" style="font-size:3rem;" data-target="63" data-suffix=" FULL DAYS / YEAR" id="count-2b">0</div>
+      <div class="counter" style="font-size:2rem; color:#aaa;" data-target="2835" data-suffix=" DAYS IN A LIFETIME" id="count-2c">0</div>
+      
+      <div class="grid-viz" id="grid-2">
+        <!-- 100 squares generated in JS -->
+      </div>
+      
+      <div class="philosophical color-gold isolated" style="opacity:0; transition:opacity 1s 1s;" id="ctx-2a">That's 7.7 YEARS of your life.</div>
+      <div class="context" style="opacity:0; transition:opacity 1s 2s;" id="ctx-2b">7.7 years of your finite life. Staring at a glass rectangle.</div>
+      <div class="philosophical" style="opacity:0; transition:opacity 1s 3s;" id="ctx-2c">The phone is not the problem. What you're looking for in it is.</div>
+    </section>
+
+    <!-- 3. FRIENDSHIPS -->
+    <section class="revelation" id="rev-3">
+      <h1 class="color-green">SEEING FRIENDS REGULARLY</h1>
+      <div class="calc-build" style="opacity:0; transition:opacity 1s;" id="calc-3">People with close friendships live 15% longer on average</div>
+      <div class="counter color-green" data-target="11" data-prefix="+ " data-suffix=" YEARS OF LIFE" id="count-3">0</div>
+      <div class="philosophical color-gold" style="opacity:0; transition:opacity 1s 0.5s;" id="ctx-3a">Friendship is not free time. It is medicine.</div>
+      <div class="context" style="opacity:0; transition:opacity 1s 1.5s;" id="ctx-3b">It also happens to be enjoyable medicine.</div>
+      <div class="calc-build" style="opacity:0; transition:opacity 1s 2s;" id="ctx-3c">Cost: 2 hrs/week = 104 hrs/year</div>
+      <div class="context color-green" style="opacity:0; transition:opacity 1s 2.5s;" id="ctx-3d">Returns: 11+ years of life, higher happiness score, lower dementia risk</div>
+      <div class="philosophical color-gold isolated" style="opacity:0; transition:opacity 1s 3s;" id="ctx-3e">This is the best ROI available to a human being.</div>
+    </section>
+
+    <!-- 4. WORRY -->
+    <section class="revelation" id="rev-4">
+      <h1 style="font-size:2.5rem;">THE AVERAGE PERSON WORRIES FOR</h1>
+      <div class="counter color-red" data-target="5" data-suffix=" YEARS OF THEIR LIFE" id="count-4">0</div>
+      <div style="text-align:left; max-width:500px; margin: 20px auto; opacity:0; transition:opacity 1s 0.5s;" id="ctx-4a">
+        <div class="calc-build">Of worries: 85% never happen.</div>
+        <div class="calc-build">Of the 15% that do: 79% were handled better than expected.</div>
+        <div class="calc-build">Effective worry time: approx 2 weeks</div>
+      </div>
+      <div class="counter color-red" style="font-size:3rem;" data-target="4" data-suffix=" YEARS WASTED" id="count-4b">0</div>
+      <div class="philosophical isolated" style="opacity:0; transition:opacity 1s 2s;" id="ctx-4b">What would you do with 4 years and 50 weeks?</div>
+    </section>
+
+    <!-- 5. SLEEP -->
+    <section class="revelation" id="rev-5">
+      <h1>SLEEP: 8 hours/day × 365 days</h1>
+      <div class="counter color-gold" data-target="2920" data-suffix=" HOURS / YEAR" id="count-5a">0</div>
+      <div class="counter color-gold" style="font-size:3rem;" data-target="33" data-suffix="% OF YOUR LIFE" id="count-5b">0</div>
+      <div class="context" style="opacity:0; transition:opacity 1s 0.5s;" id="ctx-5a">People who sleep under 6 hours live significantly shorter lives.</div>
+      <div class="philosophical" style="opacity:0; transition:opacity 1s 1.5s;" id="ctx-5b">Sleep is the only maintenance your brain has. Skip it and it stops working.</div>
+      <div class="philosophical color-gold isolated" style="opacity:0; transition:opacity 1s 2.5s;" id="ctx-5c">Sleeping is not wasted time. It's the price of all other time.</div>
+    </section>
+
+    <!-- 6. SMALL PLEASURES -->
+    <section class="revelation" id="rev-6">
+      <div style="text-align:left; max-width:400px; margin:0 auto; opacity:0; transition:opacity 1s;" id="calc-6">
+        <div class="calc-build">Morning coffee: 10 min</div>
+        <div class="calc-build">Good book before sleep: 20 min</div>
+        <div class="calc-build">Walk without phone: 15 min</div>
+      </div>
+      <div class="counter color-green" style="font-size:3rem;" data-target="45" data-suffix=" MINUTES / DAY" id="count-6a">0</div>
+      <div class="counter color-green" data-target="273" data-suffix=" HOURS / YEAR" id="count-6b">0</div>
+      <div class="context" style="opacity:0; transition:opacity 1s 1s;" id="ctx-6a">Of the 8,760 hours in a year — these 273 account for a disproportionate amount of life satisfaction.</div>
+      <div class="philosophical color-gold isolated" style="opacity:0; transition:opacity 1s 2s;" id="ctx-6b">Small pleasures are not small.</div>
+    </section>
+
+    <!-- 7. REMAINING TIME -->
+    <section class="revelation" id="rev-7">
+      <h1>YOUR REMAINING TIME</h1>
+      <div class="input-group">
+        <label class="calc-build">Enter your age: </label>
+        <input type="number" id="age-input" value="30" min="10" max="100">
+      </div>
+      <div class="counter color-gold" id="count-7" style="font-size:5rem;">18,250 DAYS LEFT</div>
+      <div class="context" style="font-size:0.9rem; opacity:0.6;">Give or take. Assuming 80 years.</div>
+      
+      <div class="breakdown-grid">
+        <div><div class="bk-num" id="bk-mon">2,600</div><div class="bk-label">Mondays</div></div>
+        <div><div class="bk-num" id="bk-sum">50</div><div class="bk-label">Summers</div></div>
+        <div><div class="bk-num" id="bk-nye">50</div><div class="bk-label">New Year's Eves</div></div>
+      </div>
+      
+      <div class="philosophical" style="opacity:0; transition:opacity 1s 1s;" id="ctx-7a">This number is not meant to scare you.</div>
+      <div class="philosophical isolated" style="opacity:0; transition:opacity 1s 2s;" id="ctx-7b">It's meant to be useful.</div>
+      <div class="philosophical color-gold" style="opacity:0; transition:opacity 1s 3s;" id="ctx-7c">Each one is finite and therefore worth something.</div>
+    </section>
+
+    <!-- 8. THE CURRENCY -->
+    <section class="revelation" id="rev-8" style="justify-content:center;">
+      <div class="context" style="opacity:0; transition:opacity 1s;" id="ctx-8a">Money can be earned again.</div>
+      <div class="philosophical isolated" style="opacity:0; transition:opacity 1s 1.5s;" id="ctx-8b">Time cannot.</div>
+      
+      <div class="context" style="opacity:0; transition:opacity 1s 3s;" id="ctx-8c">This is not a productivity argument.<br>This is not an argument for working harder.</div>
+      <div class="philosophical" style="opacity:0; transition:opacity 1s 4.5s;" id="ctx-8d">It is an argument for knowing what you're actually paying.</div>
+      
+      <div class="philosophical" style="opacity:0; transition:opacity 1s 6s;" id="ctx-8e">Every choice costs time. Some choices are worth it.</div>
+      <div class="context" style="font-size:0.9rem; opacity:0; transition:opacity 1s 7.5s;" id="ctx-8f">Some are not.</div>
+      
+      <div class="philosophical color-gold isolated" style="font-size:3rem; opacity:0; transition:opacity 2s 9s;" id="ctx-8g">The price of everything is the same.</div>
+      <div class="counter color-gold" style="font-size:5rem; opacity:0; transition:opacity 3s 11s;" id="ctx-8h">It's always your time.</div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.082;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Grid Builder
+  const grid2 = document.getElementById('grid-2');
+  let gridHTML = '';
+  // 100 squares. 7.7 years out of ~80 = ~10% = 10 squares phone, ~25 squares sleep, etc.
+  for(let i=0; i<100; i++) {
+    if(i<33) gridHTML += '<div class="grid-sq sq-spent"></div>'; // sleep
+    else if(i<43) gridHTML += '<div class="grid-sq sq-phone"></div>'; // phone
+    else gridHTML += '<div class="grid-sq sq-rem"></div>'; // remaining
+  }
+  grid2.innerHTML = gridHTML;
+
+  // Counter Animation
+  function animateCounter(el, target, duration = 2000) {
+    if(el.dataset.animating === "true") return;
+    el.dataset.animating = "true";
+    
+    const start = 0;
+    const startTime = performance.now();
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+
+    function update(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeVal = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const current = Math.floor(start + (target - start) * easeVal);
+      
+      el.textContent = prefix + current.toLocaleString() + suffix;
+      
+      if(progress > 0) playTickSound();
+      
+      if(progress < 1) requestAnimationFrame(update);
+      else {
+        el.textContent = prefix + target.toLocaleString() + suffix;
+        el.dataset.animating = "done";
+      }
+    }
+    requestAnimationFrame(update);
+  }
+
+  // Age Calculator
+  const ageInput = document.getElementById('age-input');
+  function updateAge() {
+    const age = parseInt(ageInput.value) || 30;
+    const yearsLeft = Math.max(0, 80 - age);
+    const daysLeft = yearsLeft * 365;
+    
+    const count7 = document.getElementById('count-7');
+    count7.dataset.animating = "false";
+    count7.dataset.suffix = " DAYS LEFT";
+    animateCounter(count7, daysLeft, 1500);
+    
+    document.getElementById('bk-mon').innerText = Math.floor(daysLeft/7).toLocaleString();
+    document.getElementById('bk-sum').innerText = yearsLeft;
+    document.getElementById('bk-nye').innerText = yearsLeft;
+  }
+  ageInput.addEventListener('change', updateAge);
+  ageInput.addEventListener('keyup', (e) => { if(e.key === 'Enter') updateAge(); });
+
+  // Audio System
+  let audioCtx, masterGain, basePadOscs = [];
+  let isMuted = true;
+  let currentInsight = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(255,255,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 1, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 1;
+    
+    // Base minimal pad
+    const freqs = [261.63, 329.63, 392.00]; // C Major
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.value = 0.025;
+      osc.start();
+      basePadOscs.push({osc, gain});
+    });
+  }
+
+  let lastTick = 0;
+  function playTickSound() {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    if(now - lastTick < 0.05) return; // rate limit
+    lastTick = now;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 600;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.start(); osc.stop(now + 0.05);
+  }
+
+  function playInsightSound(index) {
+    if(!audioCtx || isMuted) return;
+    
+    if(index === 3) { // Friendships - brighten
+      basePadOscs.forEach(o => {
+        o.gain.gain.setTargetAtTime(0.05, audioCtx.currentTime, 1);
+      });
+    }
+    if(index === 7) { // Time left - slow, personal
+      basePadOscs.forEach(o => {
+        o.gain.gain.setTargetAtTime(0.015, audioCtx.currentTime, 2);
+      });
+    }
+    
+    if(index === 8) { // Final - single note
+      basePadOscs.forEach((o, i) => {
+        if(i > 0) o.gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
+        else o.gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 3);
+      });
+      return;
+    }
+
+    const freqs = [523.25, 659.25, 783.99];
+    const now = audioCtx.currentTime;
+    
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, now + i*0.1);
+      gain.gain.linearRampToValueAtTime(0.1, now + i*0.1 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.1 + 2);
+      osc.start(now + i*0.1); osc.stop(now + i*0.1 + 2);
+    });
+  }
+
+  // Animation Triggers
+  const reveals = [
+    { id: 1, els: ['calc-1', 'ctx-1a', 'ctx-1b', 'ctx-1c', 'ctx-1d'], counts: ['count-1'] },
+    { id: 2, els: ['ctx-2a', 'ctx-2b', 'ctx-2c'], counts: ['count-2a', 'count-2b', 'count-2c'] },
+    { id: 3, els: ['calc-3', 'ctx-3a', 'ctx-3b', 'ctx-3c', 'ctx-3d', 'ctx-3e'], counts: ['count-3'] },
+    { id: 4, els: ['ctx-4a', 'ctx-4b'], counts: ['count-4', 'count-4b'] },
+    { id: 5, els: ['ctx-5a', 'ctx-5b', 'ctx-5c'], counts: ['count-5a', 'count-5b'] },
+    { id: 6, els: ['calc-6', 'ctx-6a', 'ctx-6b'], counts: ['count-6a', 'count-6b'] },
+    { id: 7, els: ['ctx-7a', 'ctx-7b', 'ctx-7c'], counts: [] }, // handled by input
+    { id: 8, els: ['ctx-8a', 'ctx-8b', 'ctx-8c', 'ctx-8d', 'ctx-8e', 'ctx-8f', 'ctx-8g', 'ctx-8h'], counts: [] }
+  ];
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+
+    reveals.forEach(rev => {
+      const section = document.getElementById(`rev-${rev.id}`);
+      if(!section) return;
+      const rect = section.getBoundingClientRect();
+      const secCenter = rect.top + currentY + rect.height/2;
+
+      // When section is active in viewport
+      if(Math.abs(secCenter - centerLine) < vh/1.5) {
+        if(section.dataset.active !== "true") {
+          section.dataset.active = "true";
+          
+          // trigger text fades
+          rev.els.forEach(elId => {
+            const el = document.getElementById(elId);
+            if(el) el.style.opacity = 1;
+          });
+          
+          // trigger counters
+          rev.counts.forEach(cId => {
+            const countEl = document.getElementById(cId);
+            if(countEl && countEl.dataset.animating !== "done") {
+              animateCounter(countEl, parseInt(countEl.dataset.target), 2000);
+            }
+          });
+          
+          if(rev.id === 7 && document.getElementById('count-7').dataset.animating !== "done") updateAge();
+
+          if(rev.id > currentInsight) {
+            currentInsight = rev.id;
+            playInsightSound(rev.id);
+          }
+        }
+      }
+    });
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

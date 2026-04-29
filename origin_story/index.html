@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>origin_story</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400&family=Playfair+Display:wght@900&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #0a0808;
+    --text: #e0d8d0;
+    --amber: #ffaa00;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    transition: background-color 2s ease;
+  }
+
+  #mute-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Fixed Time Counter */
+  .time-counter {
+    position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+    font-family: 'Space Mono', monospace; font-size: 1.5rem; color: var(--amber);
+    z-index: 100; letter-spacing: 2px; text-align: center;
+    text-shadow: 0 0 10px rgba(255,170,0,0.3);
+  }
+
+  /* Probability Meter */
+  .prob-meter-container {
+    position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: flex-end; z-index: 100;
+  }
+  .prob-label { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 5px;}
+  .prob-value { font-family: 'Space Mono', monospace; font-size: 0.9rem; color: var(--text); margin-bottom: 10px;}
+  .prob-bar-wrap { width: 4px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;}
+  .prob-bar { width: 100%; height: 100%; background: var(--amber); transform-origin: bottom; transition: transform 0.5s linear;}
+
+  /* Scroll Engine Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%;
+  }
+
+  /* Structural Sections */
+  .era-section {
+    min-height: 120vh; width: 100vw; position: relative; display: flex;
+    flex-direction: column; justify-content: center; align-items: center;
+    padding: 2rem 5rem; box-sizing: border-box; text-align: center;
+  }
+
+  /* Typographic Elements */
+  .narrative { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.8rem; margin: 1.5rem 0; max-width: 700px; line-height: 1.5;}
+  .miracle { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 3rem; margin: 2rem 0; letter-spacing: 1px;}
+  .statistic { font-family: 'Space Mono', monospace; font-size: 1rem; color: #aaa; margin: 1rem 0;}
+  .isolated { margin: 4rem 0; display: block; color: white;}
+  .small-final { font-size: 1rem; color: #888; margin-top: 5px;}
+
+  /* CSS Art elements */
+  .art-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.15; pointer-events: none;}
+  
+  /* 1945 Soldier */
+  .soldier { position:absolute; bottom:20%; left:50%; transform:translateX(-50%); width:0; height:0; border-left: 30px solid transparent; border-right: 30px solid transparent; border-bottom: 100px solid black;}
+  .soldier::before { content:''; position:absolute; top:-20px; left:-15px; width:30px; height:30px; background:black; border-radius:50%;}
+  .searchlight { position:absolute; bottom:0; left:20%; width: 200px; height: 150vh; background: linear-gradient(to top, rgba(255,255,255,0.2), transparent); transform: rotate(30deg) origin(bottom left); animation: sweep 10s infinite alternate;}
+
+  /* 1800 Ship */
+  .ocean { position:absolute; bottom:0; left:0; width:100%; height:30%; background: linear-gradient(to top, #000, transparent);}
+  .ship { position:absolute; bottom:25%; left:50%; transform:translateX(-50%); width: 100px; height: 30px; background: black; border-radius: 0 0 50px 50px;}
+  .ship::before { content:''; position:absolute; bottom:30px; left:20px; width:0; height:0; border-bottom: 60px solid white; border-right: 40px solid transparent; opacity:0.3;}
+  .ship::after { content:''; position:absolute; bottom:30px; left:65px; width:0; height:0; border-bottom: 50px solid white; border-right: 30px solid transparent; opacity:0.3;}
+
+  @keyframes sweep { 0%{transform: rotate(20deg);} 100%{transform: rotate(-20deg);} }
+
+  @media (max-width: 768px) {
+    .prob-meter-container { display: none; }
+    .era-section { padding: 1.5rem; }
+    .narrative { font-size: 1.4rem; }
+    .miracle { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="time-counter" id="time-counter">YEAR: 2026</div>
+
+<div class="prob-meter-container">
+  <div class="prob-label">Existence Odds</div>
+  <div class="prob-value" id="prob-val">1 in 1</div>
+  <div class="prob-bar-wrap"><div class="prob-bar" id="prob-bar"></div></div>
+</div>
+
+<button id="mute-btn">🧬</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 2026 -->
+    <section class="era-section" data-year="2026" data-bg="#0a0808" data-prob="1" data-probstr="1 in 400 trillion">
+      <p class="narrative">You are reading this. This already makes you improbable.</p>
+      <p class="narrative">To exist requires two people to meet, to choose each other, and to have you at the exact moment they did.</p>
+      <p class="narrative">If your parents had met one day later, you wouldn't be you.</p>
+    </section>
+
+    <!-- 1990 -->
+    <section class="era-section" data-year="1990" data-bg="#0a0808" data-prob="0.8" data-probstr="1 in 10^12">
+      <p class="narrative">Your mother was going to a different party that night.</p>
+      <p class="narrative">She almost didn't go. It was raining.</p>
+      <p class="narrative">Your father had already put his jacket on to leave when she walked in.</p>
+      <p class="miracle">These are the hinges of existence.</p>
+    </section>
+
+    <!-- 1945 -->
+    <section class="era-section" data-year="1945" data-bg="#080705" data-prob="0.6" data-probstr="1 in 10^34">
+      <div class="art-container"><div class="searchlight"></div><div class="soldier"></div></div>
+      <p class="narrative">Your grandfather was deployed to the eastern front.</p>
+      <p class="narrative">He was positioned at Sector 7. Sector 6 was destroyed in the morning offensive.</p>
+      <p class="narrative">No one ordered the position change. A logistics error moved him.</p>
+      <p class="narrative isolated">A mistake kept you possible.</p>
+    </section>
+
+    <!-- 1918 -->
+    <section class="era-section" data-year="1918" data-bg="#0a0806" data-prob="0.4" data-probstr="1 in 10^89">
+      <p class="statistic">The Spanish Flu killed 50 million people worldwide.</p>
+      <p class="narrative">Your great-grandmother was 23 and living in a crowded city.</p>
+      <p class="narrative">She survived. She herself didn't know how or why.</p>
+      <p class="narrative">She never spoke about it.</p>
+      <p class="narrative isolated">She didn't know she was keeping you alive by surviving.</p>
+    </section>
+
+    <!-- 1800 -->
+    <section class="era-section" data-year="1800" data-bg="#080605" data-prob="0.2" data-probstr="1 in 10^400">
+      <div class="art-container"><div class="ocean"></div><div class="ship"></div></div>
+      <p class="narrative">Someone in your lineage crossed water they could not see the other side of.</p>
+      <p class="narrative">They left what they knew. They had no guarantee of arrival.</p>
+      <p class="narrative isolated">They arrived.</p>
+    </section>
+
+    <!-- 1350 -->
+    <section class="era-section" data-year="1350" data-bg="#0a0600" data-prob="0.05" data-probstr="1 in 10^1200">
+      <p class="statistic">The Black Death killed 1 in 3 people in Europe. In Asia and the Middle East: similar losses.</p>
+      <p class="narrative">Your ancestor was in a village that was decimated.</p>
+      <p class="narrative">They were one of the surviving third.</p>
+      <p class="statistic">Every person on Earth today descended from someone who survived this.</p>
+      <p class="narrative isolated">Your ancestor specifically. Chose to survive.</p>
+    </section>
+
+    <!-- 1066 -->
+    <section class="era-section" data-year="1066" data-bg="#080602" data-prob="0.01" data-probstr="1 in 10^4500">
+      <p class="narrative">There was a battle. There are always battles.</p>
+      <p class="narrative">Your ancestor fought. Or ran. Or hid behind something large.</p>
+      <p class="narrative">We don't know which. The result is the same.</p>
+      <p class="narrative isolated">They were there. Then they weren't. Then they were somewhere else, alive.</p>
+    </section>
+
+    <!-- 500 CE -->
+    <section class="era-section" data-year="500" data-bg="#06060a" data-prob="0.001" data-probstr="1 in 10^12000">
+      <p class="narrative">A small settlement. No historical record.</p>
+      <p class="narrative">Someone planted something instead of eating the last seeds.</p>
+      <p class="narrative">That bet — seeds in ground over hunger — that's the kind of decision that echoes.</p>
+      <p class="narrative isolated">Every meal you've ever eaten comes from someone's decision to plant.</p>
+    </section>
+
+    <!-- 0 CE -->
+    <section class="era-section" data-year="0" data-bg="#050508" data-prob="0.0001" data-probstr="1 in 10^45000">
+      <p class="narrative">Two people met on a road. There were no roads. There was a path.</p>
+      <p class="narrative">They were going to different places.</p>
+      <p class="miracle isolated">One of them turned around.</p>
+      <p class="statistic">We don't know which one.</p>
+    </section>
+
+    <!-- 3000 BCE -->
+    <section class="era-section" data-year="-3000" data-bg="#040408" data-prob="0.00001" data-probstr="1 in 10^200000">
+      <p class="statistic">Child mortality in ancient populations: 50% before age 5.</p>
+      <p class="narrative">Your ancestor was a child in 3000 BCE.</p>
+      <p class="narrative isolated">They survived childhood.</p>
+      <p class="narrative" style="font-size:1.2rem; color:#888;">If this seems small: it is. That's the point.</p>
+    </section>
+
+    <!-- 10000 BCE -->
+    <section class="era-section" data-year="-10000" data-bg="#030306" data-prob="0.000001" data-probstr="1 in 10^800000">
+      <p class="narrative">The Agricultural Revolution began somewhere around here.</p>
+      <p class="narrative">Someone — your ancestor, maybe — stopped following animals and stayed.</p>
+      <p class="narrative">They put roots down, literally.</p>
+      <p class="narrative isolated">Every city, every building, every bed you've slept in: that decision.</p>
+    </section>
+
+    <!-- 100000 BCE -->
+    <section class="era-section" data-year="-100000" data-bg="#020204" data-prob="0.0000001" data-probstr="1 in 10^2685000">
+      <p class="narrative">A group of people walked north out of Africa.</p>
+      <p class="narrative">They did not know what was north.</p>
+      <p class="narrative">Some died. Some kept going.</p>
+      <p class="narrative isolated">Your ancestor kept going.</p>
+      <p class="narrative isolated" style="margin-top:5rem;">This is where your story starts.</p>
+      <p class="small-final">Except it started before that.</p>
+      <p class="small-final" style="font-size:0.8rem;">And before that.</p>
+      <p class="small-final" style="font-size:0.6rem;">It starts and starts and starts.</p>
+    </section>
+
+    <!-- BACK TO NOW -->
+    <section class="era-section" data-year="2026" data-bg="#0a0808" data-prob="1" data-probstr="1 in 1">
+      <p class="narrative">Every person listed above: they did not know about you.</p>
+      <p class="statistic">They were trying to survive Tuesday.</p>
+      <p class="miracle isolated" style="font-size:3.5rem;">You are the outcome of ten thousand Tuesdays survived.</p>
+      <p class="statistic" style="margin-top: 5rem;">Might be worth treating Wednesday well.</p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.075;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // UI Elements
+  const timeEl = document.getElementById('time-counter');
+  const bgEl = document.body;
+  const probBar = document.getElementById('prob-bar');
+  const probVal = document.getElementById('prob-val');
+  
+  const sections = document.querySelectorAll('.era-section');
+  
+  // Format Year Helper
+  function formatYear(year) {
+    if(year > 0) return `YEAR: ${year} CE`;
+    if(year === 0) return `YEAR: 0 CE`;
+    return `YEAR: ${Math.abs(year)} BCE`;
+  }
+
+  // Audio System
+  let audioCtx, masterGain, eraOscs = [], windSource;
+  let isMuted = true;
+  let currentEraIndex = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(255,255,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Wind noise for deep past
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    windSource = audioCtx.createBufferSource();
+    windSource.buffer = noiseBuffer; windSource.loop = true;
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 4000;
+    const windGain = audioCtx.createGain(); windGain.gain.value = 0;
+    windSource.connect(filter); filter.connect(windGain); windGain.connect(masterGain);
+    windSource.start();
+    eraOscs.push({type: 'wind', gainNode: windGain});
+    
+    // Tones
+    const freqs = [220, 261.63, 275, 329.63, 392]; // Array of frequencies to build chords
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.value = 0;
+      osc.start();
+      eraOscs.push({type: 'tone', freq: f, gainNode: gain});
+    });
+  }
+
+  function updateAudioForEra(index) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    // 2026: Modern warm pad
+    if(index === 0 || index === 12) {
+      setTones([261.63, 329.63, 392], 0.05, now);
+      setWind(0, now);
+    }
+    // 1800s: Fewer notes
+    else if(index === 4) {
+      setTones([261.63, 329.63], 0.05, now);
+    }
+    // Medieval (1350, 1066): Modal
+    else if(index === 5 || index === 6) {
+      setTones([220, 330], 0.06, now);
+    }
+    // Ancient (0 CE, etc): 2 notes
+    else if(index >= 7 && index <= 9) {
+      setTones([220, 275], 0.06, now);
+    }
+    // Pre-history (10000 BCE): Single drone
+    else if(index === 10) {
+      setTones([220], 0.08, now);
+      setWind(0.01, now);
+    }
+    // 100,000 BCE: Wind and drone
+    else if(index === 11) {
+      setTones([220], 0.05, now);
+      setWind(0.05, now);
+    }
+  }
+
+  function setTones(activeFreqs, vol, time) {
+    eraOscs.filter(o => o.type === 'tone').forEach(o => {
+      if(activeFreqs.includes(o.freq)) o.gainNode.gain.setTargetAtTime(vol, time, 1);
+      else o.gainNode.gain.setTargetAtTime(0, time, 1);
+    });
+  }
+  function setWind(vol, time) {
+    eraOscs.filter(o => o.type === 'wind').forEach(o => {
+      o.gainNode.gain.setTargetAtTime(vol, time, 2);
+    });
+  }
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    
+    // Find active section
+    let activeSec = null;
+    let activeIndex = 0;
+    
+    sections.forEach((sec, i) => {
+      const rect = sec.getBoundingClientRect();
+      const secCenter = rect.top + currentY + rect.height/2;
+      
+      // Interpolate values between sections
+      if(centerLine >= rect.top + currentY && centerLine <= rect.bottom + currentY) {
+        activeSec = sec;
+        activeIndex = i;
+      }
+    });
+
+    if(activeSec) {
+      // Direct updates
+      const year = parseInt(activeSec.dataset.year);
+      if(year === 2026 && activeIndex === 0) timeEl.innerText = "YEAR: 2026";
+      else if(year === 2026 && activeIndex === 12) timeEl.innerText = "YEAR: NOW";
+      else timeEl.innerText = formatYear(year);
+      
+      bgEl.style.backgroundColor = activeSec.dataset.bg;
+      probVal.innerText = activeSec.dataset.probstr;
+      probBar.style.transform = `scaleY(${activeSec.dataset.prob})`;
+
+      if(activeIndex !== currentEraIndex) {
+        currentEraIndex = activeIndex;
+        updateAudioForEra(currentEraIndex);
+      }
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

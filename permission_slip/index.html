@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>permission_slip</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg-main: #f0f0f0;
+    --paper: #ffffff;
+    --ink: #111111;
+    --ink-blue: #0055cc;
+    --red-stamp: #cc0000;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-main); color: var(--ink);
+    font-family: 'Space Mono', monospace;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: white; border: 1px solid #ccc; color: #333;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; align-items: center; width: 100%;
+    padding-top: 10vh; padding-bottom: 20vh;
+  }
+
+  /* The Slip */
+  .slip {
+    background: var(--paper); width: 90vw; max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 1px solid #ddd; padding: 40px; box-sizing: border-box;
+    position: relative; overflow: hidden;
+  }
+  .slip::before {
+    content:''; position:absolute; top:0; left:0; width:100%; height:10px;
+    background: repeating-linear-gradient(45deg, #ccc 0px, #ccc 10px, transparent 10px, transparent 20px);
+  }
+
+  .header { text-align: center; border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 30px;}
+  .header h1 { font-size: 2rem; margin: 0; text-transform: uppercase; letter-spacing: 2px;}
+  .header p { font-size: 0.8rem; color: #666; margin: 5px 0 0 0;}
+
+  /* Form Fields */
+  .field { margin-bottom: 30px; }
+  .label { font-size: 0.9rem; font-weight: 700; display: block; margin-bottom: 10px; text-transform: uppercase;}
+  
+  .input-line {
+    border: none; border-bottom: 2px dashed #999; background: transparent;
+    width: 100%; font-family: 'Caveat', cursive; font-size: 2rem; color: var(--ink-blue);
+    outline: none; padding: 0 5px; box-sizing: border-box;
+  }
+  .input-line::placeholder { color: rgba(0,85,204,0.2); font-family: 'Caveat';}
+
+  /* Prescribed Permissions */
+  .preset-list { list-style: none; padding: 0; margin: 0 0 40px 0;}
+  .preset-list li { margin-bottom: 15px; display: flex; align-items: flex-start; opacity: 0; transform: translateY(10px); transition: all 0.5s;}
+  .preset-list li.visible { opacity: 1; transform: translateY(0); }
+  
+  .checkbox {
+    width: 20px; height: 20px; border: 2px solid var(--ink); margin-right: 15px;
+    display: flex; justify-content: center; align-items: center; flex-shrink: 0; margin-top: 3px;
+    cursor: pointer;
+  }
+  .checkbox.checked::after { content: 'X'; font-family: 'Caveat', cursive; font-size: 1.5rem; color: var(--ink-blue); }
+  .preset-text { font-size: 1rem; line-height: 1.4;}
+
+  /* Signature Block */
+  .sign-block { display: flex; justify-content: space-between; margin-top: 60px; align-items: flex-end;}
+  .sign-box { width: 45%; }
+  .sign-line { border-bottom: 1px solid var(--ink); height: 40px; margin-bottom: 5px; position: relative;}
+  .sign-label { font-size: 0.7rem; color: #666;}
+  
+  .auth-sign { font-family: 'Caveat', cursive; font-size: 2.5rem; color: var(--ink); position: absolute; bottom: 0; left: 10px;}
+
+  /* Action Button / Stamp */
+  .btn-submit {
+    display: block; width: 100%; margin-top: 50px; background: #f0f0f0; border: 2px solid #ccc;
+    padding: 20px; font-family: 'Space Mono', monospace; font-size: 1.2rem; font-weight: 700;
+    cursor: pointer; transition: background 0.3s;
+  }
+  .btn-submit:hover { background: #e0e0e0; }
+
+  .stamp {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-15deg) scale(2);
+    border: 4px solid var(--red-stamp); color: var(--red-stamp); padding: 10px 20px;
+    font-size: 3rem; font-weight: 700; border-radius: 10px; opacity: 0; pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 20;
+  }
+  .stamp.active { opacity: 0.8; transform: translate(-50%, -50%) rotate(-15deg) scale(1); }
+
+  /* Narrative text outside slip */
+  .context-text {
+    max-width: 600px; text-align: center; margin-top: 50px; font-size: 1.1rem; line-height: 1.6;
+    color: #555; font-family: 'DM Sans', sans-serif; opacity: 0; transition: opacity 1s;
+  }
+  .context-text.visible { opacity: 1; }
+
+  @media (max-width: 768px) {
+    .slip { padding: 20px; }
+    .sign-block { flex-direction: column; gap: 30px;}
+    .sign-box { width: 100%; }
+    .stamp { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">✍️</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <div class="slip" id="main-slip">
+      <div class="stamp" id="stamp">APPROVED</div>
+      
+      <div class="header">
+        <h1>Official Permission Slip</h1>
+        <p>FORM 001 - ADULT AUTHORIZATION</p>
+      </div>
+
+      <div class="field">
+        <span class="label">I, the undersigned, grant permission to:</span>
+        <input type="text" class="input-line" id="name-input" placeholder="Your Name" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <span class="label">To perform the following actions (Select all that apply):</span>
+        <ul class="preset-list" id="preset-list">
+          <li>
+            <div class="checkbox" onclick="toggleCheck(this)"></div>
+            <div class="preset-text">To change my mind about a major life decision without feeling like a failure.</div>
+          </li>
+          <li>
+            <div class="checkbox" onclick="toggleCheck(this)"></div>
+            <div class="preset-text">To disappoint someone else in order to avoid disappointing myself.</div>
+          </li>
+          <li>
+            <div class="checkbox" onclick="toggleCheck(this)"></div>
+            <div class="preset-text">To rest before I am completely exhausted.</div>
+          </li>
+          <li>
+            <div class="checkbox" onclick="toggleCheck(this)"></div>
+            <div class="preset-text">To not have an opinion on the current outrage.</div>
+          </li>
+          <li>
+            <div class="checkbox" onclick="toggleCheck(this)"></div>
+            <div class="preset-text">To walk away from a sunk cost.</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="field">
+        <span class="label">Other (Specify):</span>
+        <input type="text" class="input-line" placeholder="..." autocomplete="off">
+      </div>
+
+      <div class="sign-block">
+        <div class="sign-box">
+          <div class="sign-line"><div class="auth-sign">The Universe</div></div>
+          <div class="sign-label">Authorized Signature</div>
+        </div>
+        <div class="sign-box">
+          <div class="sign-line" style="font-family:'Space Mono'; display:flex; align-items:flex-end; padding-bottom:5px;" id="date-display"></div>
+          <div class="sign-label">Date</div>
+        </div>
+      </div>
+
+      <button class="btn-submit" id="submit-btn">ISSUE PERMISSION</button>
+    </div>
+
+    <div class="context-text" id="final-text">
+      The secret of adulthood is realizing there is no principal's office. No one is coming to give you the slip. You have to write it yourself.
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  document.getElementById('date-display').innerText = new Date().toLocaleDateString();
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    // Only prevent default if we aren't focused on an input to allow normal typing
+    if(document.activeElement.tagName !== "INPUT") {
+      e.preventDefault();
+      targetY += e.deltaY * 0.8;
+      targetY = Math.max(0, Math.min(targetY, maxScroll));
+    }
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    if(document.activeElement.tagName !== "INPUT") {
+      e.preventDefault();
+      targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+      touchStartY = e.touches[0].clientY;
+      targetY = Math.max(0, Math.min(targetY, maxScroll));
+    }
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'white' : '#e0f0ff';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 1, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 1;
+    
+    // Very faint room tone (office)
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<buffer.length; i++) data[i] = Math.random()*2-1;
+    noise.buffer = buffer; noise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 300;
+    const nGain = audioCtx.createGain(); nGain.gain.value = 0.01;
+    
+    noise.connect(filter); filter.connect(nGain); nGain.connect(masterGain);
+    noise.start();
+  }
+
+  function playPenScratch() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = 400 + Math.random()*200;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+  }
+
+  function playStampThud() {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    // Thud
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square'; 
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.start(); osc.stop(now + 0.3);
+    
+    // Reverb/ringing
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine'; osc2.frequency.value = 300;
+    osc2.connect(gain2); gain2.connect(masterGain);
+    gain2.gain.setValueAtTime(0.1, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+    osc2.start(); osc2.stop(now + 1.5);
+  }
+
+  // Interactivity
+  function toggleCheck(el) {
+    el.classList.toggle('checked');
+    playPenScratch();
+  }
+
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    input.addEventListener('input', () => {
+      if(Math.random() > 0.5) playPenScratch();
+    });
+  });
+
+  document.getElementById('submit-btn').addEventListener('click', () => {
+    const name = document.getElementById('name-input').value;
+    if(!name) {
+      alert("Please sign your name.");
+      return;
+    }
+    
+    document.getElementById('stamp').classList.add('active');
+    playStampThud();
+    
+    setTimeout(() => {
+      document.getElementById('final-text').classList.add('visible');
+      // Scroll to reveal text
+      targetY = maxScroll;
+      
+      // Save to local storage conceptually
+      localStorage.setItem('permission_slip_signed', 'true');
+    }, 1000);
+  });
+
+  // Reveal list items as user scrolls
+  const listItems = document.querySelectorAll('#preset-list li');
+  
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/1.5; // Trigger slightly lower on screen
+    
+    listItems.forEach(li => {
+      const rect = li.getBoundingClientRect();
+      const liTop = rect.top + currentY;
+      
+      if(centerLine > liTop && !li.classList.contains('visible')) {
+        li.classList.add('visible');
+      }
+    });
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

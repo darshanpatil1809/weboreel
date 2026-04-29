@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>shopfront_stories</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400&family=Permanent+Marker&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-night: #0a0a0c;
+    --street-light: #ffaa55;
+    --text-dim: #888;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-night); color: white;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Global UI */
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+  
+  .street-sign {
+    position: fixed; top: 30px; left: 30px; z-index: 100;
+    background: #116633; color: white; padding: 5px 15px;
+    font-family: 'DM Sans', sans-serif; font-weight: bold; border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); letter-spacing: 1px;
+  }
+  .street-sign::after { content:''; position:absolute; bottom:-20px; left:10px; width:4px; height:20px; background:#444;}
+  .street-sign::before { content:''; position:absolute; bottom:-20px; right:10px; width:4px; height:20px; background:#444;}
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  /* Horizontal Scroll Wrapper */
+  .wrapper {
+    display: flex; height: 100vh; width: max-content; align-items: flex-end;
+    padding-bottom: 50px; box-sizing: border-box;
+  }
+
+  /* Structural Street */
+  .street-base {
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
+    background: #111; z-index: 50; border-top: 5px solid #222;
+  }
+
+  /* Shops */
+  .shop {
+    width: 80vw; max-width: 600px; height: 70vh; min-height: 500px;
+    margin: 0 5vw; position: relative; display: flex; flex-direction: column;
+    justify-content: flex-end;
+  }
+  
+  .building-facade {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: #1a1a1a; border: 2px solid #000; box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+    display: flex; flex-direction: column;
+  }
+
+  .signage {
+    height: 15%; width: 100%; background: #222; border-bottom: 4px solid #111;
+    display: flex; justify-content: center; align-items: center; text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5); z-index: 2;
+  }
+
+  .window {
+    flex-grow: 1; margin: 20px; border: 10px solid #222; position: relative;
+    background: #000; overflow: hidden; transition: background 1s;
+  }
+  .window::after {
+    content:''; position:absolute; top:0; left:-100%; width:50%; height:100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+    transform: skewX(-20deg);
+  }
+
+  /* Story Text */
+  .story-card {
+    position: absolute; bottom: -100px; left: 50%; transform: translateX(-50%);
+    width: 90%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    padding: 20px; border: 1px solid #333; z-index: 10; opacity: 0.5; transition: all 0.5s;
+  }
+  .shop.active .story-card { opacity: 1; bottom: 30px; }
+  .shop.active .window { background: rgba(255, 170, 85, 0.1); }
+  
+  .narrative { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.3rem; line-height: 1.4;}
+  .owner-name { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--text-dim); margin-top: 10px; text-transform: uppercase;}
+  
+  /* Shop Details */
+  /* Tailor */
+  .sign-tailor { font-family: 'Cormorant Garamond', serif; font-size: 2.5rem; letter-spacing: 4px; color: #eeddcc;}
+  .tailor-dummy { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); width:40px; height:120px; background:#443; border-radius: 20px 20px 0 0;}
+  .tailor-dummy::before {content:''; position:absolute; top:10px; left:-10px; width:60px; height:20px; background:#332; border-radius: 10px;}
+  
+  /* VHS Store (Closed) */
+  .sign-vhs { font-family: 'Permanent Marker', cursive; font-size: 3rem; color: #ff3366; text-shadow: 0 0 10px rgba(255,51,102,0.3);}
+  .closed-sign { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-10deg); background:red; color:white; font-family:'DM Sans'; padding:10px 20px; font-weight:bold; letter-spacing:2px; border:2px solid white;}
+  .graffiti { position:absolute; bottom:10px; left:10px; font-family:'Permanent Marker'; color:#333; font-size:2rem; transform:rotate(-5deg);}
+
+  /* Bakery */
+  .sign-bakery { font-family: 'DM Sans', sans-serif; font-size: 2rem; font-weight:bold; color: #fff; text-shadow: 2px 2px 0 #ffaa00;}
+  .bakery-shelf { position:absolute; bottom:30px; left:10%; width:80%; height:10px; background:#332;}
+  .bakery-shelf::before {content:''; position:absolute; top:-20px; left:10%; width:30px; height:20px; background:#aa6633; border-radius:15px 15px 0 0; box-shadow: 40px 0 0 #aa6633, 80px 0 0 #aa6633;}
+
+  /* Watch Repair */
+  .sign-watch { font-family: 'Space Mono', monospace; font-size: 1.8rem; color: #ccc; letter-spacing: 5px;}
+  .watch-clock { position:absolute; top:30px; left:50%; transform:translateX(-50%); width:60px; height:60px; border:3px solid #666; border-radius:50%;}
+  .watch-clock::after {content:''; position:absolute; top:10px; left:28px; width:2px; height:20px; background:#ccc; transform-origin:bottom; transform:rotate(45deg);}
+
+  /* Final Alley */
+  .alley { width: 40vw; max-width: 300px; height: 100vh; display:flex; justify-content:center; align-items:center; text-align:center; padding:0 20px;}
+
+  @media (max-width: 768px) {
+    .shop { width: 85vw; margin: 0 10px; }
+    .story-card { width: 95%; padding: 15px; }
+    .narrative { font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="street-sign">MEMORY LN</div>
+<button id="mute-btn">🚶</button>
+
+<div class="street-base"></div>
+
+<div id="scroll-container">
+  <!-- Note: We scroll horizontally by translating X -->
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1. The Tailor -->
+    <div class="shop" id="shop-0">
+      <div class="building-facade">
+        <div class="signage"><div class="sign-tailor">A. Varma & Sons</div></div>
+        <div class="window">
+          <div class="tailor-dummy"></div>
+        </div>
+      </div>
+      <div class="story-card">
+        <div class="narrative">"I don't measure bodies anymore. I measure how people stand when they want to feel important. A suit cannot give you confidence, but it can catch you when yours fails. The sons left for finance. It's just A. Varma now."</div>
+        <div class="owner-name">Anand Varma — 42 Years at this location</div>
+      </div>
+    </div>
+
+    <!-- 2. The VHS Store -->
+    <div class="shop" id="shop-1">
+      <div class="building-facade" style="background:#151515;">
+        <div class="signage" style="background:#000;"><div class="sign-vhs">STAR VIDEO</div></div>
+        <div class="window">
+          <div class="closed-sign">CLOSED</div>
+          <div class="graffiti">GHOSTS</div>
+        </div>
+      </div>
+      <div class="story-card">
+        <div class="narrative">"We didn't just rent movies. We rented Friday nights. We rented the argument in the aisle over action versus comedy. The algorithm gives you what you want. We gave you what the person you had a crush on recommended."</div>
+        <div class="owner-name">Closed 2012</div>
+      </div>
+    </div>
+
+    <!-- 3. The Bakery -->
+    <div class="shop" id="shop-2">
+      <div class="building-facade">
+        <div class="signage" style="background:#3a1a00;"><div class="sign-bakery">GOLDEN CRUST</div></div>
+        <div class="window">
+          <div class="bakery-shelf"></div>
+        </div>
+      </div>
+      <div class="story-card">
+        <div class="narrative">"People confess things to bakers. It's the sugar. A woman came in yesterday, bought two pastries, looked at them and started crying. She said she was buying for two out of habit. I didn't charge her. You can't charge for ghosts."</div>
+        <div class="owner-name">Maria T. — Open at 4AM</div>
+      </div>
+    </div>
+
+    <!-- 4. The Watch Repair -->
+    <div class="shop" id="shop-3">
+      <div class="building-facade">
+        <div class="signage" style="background:#111;"><div class="sign-watch">CHRONOS REPAIR</div></div>
+        <div class="window">
+          <div class="watch-clock"></div>
+        </div>
+      </div>
+      <div class="story-card">
+        <div class="narrative">"A man brings me a shattered watch. Wants it fixed exactly as it was. I fix it. He looks at it, disappointed. Because it's fixed, but the time when it broke—the moment he really wants back—is gone. I fix gears. I don't fix time."</div>
+        <div class="owner-name">Elias — Generational Horologist</div>
+      </div>
+    </div>
+
+    <!-- 5. The Alley -->
+    <div class="alley">
+      <div>
+        <div class="narrative" style="color:var(--text-dim);">The city replaces itself every fifty years.</div>
+        <div class="narrative" style="color:var(--text-dim); margin-top:20px;">The bricks change. The longings stay exactly the same.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Horizontal Scroll Engine
+  let currentX = 0, targetX = 0;
+  const ease = 0.07;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollWidth - window.innerWidth); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  // Map vertical wheel to horizontal scroll
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetX += e.deltaY * 0.8;
+    targetX += e.deltaX * 0.8; // support trackpad horizontal
+    targetX = Math.max(0, Math.min(targetX, maxScroll));
+  }, { passive: false });
+
+  let touchStartX = 0;
+  window.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetX += (touchStartX - e.touches[0].clientX) * 1.5;
+    touchStartX = e.touches[0].clientX;
+    targetX = Math.max(0, Math.min(targetX, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain, streetNoise;
+  let isMuted = true;
+  let activeShop = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(255,255,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Ambient night street (low rumble + subtle wind)
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    streetNoise = audioCtx.createBufferSource();
+    streetNoise.buffer = noiseBuffer; streetNoise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 150;
+    const sGain = audioCtx.createGain(); sGain.gain.value = 0.05;
+    
+    streetNoise.connect(filter); filter.connect(sGain); sGain.connect(masterGain);
+    streetNoise.start();
+  }
+
+  function playShopChime(index) {
+    if(!audioCtx || isMuted) return;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(masterGain);
+    const now = audioCtx.currentTime;
+
+    if(index === 0) { // Tailor - crisp, precise bell
+      osc.type = 'triangle'; osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.05, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+      osc.start(); osc.stop(now + 1);
+    } else if(index === 1) { // VHS - low synth thud (closed)
+      osc.type = 'square'; osc.frequency.value = 110;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.03, now + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(); osc.stop(now + 0.5);
+    } else if(index === 2) { // Bakery - warm chord
+      [261.63, 329.63].forEach((f, i) => {
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        o.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.03, now + 0.1 + i*0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 2);
+        o.start(); o.stop(now + 2);
+      });
+    } else if(index === 3) { // Watchmaker - ticking
+      let tickTime = now;
+      for(let i=0; i<4; i++) {
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = 'square'; o.frequency.value = 1200;
+        o.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0.02, tickTime);
+        g.gain.exponentialRampToValueAtTime(0.001, tickTime + 0.05);
+        o.start(tickTime); o.stop(tickTime + 0.05);
+        tickTime += 0.5;
+      }
+    }
+  }
+
+  // Animation Loop
+  function checkScroll() {
+    const vw = window.innerWidth;
+    const centerLine = currentX + vw/2;
+    let foundShop = -1;
+
+    document.querySelectorAll('.shop').forEach((shop, i) => {
+      const rect = shop.getBoundingClientRect();
+      const shopCenter = rect.left + currentX + rect.width/2;
+      
+      if(Math.abs(shopCenter - centerLine) < vw/2.5) {
+        if(!shop.classList.contains('active')) {
+          shop.classList.add('active');
+          foundShop = i;
+        }
+      } else {
+        shop.classList.remove('active');
+      }
+    });
+
+    if(foundShop !== -1 && foundShop !== activeShop) {
+      activeShop = foundShop;
+      playShopChime(activeShop);
+    }
+  }
+
+  function tick() {
+    currentX += (targetX - currentX) * ease;
+    wrapper.style.transform = `translateX(-${currentX}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

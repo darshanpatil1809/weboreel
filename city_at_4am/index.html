@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>city_at_4am</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,300&family=DM+Sans:wght@400&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-dark: #050505;
+    --text-main: #e0e0e0;
+    --amber: #ffaa00;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-dark); color: var(--text-main);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Fixed Global UI */
+  .fixed-clock {
+    position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+    font-family: 'Space Mono', monospace; font-size: 1.5rem; color: var(--amber);
+    z-index: 100; text-shadow: 0 0 10px rgba(255,170,0,0.5); letter-spacing: 2px;
+    transition: all 1s;
+  }
+  
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid #444; color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Scroll Engine Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%;
+  }
+
+  /* Structural Sections */
+  .life-section {
+    min-height: 100vh; width: 100vw; position: relative; display: flex;
+    flex-direction: column; justify-content: center; align-items: center;
+    padding: 2rem; box-sizing: border-box; overflow: hidden;
+  }
+  .interstitial {
+    min-height: 50vh; width: 100vw; display: flex; justify-content: center; align-items: center;
+    background: #020202; position: relative; text-align: center;
+    border-top: 1px solid #111; border-bottom: 1px solid #111;
+  }
+
+  /* Typographic Elements */
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; margin: 0 0 1rem 0; letter-spacing: 2px; z-index: 5;}
+  p { max-width: 600px; margin: 0 0 1rem 0; line-height: 1.6; z-index: 5; position: relative;}
+  .narrative { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.4rem; color: #ccc;}
+  .practical { font-family: 'DM Sans', sans-serif; font-size: 1.1rem; color: #aaa;}
+  .meta { font-family: 'Space Mono', monospace; font-size: 0.9rem; color: #888;}
+  
+  .isolated { margin: 3rem 0; text-align: center; font-size: 1.5rem; color: white;}
+
+  /* CSS Scenes Backgrounds (Parallax) */
+  .scene-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1; pointer-events: none; opacity: 0.3; transition: transform 0.1s;
+  }
+  
+  /* Baker */
+  .life-baker { background: #1a0a00; }
+  .baker-oven { position: absolute; bottom: 10%; right: 10%; width: 300px; height: 200px; border: 4px solid #331; background: #000; border-radius: 10px 10px 0 0;}
+  .baker-oven::after { content:''; position:absolute; bottom:10px; left:10px; width:280px; height:10px; background: #ff5500; box-shadow: 0 0 30px #ff5500; border-radius:5px;}
+  .flour-particle { position: absolute; background: white; border-radius: 50%; opacity:0; animation: floatUp 5s infinite;}
+
+  /* Insomniac */
+  .life-insomniac { background: #0a0d1a; }
+  .laptop-glow { position:absolute; top:40%; left:50%; transform:translate(-50%,-50%); width:600px; height:600px; background: radial-gradient(circle, rgba(100,150,255,0.2) 0%, transparent 70%);}
+  
+  /* Nurse */
+  .life-nurse { background: #0a1008; }
+  .corridor { position:absolute; top:0; left:50%; transform:translateX(-50%); width: 200px; height: 100%; background: linear-gradient(90deg, #050804 0%, #1a2a15 50%, #050804 100%); perspective: 1000px;}
+  .door { position:absolute; left:0; width:20px; height:150px; background:#000; transform: rotateY(90deg);}
+
+  /* Sweeper */
+  .life-sweeper { background: #050505; }
+  .street-light { position:absolute; top:0; left:30%; width:200px; height:100%; background: linear-gradient(to bottom, rgba(255,255,200,0.1), transparent);}
+
+  /* Student */
+  .life-student { background: #0a0a05; }
+  .books { position:absolute; bottom:20%; left:20%; width:100px; height:200px; border-left: 20px solid #553; border-bottom: 30px solid #833;}
+
+  /* Parent */
+  .life-parent { background: #08080f; }
+  .mobile-hang { position:absolute; top:0; right:30%; width:2px; height:200px; background:#333;}
+  .mobile-circle { position:absolute; bottom:-10px; left:-20px; width:40px; height:40px; border:2px solid #555; border-radius:50%;}
+
+  /* Final Section */
+  .life-final { background: #000; justify-content: center; text-align: center; min-height: 120vh;}
+
+  @keyframes floatUp { 0%{transform:translateY(0); opacity:0;} 50%{opacity:0.5;} 100%{transform:translateY(-100px); opacity:0;} }
+
+  @media (max-width: 768px) {
+    h1 { font-size: 2.2rem; }
+    .narrative { font-size: 1.2rem; }
+    .life-section { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="fixed-clock" id="clock">4:00 AM</div>
+<button id="mute-btn">🌙</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1. The Baker -->
+    <section class="life-section life-baker" data-index="0">
+      <div class="scene-bg" id="bg-0">
+        <div class="baker-oven"></div>
+        <script>for(let i=0;i<20;i++) document.write(`<div class="flour-particle" style="left:${Math.random()*100}%; bottom:${Math.random()*50}%; width:${Math.random()*3+1}px; height:${Math.random()*3+1}px; animation-delay:${Math.random()*5}s"></div>`);</script>
+      </div>
+      <h1>ROHAN</h1>
+      <p class="practical">He has been awake since 2am.</p>
+      <p class="narrative">His hands know this without instruction — 200 grams, turn, fold, wait.</p>
+      <p class="narrative">The bread will be warm when the city wakes. He'll be asleep.</p>
+      <p class="narrative isolated">He does not find this sad. This is the deal he made.</p>
+      <p class="practical">Thought: His daughter has a school performance today. He set the alarm for 8. He'll make it.</p>
+    </section>
+
+    <div class="interstitial">
+      <p class="narrative" style="color:#555;">Somewhere in the same city. The same moment.</p>
+    </div>
+
+    <!-- 2. The Insomniac -->
+    <section class="life-section life-insomniac" data-index="1">
+      <div class="scene-bg" id="bg-1"><div class="laptop-glow"></div></div>
+      <h1>PRIYA</h1>
+      <p class="practical">She has not slept since Tuesday.</p>
+      <p class="meta">It is now Thursday.</p>
+      <p class="narrative">At 4am she is reading about ancient Roman sleep patterns.</p>
+      <p class="practical">She is also reading about insomnia cures. And a recipe for pasta. And her ex's LinkedIn.</p>
+      <p class="practical isolated">She is not looking for any of these things.</p>
+      <p class="practical">She is looking for the off switch. There isn't one at 4am. There is only the next link.</p>
+    </section>
+
+    <div class="interstitial">
+      <p class="narrative" style="color:#555;">Somewhere in the same city. The same moment.</p>
+    </div>
+
+    <!-- 3. The Night Nurse -->
+    <section class="life-section life-nurse" data-index="2">
+      <div class="scene-bg" id="bg-2"><div class="corridor"></div></div>
+      <h1>SARAH</h1>
+      <p class="practical">She is on hour 9 of 12.</p>
+      <p class="practical">Room 14 buzzed 3 minutes ago. She answered. Everything was fine.</p>
+      <p class="practical">Room 14 will buzz again in 40 minutes. She already knows.</p>
+      <p class="practical isolated">Thought: She is thinking about whether she left the stove on. She did not. She checks this thought 3 times per shift.</p>
+      <p class="narrative">At 4am the hospital is quieter but not quiet.</p>
+      <p class="narrative isolated" style="color:white;">Quieter is different from quiet.</p>
+    </section>
+
+    <div class="interstitial">
+      <p class="narrative" style="color:#555;">Somewhere in the same city. The same moment.</p>
+    </div>
+
+    <!-- 4. The Street Sweeper -->
+    <section class="life-section life-sweeper" data-index="3">
+      <div class="scene-bg" id="bg-3"><div class="street-light"></div></div>
+      <h1>JAMES</h1>
+      <p class="practical">He is the reason the city looks clean when you wake up.</p>
+      <p class="practical">This has never been said to him directly.</p>
+      <p class="narrative">At 4am he has the city entirely to himself.</p>
+      <p class="narrative isolated">He finds this satisfying in a way he can't quite explain to people who sleep.</p>
+      <p class="narrative">He waves at the night nurse leaving a shift. She waves back. They have never spoken.</p>
+      <p class="narrative">They are colleagues in the 4am.</p>
+    </section>
+
+    <div class="interstitial">
+      <p class="narrative" style="color:#555;">Somewhere in the same city. The same moment.</p>
+    </div>
+
+    <!-- 5. The Student -->
+    <section class="life-section life-student" data-index="4">
+      <div class="scene-bg" id="bg-4"><div class="books"></div></div>
+      <h1>ANIKA</h1>
+      <p class="practical">She has an exam in 5 hours.</p>
+      <p class="meta">She has known about this exam for 6 weeks.</p>
+      <p class="meta">She began studying 8 hours ago.</p>
+      <p class="practical isolated">She is regretting weeks 1 through 5.</p>
+      <p class="narrative">But at 4am she is also discovering that she actually knows more than she thought.</p>
+      <p class="narrative">This is 4am's greatest trick on students. When the panic clears: there is knowledge.</p>
+      <p class="narrative" style="color:#ffd;">She will pass. She doesn't know that yet.</p>
+    </section>
+
+    <div class="interstitial">
+      <p class="narrative" style="color:#555;">Somewhere in the same city. The same moment.</p>
+    </div>
+
+    <!-- 6. The Parent -->
+    <section class="life-section life-parent" data-index="5">
+      <div class="scene-bg" id="bg-5">
+        <div class="mobile-hang"><div class="mobile-circle"></div></div>
+      </div>
+      <h1>VIKRAM</h1>
+      <p class="practical">He has been awake since 1:47am.</p>
+      <p class="practical">He is rocking. The baby is almost asleep.</p>
+      <p class="narrative">At 4am he is thinking: I would do this forever.</p>
+      <p class="narrative">Also: I have never been this tired.</p>
+      <p class="practical isolated">These two things are not contradictions. This is what 4am teaches new parents.</p>
+      <p class="narrative isolated" style="color:white; margin:5rem 0;">The baby's eyes close.</p>
+      <p class="practical" style="opacity:0.6;">He doesn't move for 4 minutes, afraid to break it.</p>
+    </section>
+
+    <!-- Final Resolution -->
+    <section class="life-section life-final" data-index="6">
+      <p class="practical" style="margin-bottom: 100px;">Seventeen minutes passed.</p>
+      
+      <p class="practical" style="opacity:0.7;">The baker's first batch is done. The insomniac found the off switch.</p>
+      <p class="practical" style="opacity:0.7;">The nurse answered room 14 again. The street sweeper finished block 7.</p>
+      <p class="narrative" style="opacity:0.7;">The student closed her books. The baby stayed asleep.</p>
+      
+      <p class="narrative isolated" style="font-size: 2rem; color:white; margin: 4rem 0;">The city inhaled.</p>
+      
+      <p class="practical">In a few hours it will wake up and call itself morning.</p>
+      <p class="practical" style="font-weight:bold; color:var(--amber);">It was already alive.</p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.07;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeSection = -1;
+  const sourceNodes = [];
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(255,255,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Base City hum
+    const cityNoise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<audioCtx.sampleRate; i++) data[i] = Math.random()*2-1;
+    cityNoise.buffer = buffer; cityNoise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 200;
+    const cityGain = audioCtx.createGain(); cityGain.gain.value = 0.015;
+    cityNoise.connect(filter); filter.connect(cityGain); cityGain.connect(masterGain);
+    cityNoise.start();
+  }
+
+  function playSoundForSection(index) {
+    if(!audioCtx || isMuted) return;
+    
+    // Simple tone generators per character
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(masterGain);
+    
+    const now = audioCtx.currentTime;
+    
+    if(index === 0) { // Baker - warm hum
+      osc.type = 'sine'; osc.frequency.value = 180;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.05, now + 1);
+      gain.gain.linearRampToValueAtTime(0, now + 4);
+      osc.start(); osc.stop(now + 4);
+    } else if (index === 1) { // Insomniac - notification ping + fan
+      osc.type = 'square'; osc.frequency.value = 800;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(); osc.stop(now + 0.1);
+    } else if (index === 2) { // Nurse - monitor beep
+      osc.type = 'sine'; osc.frequency.value = 900;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+      gain.gain.linearRampToValueAtTime(0, now + 0.1);
+      osc.start(); osc.stop(now + 0.1);
+    } else if (index === 5) { // Parent - music box
+      const notes = [261.63, 293.66, 329.63];
+      notes.forEach((f, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        o.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0, now + i*1.5);
+        g.gain.linearRampToValueAtTime(0.03, now + i*1.5 + 0.1);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i*1.5 + 2);
+        o.start(now + i*1.5); o.stop(now + i*1.5 + 2);
+      });
+    } else if (index === 6) { // Final - Dawn chord
+      const notes = [261.63, 329.63, 392.00, 528.00];
+      notes.forEach(f => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        o.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.05, now + 3);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 10);
+        o.start(); o.stop(now + 10);
+      });
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    
+    // Parallax logic & Section detection
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    let foundSection = -1;
+
+    document.querySelectorAll('.life-section').forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      const secCenter = rect.top + currentY + rect.height/2;
+      const index = parseInt(sec.getAttribute('data-index'));
+      
+      // Parallax background
+      const bg = document.getElementById(`bg-${index}`);
+      if(bg) {
+        const offset = (centerLine - secCenter) * 0.2;
+        bg.style.transform = `translateY(${offset}px)`;
+      }
+
+      // Detect active section
+      if(Math.abs(secCenter - centerLine) < vh/2) {
+        foundSection = index;
+      }
+    });
+
+    if(foundSection !== -1 && foundSection !== activeSection) {
+      activeSection = foundSection;
+      playSoundForSection(activeSection);
+      
+      // Clock Logic
+      const clock = document.getElementById('clock');
+      if(activeSection === 6) {
+        clock.innerText = "4:17 AM";
+        clock.style.color = "#aaddff"; // dawn light
+      } else {
+        clock.innerText = "4:00 AM";
+        clock.style.color = "var(--amber)";
+      }
+    }
+    
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

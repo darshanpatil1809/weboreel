@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>speed_of_dark</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;700&family=Space+Mono&display=swap');
+
+  :root {
+    --light: #ffffff;
+    --dark: #000000;
+    --accent: #ffff00;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--light); color: var(--dark);
+    font-family: 'DM Sans', sans-serif;
+    transition: background 1s, color 1s;
+  }
+
+  /* When inverted */
+  body.dark-mode { background: var(--dark); color: var(--light); }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid var(--dark); color: var(--dark);
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+    transition: all 1s;
+  }
+  body.dark-mode #mute-btn { border-color: var(--light); color: var(--light); }
+
+  /* Scroll Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%; align-items: center;
+    padding-top: 30vh; padding-bottom: 50vh;
+  }
+
+  /* Physics Visuals */
+  .photon {
+    position: fixed; top: 50%; left: -20px; width: 10px; height: 10px;
+    background: var(--dark); border-radius: 50%; z-index: 5;
+    transition: all 0.1s linear; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  }
+  body.dark-mode .photon { background: var(--accent); box-shadow: 0 0 30px var(--accent); }
+  
+  .dark-wave {
+    position: fixed; top: 0; right: 0; width: 0%; height: 100vh;
+    background: var(--dark); z-index: 1; transition: width 0.3s;
+  }
+
+  /* Typography */
+  .statement {
+    font-size: 2.5rem; font-weight: 300; max-width: 800px; text-align: center;
+    margin: 40vh 20px; opacity: 0; transform: translateY(20px); transition: all 1s;
+    position: relative; z-index: 10;
+  }
+  .statement.active { opacity: 1; transform: translateY(0); }
+  
+  .equation { font-family: 'Space Mono', monospace; font-size: 1.5rem; font-weight: 700; letter-spacing: 2px;}
+
+  /* The Switch */
+  .the-switch-container {
+    height: 100vh; display: flex; justify-content: center; align-items: center; flex-direction: column;
+    z-index: 10; position: relative;
+  }
+  
+  /* Text highlighting */
+  .highlight { font-weight: 700; }
+  body.dark-mode .highlight { color: var(--accent); }
+
+  @media (max-width: 768px) {
+    .statement { font-size: 1.8rem; margin: 30vh 20px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="photon" id="photon"></div>
+<div class="dark-wave" id="dark-wave"></div>
+
+<button id="mute-btn">💡</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <div class="statement" id="st-0">
+      The speed of light is <span class="equation">299,792,458 m/s</span>.
+    </div>
+
+    <div class="statement" id="st-1">
+      It is the absolute speed limit of the universe. Nothing can travel faster.
+    </div>
+
+    <div class="statement" id="st-2">
+      Light requires energy. It is a photon traveling through space. It is a physical thing taking a physical journey.
+    </div>
+
+    <div class="the-switch-container" id="switch-node">
+      <div class="statement" style="margin:0; max-width:600px;" id="st-3">
+        But what is the speed of dark?
+      </div>
+    </div>
+
+    <div class="statement" id="st-4">
+      Darkness is not a particle. Darkness has no mass, no energy, no physics to obey.
+    </div>
+
+    <div class="statement" id="st-5">
+      Darkness is simply the absence of light.
+    </div>
+
+    <div class="statement" id="st-6">
+      Therefore, darkness does not travel. It is already there. It is waiting.
+    </div>
+
+    <div class="statement" id="st-7">
+      When light leaves, darkness fills the void instantly. At infinite speed.
+    </div>
+
+    <div class="statement" id="st-8">
+      <span class="highlight">The speed of dark is faster than the speed of light.</span>
+    </div>
+
+    <div class="statement" id="st-9" style="margin-top:50vh;">
+      A reminder that presence requires effort.
+    </div>
+
+    <div class="statement" id="st-10">
+      Absence is the default state of the universe.
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Elements
+  const photon = document.getElementById('photon');
+  const darkWave = document.getElementById('dark-wave');
+  const statements = document.querySelectorAll('.statement');
+  const switchNode = document.getElementById('switch-node');
+
+  // Audio System
+  let audioCtx, masterGain, droneOsc;
+  let isMuted = true;
+  let isDark = false;
+  let activeSt = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    // Icon change handled by css inversion, but bg changes
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // High pitched light tone
+    droneOsc = audioCtx.createOscillator();
+    const dGain = audioCtx.createGain();
+    droneOsc.type = 'sine'; droneOsc.frequency.value = 880; // High A
+    droneOsc.connect(dGain); dGain.connect(masterGain);
+    dGain.gain.value = 0.05;
+    droneOsc.start();
+  }
+
+  function playWhoosh() {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; 
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.exponentialRampToValueAtTime(10, now + 1);
+    
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+    
+    osc.start(); osc.stop(now + 1);
+  }
+
+  function playTextReveal(isDarkTone) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = isDarkTone ? 'triangle' : 'sine'; 
+    osc.frequency.value = isDarkTone ? 110 : 440;
+    
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+    
+    osc.start(); osc.stop(now + 1);
+  }
+
+  function toggleDarkness(state) {
+    if(state === isDark) return;
+    isDark = state;
+    if(isDark) {
+      document.body.classList.add('dark-mode');
+      darkWave.style.width = '100%';
+      playWhoosh();
+      if(droneOsc) droneOsc.frequency.setTargetAtTime(55, audioCtx.currentTime, 0.5); // Drop to deep bass
+    } else {
+      document.body.classList.remove('dark-mode');
+      darkWave.style.width = '0%';
+      if(droneOsc) droneOsc.frequency.setTargetAtTime(880, audioCtx.currentTime, 0.5); // Back to high pitch
+    }
+  }
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    
+    // Animate photon across screen relative to total scroll
+    const scrollPercent = Math.min(1, Math.max(0, currentY / (maxScroll || 1)));
+    photon.style.left = `${(scrollPercent * 120) - 10}vw`;
+
+    // Detect switch node
+    const switchRect = switchNode.getBoundingClientRect();
+    const switchCenter = switchRect.top + currentY + switchRect.height/2;
+    if(centerLine > switchCenter) {
+      toggleDarkness(true);
+    } else {
+      toggleDarkness(false);
+    }
+
+    // Text reveals
+    let foundSt = -1;
+    statements.forEach((st, i) => {
+      const rect = st.getBoundingClientRect();
+      const stCenter = rect.top + currentY + rect.height/2;
+      
+      if(Math.abs(stCenter - centerLine) < vh/2.5) {
+        if(!st.classList.contains('active')) {
+          st.classList.add('active');
+          foundSt = i;
+        }
+      } else {
+        // Optional: uncomment to hide when out of view
+        // st.classList.remove('active');
+      }
+    });
+
+    if(foundSt !== -1 && foundSt !== activeSt) {
+      activeSt = foundSt;
+      playTextReveal(isDark);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

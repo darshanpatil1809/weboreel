@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>one_decision</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-dark: #050505;
+    --text-main: #f0f0f0;
+    --line-color: #333;
+    --split-color: #888;
+    --active-color: #00ccff;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-dark); color: var(--text-main);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid #444; color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%;
+    align-items: center; padding-top: 20vh; padding-bottom: 50vh;
+  }
+
+  /* The Line */
+  .timeline {
+    position: absolute; top: 0; left: 50%; width: 2px; height: 100%;
+    background: var(--line-color); z-index: 1; transform: translateX(-50%);
+  }
+  
+  .progress-line {
+    position: fixed; top: 0; left: 50%; width: 2px; height: 50vh;
+    background: var(--active-color); z-index: 2; transform: translateX(-50%);
+    box-shadow: 0 0 10px var(--active-color);
+  }
+
+  /* Nodes */
+  .node {
+    position: relative; width: 100%; min-height: 50vh; display: flex;
+    flex-direction: column; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .dot {
+    width: 16px; height: 16px; background: var(--bg-dark); border: 2px solid var(--split-color);
+    border-radius: 50%; z-index: 10; transition: all 0.3s;
+  }
+  .node.active .dot {
+    background: var(--active-color); border-color: var(--active-color);
+    box-shadow: 0 0 15px var(--active-color);
+  }
+
+  /* Narrative text */
+  .text-box {
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    border: 1px solid #222; padding: 20px; border-radius: 8px;
+    max-width: 400px; text-align: center; margin-top: 30px;
+    opacity: 0.3; transition: all 0.5s; transform: translateY(20px);
+  }
+  .node.active .text-box {
+    opacity: 1; transform: translateY(0); border-color: #444;
+  }
+  .decision-title { font-weight: 700; font-size: 1.2rem; margin-bottom: 10px; color: white;}
+  .decision-desc { color: #aaa; font-size: 1rem; line-height: 1.5;}
+  .split-meta { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: #666; margin-top: 15px; text-transform: uppercase;}
+
+  /* Diverging Lines (Canvas handles complex rendering, but CSS for visual cues) */
+  .ghost-path {
+    position: absolute; top: 50%; left: 50%; width: 2px; height: 50vh;
+    background: linear-gradient(to bottom, #333, transparent);
+    transform-origin: top center; z-index: 1; opacity: 0; transition: opacity 1s;
+  }
+  .node.active .ghost-path { opacity: 0.5; }
+  .ghost-left { transform: rotate(15deg); }
+  .ghost-right { transform: rotate(-15deg); }
+
+  /* Final Stats */
+  .final-stats { text-align: center; margin-top: 100px; max-width: 600px; }
+  .stat-num { font-size: 4rem; font-weight: 700; color: var(--active-color); margin-bottom: 10px;}
+  .stat-label { font-size: 1.2rem; color: #888; margin-bottom: 30px;}
+
+  @media (max-width: 768px) {
+    .text-box { width: 85vw; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-line" id="progress"></div>
+<button id="mute-btn">🕸️</button>
+
+<!-- Canvas for rendering the branching paths -->
+<canvas id="bg-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:0; pointer-events:none;"></canvas>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+    <div class="timeline" id="timeline"></div>
+
+    <!-- Nodes -->
+    <div class="node" id="node-0">
+      <div class="dot"></div>
+      <div class="text-box">
+        <div class="decision-title">The Coffee Shop</div>
+        <div class="decision-desc">You sat at the window seat instead of the back corner.</div>
+        <div class="split-meta">Divergence: +1 Reality</div>
+      </div>
+      <div class="ghost-path ghost-left"></div>
+    </div>
+
+    <div class="node" id="node-1">
+      <div class="dot"></div>
+      <div class="text-box">
+        <div class="decision-title">The Dropped Pen</div>
+        <div class="decision-desc">The person next to you dropped their pen. You picked it up. They said thank you. You smiled.</div>
+        <div class="split-meta">Divergence: +14 Realities</div>
+      </div>
+      <div class="ghost-path ghost-right"></div>
+      <div class="ghost-path ghost-left" style="transform: rotate(25deg);"></div>
+    </div>
+
+    <div class="node" id="node-2">
+      <div class="dot"></div>
+      <div class="text-box">
+        <div class="decision-title">The Conversation</div>
+        <div class="decision-desc">You commented on the book they were reading. In another timeline, you put your headphones back on.</div>
+        <div class="split-meta">Divergence: +8,402 Realities</div>
+      </div>
+      <div class="ghost-path ghost-left"></div>
+      <div class="ghost-path ghost-right"></div>
+    </div>
+
+    <div class="node" id="node-3">
+      <div class="dot"></div>
+      <div class="text-box">
+        <div class="decision-title">The Choice to Stay</div>
+        <div class="decision-desc">You had somewhere to be in 10 minutes. You decided you could be 5 minutes late.</div>
+        <div class="split-meta">Divergence: +1.2 Million Realities</div>
+      </div>
+      <div class="ghost-path ghost-left" style="transform: rotate(10deg);"></div>
+      <div class="ghost-path ghost-right" style="transform: rotate(-30deg);"></div>
+    </div>
+
+    <div class="node" id="node-4">
+      <div class="dot"></div>
+      <div class="text-box">
+        <div class="decision-title">The Number Exchange</div>
+        <div class="decision-desc">They almost didn't ask. They were nervous. You almost said no. You were guarded.</div>
+        <div class="split-meta">Divergence: +44 Million Realities</div>
+      </div>
+      <div class="ghost-path ghost-left"></div>
+    </div>
+
+    <div class="node" id="node-5">
+      <div class="dot"></div>
+      <div class="text-box">
+        <div class="decision-title">Five Years Later</div>
+        <div class="decision-desc">You share an apartment. You have a dog. They are making breakfast in the other room.</div>
+        <div class="split-meta">Current Reality Isolated.</div>
+      </div>
+    </div>
+
+    <!-- Final Stats -->
+    <div class="node" style="min-height: 80vh;">
+      <div class="final-stats">
+        <div class="stat-num">45,210,418</div>
+        <div class="stat-label">Versions of your life where this didn't happen.</div>
+        
+        <div class="decision-desc" style="margin-top:50px; font-size:1.5rem; color:white;">
+          Every choice you make murders a thousand alternate futures.
+        </div>
+        <div class="decision-desc" style="margin-top:20px; font-size:1.5rem; color:var(--active-color);">
+          The one you're living is the only survivor.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Canvas Fractal Rendering
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+
+  function resizeCanvas() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // Draw background branches moving upwards
+  let branches = [];
+  function initBranches() {
+    branches = [];
+    for(let i=0; i<50; i++) {
+      branches.push({
+        x: width/2, y: height/2,
+        vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2,
+        life: 0, maxLife: Math.random()*200 + 100
+      });
+    }
+  }
+
+  function drawFractals() {
+    ctx.clearRect(0, 0, width, height);
+    // As we scroll down, currentY increases. We want to draw static lines that seem to scroll up.
+    // Actually, drawing static geometric splits based on currentY is better.
+    
+    ctx.save();
+    ctx.translate(width/2, height/2 - (currentY * 0.2)); // Parallax branches
+    
+    // Draw a tree
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    
+    function drawBranch(x, y, len, angle, depth) {
+      if(depth === 0) return;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      const nx = x + len * Math.sin(angle);
+      const ny = y - len * Math.cos(angle); // going "up" visually
+      ctx.lineTo(nx, ny);
+      ctx.stroke();
+      
+      // The further we scroll, the more branches are visible
+      if(currentY > (5 - depth) * 500) {
+        drawBranch(nx, ny, len*0.7, angle - 0.3, depth - 1);
+        drawBranch(nx, ny, len*0.7, angle + 0.3, depth - 1);
+      }
+    }
+    
+    drawBranch(0, height, 150, 0, 7);
+    ctx.restore();
+  }
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeNode = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(0, 204, 255, 0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Constant drone
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 55; // Low A
+    osc.connect(g); g.connect(masterGain);
+    g.gain.value = 0.1;
+    osc.start();
+  }
+
+  function playSplitSound(nodeIndex) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    // Main note (gets higher with each node)
+    const baseFreq = 220 + (nodeIndex * 55);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = baseFreq;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.1, now + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+    osc.start(); osc.stop(now + 2);
+
+    // Fractal echoes (representing split timelines)
+    const numEchoes = Math.min(5 + (nodeIndex * 2), 15);
+    for(let i=1; i<=numEchoes; i++) {
+      const eOsc = audioCtx.createOscillator();
+      const eGain = audioCtx.createGain();
+      eOsc.type = 'sine';
+      // Detune slightly for dissonant/echo effect
+      eOsc.frequency.value = baseFreq * (1 + (Math.random()*0.05 - 0.025)); 
+      eOsc.connect(eGain); eGain.connect(masterGain);
+      
+      const delay = Math.random() * 0.5;
+      eGain.gain.setValueAtTime(0, now + delay);
+      eGain.gain.linearRampToValueAtTime(0.02 / (i*0.5), now + delay + 0.05);
+      eGain.gain.exponentialRampToValueAtTime(0.001, now + delay + 1);
+      eOsc.start(now + delay); eOsc.stop(now + delay + 1);
+    }
+  }
+
+  // Animation Loop
+  const nodes = document.querySelectorAll('.node');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    let foundNode = -1;
+
+    nodes.forEach((node, i) => {
+      const rect = node.getBoundingClientRect();
+      const nodeCenter = rect.top + currentY + rect.height/2;
+      
+      if(centerLine >= nodeCenter - vh/3 && centerLine <= nodeCenter + vh/3) {
+        if(!node.classList.contains('active')) {
+          node.classList.add('active');
+          foundNode = i;
+        }
+      } else {
+        node.classList.remove('active');
+      }
+    });
+
+    if(foundNode !== -1 && foundNode !== activeNode) {
+      activeNode = foundNode;
+      playSplitSound(activeNode);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    
+    // Stretch timeline based on scroll wrapper height
+    const tl = document.getElementById('timeline');
+    if(tl) tl.style.height = `${wrapper.scrollHeight}px`;
+    
+    checkScroll();
+    drawFractals();
+    
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

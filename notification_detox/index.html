@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>notification_detox</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-main: #f0f2f5;
+    --text-dark: #1c1e21;
+    --red-badge: #fa3e3e;
+    --blue-accent: #1877f2;
+    --green-accent: #25d366;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-main); color: var(--text-dark);
+    font-family: 'Inter', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: white; border: 1px solid #ddd; color: #333;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+
+  /* Scroll Engine Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; align-items: center; width: 100%;
+    padding-top: 100px; padding-bottom: 80vh;
+  }
+
+  /* Phone Mockup */
+  .phone-frame {
+    width: 320px; background: white; border-radius: 40px; border: 12px solid #222;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2); overflow: hidden; position: relative;
+    display: flex; flex-direction: column; align-items: center; padding: 20px 10px;
+    margin-bottom: 100px; transition: transform 0.5s;
+  }
+  .notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:120px; height:25px; background:#222; border-radius:0 0 15px 15px;}
+  
+  .time-display { font-size: 4rem; font-weight: 800; margin-top: 30px; margin-bottom: 20px;}
+  .date-display { font-size: 1.1rem; color: #666; margin-bottom: 40px;}
+
+  /* Notification Stack */
+  .notif-stack { width: 100%; position: relative;}
+  .notif {
+    background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+    border-radius: 15px; padding: 15px; margin-bottom: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: left;
+    display: flex; gap: 15px; align-items: flex-start;
+    transform-origin: top center; transition: all 0.5s;
+    border: 1px solid rgba(0,0,0,0.05); cursor: pointer;
+  }
+  /* For the visual stacking effect before scroll */
+  .notif-stack[data-state="stacked"] .notif { position: absolute; top:0; left:0; width:100%; box-sizing: border-box;}
+  .notif-stack[data-state="stacked"] .notif:nth-child(1) { transform: translateY(0) scale(1); z-index: 10; }
+  .notif-stack[data-state="stacked"] .notif:nth-child(2) { transform: translateY(10px) scale(0.95); z-index: 9; opacity: 0.8;}
+  .notif-stack[data-state="stacked"] .notif:nth-child(3) { transform: translateY(20px) scale(0.9); z-index: 8; opacity: 0.5;}
+  .notif-stack[data-state="stacked"] .notif:nth-child(n+4) { opacity: 0; pointer-events: none;}
+
+  .notif-icon { width: 40px; height: 40px; border-radius: 10px; display:flex; justify-content:center; align-items:center; font-size:1.5rem; color:white; flex-shrink:0;}
+  .bg-blue { background: var(--blue-accent); }
+  .bg-green { background: var(--green-accent); }
+  .bg-red { background: var(--red-badge); }
+  .bg-dark { background: #333; }
+
+  .notif-content { flex-grow: 1; }
+  .notif-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;}
+  .notif-time { color: #888; font-weight: 400; font-size: 0.8rem;}
+  .notif-title { font-weight: 800; font-size: 0.95rem; margin-bottom: 2px;}
+  .notif-body { color: #555; font-size: 0.9rem; line-height: 1.3;}
+
+  /* Deconstruction Section */
+  .deconstruction { width: 90vw; max-width: 600px; text-align: center; margin-bottom: 150px;}
+  .d-title { font-size: 2.5rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 20px;}
+  .d-text { font-size: 1.2rem; color: #555; line-height: 1.6; margin-bottom: 20px;}
+  .d-highlight { background: var(--red-badge); color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;}
+  
+  .metric-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin: 20px 0;}
+  .metric-num { font-size: 3rem; font-weight: 800; color: var(--blue-accent);}
+  .metric-label { font-size: 1rem; color: #666; font-weight: 600; text-transform: uppercase;}
+
+  /* Final Action */
+  .btn-detox {
+    background: #111; color: white; border: none; padding: 20px 40px;
+    font-size: 1.2rem; font-weight: 800; border-radius: 30px; cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2); transition: transform 0.2s;
+  }
+  .btn-detox:active { transform: scale(0.95); }
+
+  /* Detox State */
+  body.detox-mode { background: #000; color: #555; }
+  body.detox-mode .phone-frame { border-color: #111; background: #050505;}
+  body.detox-mode .notif { opacity: 0; pointer-events: none;}
+  body.detox-mode .time-display { color: #333;}
+  body.detox-mode .date-display { color: #222;}
+  body.detox-mode .deconstruction { opacity: 0.1;}
+  
+  .peace-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; opacity: 0; pointer-events: none; transition: opacity 2s;}
+  body.detox-mode .peace-msg { opacity: 1; }
+
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🔔</button>
+
+<div class="peace-msg">
+  <div style="font-size: 3rem; margin-bottom:20px;">Breathe.</div>
+  <div style="font-family:'Space Mono'; color:#888;">The world will wait.</div>
+  <button onclick="location.reload()" style="margin-top:40px; background:transparent; border:1px solid #555; color:#888; padding:10px 20px; border-radius:20px; cursor:pointer;">RETURN TO NOISE</button>
+</div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- The Phone -->
+    <div class="phone-frame" id="phone">
+      <div class="notch"></div>
+      <div class="time-display">09:41</div>
+      <div class="date-display">Tuesday, October 12</div>
+      
+      <div class="notif-stack" data-state="stacked" id="notif-container">
+        <!-- Notif 1 -->
+        <div class="notif" style="top:0px;">
+          <div class="notif-icon bg-blue">in</div>
+          <div class="notif-content">
+            <div class="notif-header"><span>Work</span><span class="notif-time">now</span></div>
+            <div class="notif-title">Sarah Jenkins</div>
+            <div class="notif-body">URGENT: Need those slides by 10am for the client call...</div>
+          </div>
+        </div>
+        <!-- Notif 2 -->
+        <div class="notif" style="top:120px;">
+          <div class="notif-icon bg-green">💬</div>
+          <div class="notif-content">
+            <div class="notif-header"><span>Messages</span><span class="notif-time">2m ago</span></div>
+            <div class="notif-title">Mom</div>
+            <div class="notif-body">Are you coming over this weekend? Your dad is asking.</div>
+          </div>
+        </div>
+        <!-- Notif 3 -->
+        <div class="notif" style="top:240px;">
+          <div class="notif-icon bg-red">📸</div>
+          <div class="notif-content">
+            <div class="notif-header"><span>Social</span><span class="notif-time">15m ago</span></div>
+            <div class="notif-title">Alex likes your photo</div>
+            <div class="notif-body">Plus 42 other notifications you need to check right now.</div>
+          </div>
+        </div>
+        <!-- Notif 4 -->
+        <div class="notif" style="top:360px;">
+          <div class="notif-icon bg-dark">🗞️</div>
+          <div class="notif-content">
+            <div class="notif-header"><span>News</span><span class="notif-time">1h ago</span></div>
+            <div class="notif-title">BREAKING</div>
+            <div class="notif-body">Something terrible happened somewhere. Click to feel anxious.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Deconstruction -->
+    <div class="deconstruction" id="text-1">
+      <div class="d-title">Manufactured Urgency</div>
+      <div class="d-text">Every red badge is designed by behavioral psychologists to trigger a dopamine deficit state.</div>
+      <div class="d-text">It feels like an emergency. It's actually just <span class="d-highlight">engagement</span>.</div>
+      
+      <div class="metric-card">
+        <div class="metric-num">150+</div>
+        <div class="metric-label">Times the average person checks their phone daily</div>
+      </div>
+    </div>
+
+    <div class="deconstruction" id="text-2">
+      <div class="d-title">Attention is Currency</div>
+      <div class="d-text">You pay for "free" apps with your focus. When your phone buzzes, you are completing a transaction.</div>
+      <div class="d-text">They get your attention. You get anxiety.</div>
+      
+      <div class="metric-card">
+        <div class="metric-num">23 min</div>
+        <div class="metric-label">Time to regain deep focus after an interruption</div>
+      </div>
+    </div>
+
+    <div class="deconstruction">
+      <div class="d-title" style="margin-bottom: 50px;">Take It Back</div>
+      <button class="btn-detox" id="detox-btn">ACTIVATE DO NOT DISTURB</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  const notifContainer = document.getElementById('notif-container');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    if(document.body.classList.contains('detox-mode')) return; // lock scroll in detox
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    if(document.body.classList.contains('detox-mode')) return;
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain, anxietyOsc;
+  let isMuted = true;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'white' : '#ffe0e0';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Constant high-pitch tension (very quiet)
+    anxietyOsc = audioCtx.createOscillator();
+    const aGain = audioCtx.createGain();
+    anxietyOsc.type = 'sine'; anxietyOsc.frequency.value = 12000;
+    anxietyOsc.connect(aGain); aGain.connect(masterGain);
+    aGain.gain.value = 0.01;
+    anxietyOsc.start();
+  }
+
+  function playNotification(type) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(masterGain);
+
+    if(type === 'tri-tone') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.setValueAtTime(800, now + 0.1);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.start(); osc.stop(now + 0.2);
+    } else if (type === 'buzz') {
+      osc.type = 'sawtooth'; osc.frequency.value = 60;
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.linearRampToValueAtTime(0, now + 0.3);
+      osc.start(); osc.stop(now + 0.3);
+    }
+  }
+
+  function playDetoxSound() {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    // Stop anxiety tone
+    if(anxietyOsc) {
+      anxietyOsc.stop();
+      anxietyOsc = null;
+    }
+    
+    // Deep exhale sound
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*4, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<buffer.length; i++) data[i] = Math.random()*2-1;
+    noise.buffer = buffer;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.setValueAtTime(100, now);
+    filter.frequency.exponentialRampToValueAtTime(800, now + 1);
+    filter.frequency.exponentialRampToValueAtTime(100, now + 4);
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 1);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 4);
+    
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    noise.start();
+  }
+
+  // Random notifications when stacked
+  let notifInterval = setInterval(() => {
+    if(notifContainer.dataset.state === "stacked" && Math.random() > 0.5) {
+      const types = ['tri-tone', 'buzz'];
+      playNotification(types[Math.floor(Math.random()*types.length)]);
+    }
+  }, 3000);
+
+  // Detox Action
+  document.getElementById('detox-btn').addEventListener('click', () => {
+    clearInterval(notifInterval);
+    document.body.classList.add('detox-mode');
+    document.getElementById('wrapper').style.transform = `translateY(0px)`;
+    targetY = 0; currentY = 0;
+    playDetoxSound();
+  });
+
+  // Scroll Animation Loop
+  function tick() {
+    if(!document.body.classList.contains('detox-mode')) {
+      currentY += (targetY - currentY) * ease;
+      wrapper.style.transform = `translateY(-${currentY}px)`;
+      
+      // Unstack notifications on scroll
+      if(currentY > 100) {
+        if(notifContainer.dataset.state === "stacked") {
+          notifContainer.dataset.state = "unstacked";
+          notifContainer.style.height = "500px";
+        }
+      } else {
+        if(notifContainer.dataset.state === "unstacked") {
+          notifContainer.dataset.state = "stacked";
+          notifContainer.style.height = "auto";
+        }
+      }
+    }
+    
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

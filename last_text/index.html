@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>last_text</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300;400&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #1a1a1a;
+    --you-bg: #0b84ff;
+    --them-bg: #333333;
+    --text-light: #ffffff;
+    --text-dim: #8e8e93;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh;
+    background: var(--bg); color: var(--text-light);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden; /* custom scroll engine */
+  }
+
+  #mute-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: rgba(255,255,255,0.1); border: 1px solid var(--text-dim); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    position: fixed; top: 0; left: 0; width: 100%;
+    padding: 10px 20px; box-sizing: border-box;
+    display: flex; justify-content: space-between;
+    font-family: 'DM Sans', sans-serif; font-weight: bold; font-size: 0.9rem;
+    background: rgba(26,26,26,0.8); backdrop-filter: blur(10px); z-index: 50;
+  }
+  
+  .narrator-top {
+    position: fixed; top: 50px; left: 0; width: 100%; text-align: center;
+    font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--text-dim);
+    z-index: 40; opacity: 1; transition: opacity 0.5s;
+  }
+
+  /* Scroll Area */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    /* We build from top to bottom, but view from bottom to top initially */
+    display: flex; flex-direction: column; width: 100%;
+    padding: 150px 20px 50px 20px; box-sizing: border-box;
+    max-width: 600px; margin: 0 auto;
+    filter: sepia(0); /* Modified dynamically */
+  }
+
+  /* Messages */
+  .section-label {
+    text-align: center; font-family: 'Space Mono', monospace; font-size: 0.8rem;
+    color: var(--text-dim); margin: 30px 0 10px 0; text-transform: uppercase;
+  }
+  
+  .msg-row { display: flex; width: 100%; margin-bottom: 5px; flex-direction: column;}
+  .msg-row.you { align-items: flex-end; }
+  .msg-row.them { align-items: flex-start; }
+
+  .bubble {
+    max-width: 75%; padding: 10px 15px; font-size: 1.1rem; line-height: 1.4;
+  }
+  .you .bubble { background: var(--you-bg); border-radius: 20px 20px 5px 20px; }
+  .them .bubble { background: var(--them-bg); border-radius: 20px 20px 20px 5px; }
+
+  .msg-meta { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-top: 5px; margin-bottom: 10px;}
+  .you .msg-meta { text-align: right; }
+  .them .msg-meta { text-align: left; }
+  
+  .read-receipt { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--text-dim); align-self: flex-end; margin-top: -5px; margin-bottom: 15px;}
+
+  /* Context Card */
+  .context-card {
+    background: rgba(0,0,0,0.4); border-radius: 15px; padding: 30px 20px;
+    margin: 50px 0; text-align: center; border: 1px solid #333;
+    opacity: 0; transform: scale(0.95); transition: all 1s ease;
+  }
+  .context-card.active { opacity: 1; transform: scale(1); }
+  .context-main { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.5rem; margin-bottom: 10px; color: white;}
+  .context-sub { font-family: 'DM Sans', sans-serif; font-size: 1rem; color: #ccc;}
+  .context-tiny { font-family: 'DM Sans', sans-serif; font-weight: 300; font-size: 0.85rem; color: #888; margin-top: 15px;}
+
+  /* Placeholders */
+  .img-placeholder {
+    width: 200px; height: 150px; background: #444; border-radius: 15px;
+    display: flex; justify-content: center; align-items: center; color: #888; font-family: 'Space Mono', monospace; font-size: 0.8rem;
+  }
+
+  /* Final elements */
+  .typing-indicator {
+    display: inline-flex; gap: 4px; padding: 12px 15px; background: var(--them-bg); border-radius: 20px;
+    margin-bottom: 20px; width: max-content; align-self: flex-start;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .typing-indicator span { width: 6px; height: 6px; background: #888; border-radius: 50%; animation: blink 1.4s infinite both; }
+  .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+  .system-msg { text-align: center; font-size: 0.8rem; color: var(--text-dim); margin: 30px 0;}
+  .undelivered { background: transparent !important; border: 1px solid var(--text-dim); color: var(--text-dim); border-radius: 20px !important;}
+  .clock-icon { font-size: 0.8rem; margin-right: 5px;}
+  
+  .final-thought { text-align: center; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.2rem; color: white; margin-top: 50px; opacity:0; transition: opacity 2s;}
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <span>9:41 AM</span>
+  <span>100% 🔋</span>
+</div>
+<div class="narrator-top" id="narrator">
+  You are reading the last conversation Meera had with her sister.<br>The most recent messages are at the bottom.
+</div>
+
+<button id="mute-btn">📱</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+    <!-- Messages are appended here by JS to keep HTML clean -->
+  </div>
+</div>
+
+<script>
+  const wrapper = document.getElementById('wrapper');
+
+  // Conversation Data (Oldest to Newest to build DOM top to bottom)
+  const conversation = [
+    // SECTION 7 - Earliest visible
+    { type: 'label', text: 'Thursday, 3 months ago' },
+    { type: 'them', text: 'I\'m glad you\'re my person', time: '11:34 PM' },
+    { type: 'you', text: 'you\'re so embarrassing', time: '11:35 PM' },
+    { type: 'them', text: 'I know', time: '11:35 PM' },
+    { type: 'you', text: 'obviously you\'re mine too stop', time: '11:36 PM' },
+    { type: 'them', text: '😊', time: '' }, // Last them message this direction
+
+    { type: 'space', height: '100px' },
+
+    // SECTION 6 - A month before
+    { type: 'label', text: 'Friday, 1 month ago' },
+    { type: 'them', text: 'did you buy the milk', time: '5:12 PM' },
+    { type: 'you', text: 'yes i am not a child', time: '5:14 PM' },
+    { type: 'them', html: '<div class="img-placeholder">[meme cannot be loaded]</div>', time: '8:45 PM' },
+    { type: 'you', text: 'dead 💀', time: '8:47 PM' }, // Lands differently
+
+    { type: 'space', height: '150px' },
+
+    // SECTION 5 - Two weeks before
+    { type: 'label', text: 'Tuesday, 2 weeks ago' },
+    { type: 'you', text: 'are you okay', time: '9:02 AM' },
+    { type: 'them', text: 'yeah why', time: '9:10 AM' },
+    { type: 'you', text: 'you seemed quiet at dinner', time: '9:11 AM' },
+    { type: 'them', text: 'just tired', time: '9:12 AM' },
+    { type: 'you', text: 'you sure', time: '9:12 AM' },
+    { type: 'them', text: 'yes mama stop', time: '9:13 AM' },
+    { type: 'you', text: '🙄 fine', time: '9:13 AM' },
+    { type: 'them', text: 'love you though', time: '9:14 AM' },
+    { type: 'you', text: 'love you too 🙄', time: '9:14 AM' },
+
+    { type: 'space', height: '150px' },
+
+    // SECTION 4 - The previous week
+    { type: 'label', text: 'Tuesday, 2:14 PM' },
+    { type: 'them', text: 'do you want me to send you that recipe', time: '2:14 PM' },
+    { type: 'you', text: 'yes please', time: '2:15 PM' },
+    { type: 'them', html: '<div class="img-placeholder">[recipe image]</div>', time: '2:16 PM' },
+    { type: 'you', text: 'this is too many ingredients', time: '2:17 PM' },
+    { type: 'them', text: 'you\'re so lazy', time: '2:17 PM' },
+    { type: 'you', text: 'correct', time: '2:18 PM' },
+
+    // SECTION 3 - Context Card
+    { type: 'card', main: 'Meera did not call the next day.', sub: 'She was in an accident on the morning of the 14th.', tiny: 'She was 29.' },
+
+    // SECTION 2 - Same Night
+    { type: 'label', text: 'Wednesday, 9:31 PM' },
+    { type: 'you', text: 'the movie was actually good', time: '9:31 PM' },
+    { type: 'them', text: 'I TOLD YOU', time: '9:32 PM' },
+    { type: 'you', text: 'fine you were right', time: '9:33 PM' },
+    { type: 'them', text: 'screenshot for court', time: '9:33 PM' },
+    { type: 'you', text: '😭😭', time: '9:34 PM' },
+    { type: 'them', text: 'what are you doing this weekend', time: '9:35 PM' },
+    { type: 'you', text: 'nothing probably. you?', time: '9:36 PM' },
+    { type: 'them', text: 'come here. maa has been asking', time: '9:37 PM' },
+    { type: 'you', text: 'ok ok maybe friday', time: '9:38 PM' },
+    { type: 'them', text: 'MAYBE is not an answer', time: '9:39 PM' },
+
+    // SECTION 1 - Most Recent
+    { type: 'label', text: '9:43 PM' },
+    { type: 'them', text: 'are you asleep yet lol', time: '9:43 PM' },
+    { type: 'you', text: 'yes tomorrow', time: '9:45 PM' },
+    { type: 'them', text: 'night! call me tomorrow', time: '9:46 PM' },
+    { type: 'you', text: 'ok goodnight ❤️', time: '9:47 PM' },
+    { type: 'read', text: 'Read 9:44 PM' } // Intentionally unsettling timestamp anomaly? Based on prompt: Read 9:44 PM is under the 9:43 message or at end.
+  ];
+
+  // Build DOM
+  conversation.forEach(item => {
+    if(item.type === 'label') {
+      wrapper.innerHTML += `<div class="section-label">${item.text}</div>`;
+    } else if(item.type === 'space') {
+      wrapper.innerHTML += `<div style="height:${item.height}"></div>`;
+    } else if(item.type === 'card') {
+      wrapper.innerHTML += `
+        <div style="height:300px; display:flex; align-items:center; justify-content:center;">
+          <div class="context-card" id="context-card">
+            <div class="context-main">${item.main}</div>
+            <div class="context-sub">${item.sub}</div>
+            <div class="context-tiny">${item.tiny}</div>
+          </div>
+        </div>`;
+    } else if(item.type === 'read') {
+      wrapper.innerHTML += `<div class="read-receipt">${item.text}</div>`;
+    } else {
+      const content = item.html ? item.html : item.text;
+      const meta = item.time ? `<div class="msg-meta">${item.time}</div>` : '';
+      wrapper.innerHTML += `
+        <div class="msg-row ${item.type}">
+          <div class="bubble">${content}</div>
+          ${meta}
+        </div>
+      `;
+    }
+  });
+
+  // Final Elements
+  wrapper.innerHTML += `
+    <div style="height:40vh;"></div>
+    <div class="typing-indicator" id="typing"><span></span><span></span><span></span></div>
+    <div class="system-msg" id="unavailable" style="opacity:0; transition:opacity 1s;">Meera is no longer available</div>
+    <div style="height:30vh;"></div>
+    <div class="msg-row you" id="undelivered" style="opacity:0; transition:opacity 1s;">
+      <div class="bubble undelivered"><span class="clock-icon">🕒</span>I was going to come Friday.</div>
+    </div>
+    <div class="final-thought" id="final1">Some messages are still being written.</div>
+    <div class="final-thought" id="final2" style="font-family:'DM Sans', sans-serif; font-size:1rem; color:#888;">Some conversations haven't ended. They've just gone quiet.</div>
+    <div style="height:50vh;"></div>
+  `;
+
+  // Scroll Engine
+  let currentY = 0, targetY = 0;
+  const ease = 0.07;
+  let maxScroll = 0;
+
+  function updateMaxScroll() {
+    maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight);
+    // Start at bottom
+    if(targetY === 0 && currentY === 0 && maxScroll > 0) {
+      targetY = maxScroll;
+      currentY = maxScroll;
+      applyScroll(currentY);
+    }
+  }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.85;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain, musicOsc1, musicOsc2, musicOsc3;
+  let isMuted = true;
+  let contextRevealed = false;
+  let finalReached = false;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'rgba(255,255,255,0.1)' : 'rgba(11,132,255,0.4)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 1, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 1;
+    
+    // Ambient noise very quiet
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<audioCtx.sampleRate; i++) data[i] = Math.random()*2-1;
+    noise.buffer = buffer; noise.loop = true;
+    const nFilter = audioCtx.createBiquadFilter(); nFilter.type = 'lowpass'; nFilter.frequency.value = 200;
+    const nGain = audioCtx.createGain(); nGain.gain.value = 0.01;
+    noise.connect(nFilter); nFilter.connect(nGain); nGain.connect(masterGain);
+    noise.start();
+  }
+
+  function playContextReveal() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 261.63; // C minor base
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 1);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 8);
+    osc.start(); osc.stop(audioCtx.currentTime + 8);
+    
+    // Start continuous pad after a moment
+    setTimeout(startContinuousPad, 3000);
+  }
+
+  function startContinuousPad() {
+    if(!audioCtx) return;
+    const freqs = [220, 261.63, 311.13]; // Minor pad
+    const padGain = audioCtx.createGain();
+    padGain.gain.value = 0;
+    padGain.connect(masterGain);
+    padGain.gain.linearRampToValueAtTime(0.02, audioCtx.currentTime + 2);
+    
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(padGain);
+      osc.start();
+    });
+  }
+
+  function playFinalNote() {
+    if(!audioCtx || isMuted) return;
+    // Silence first
+    masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+    
+    setTimeout(() => {
+      masterGain.gain.setValueAtTime(1, audioCtx.currentTime);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = 523.25; // High C
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 10);
+      osc.start(); osc.stop(audioCtx.currentTime + 10);
+    }, 2000);
+  }
+
+  let typingShown = false;
+
+  function applyScroll(y) {
+    wrapper.style.transform = `translateY(-${y}px)`;
+    
+    // Sepia filter based on depth (scroll is reversed: 0 is top/past, max is bottom/present)
+    const depth = 1 - (y / maxScroll); // 0 at present, 1 at deep past
+    const sepiaAmt = Math.min(depth * 0.4, 0.4);
+    wrapper.style.filter = `sepia(${sepiaAmt})`;
+
+    // Hide narrator as we scroll up
+    const narrator = document.getElementById('narrator');
+    if(y < maxScroll - 100) narrator.style.opacity = 0;
+    else narrator.style.opacity = 1;
+
+    // Context Card Reveal
+    const contextCard = document.getElementById('context-card');
+    if(contextCard) {
+      const cardRect = contextCard.getBoundingClientRect();
+      if(cardRect.top > 0 && cardRect.bottom < window.innerHeight && !contextRevealed) {
+        contextRevealed = true;
+        contextCard.classList.add('active');
+        playContextReveal();
+      }
+    }
+
+    // Final sequence at the very bottom
+    if(y < 100 && !finalReached) {
+      finalReached = true;
+      const typing = document.getElementById('typing');
+      typing.style.opacity = 1;
+      
+      setTimeout(() => {
+        typing.style.opacity = 0;
+        setTimeout(() => {
+          document.getElementById('unavailable').style.opacity = 1;
+          setTimeout(() => {
+            document.getElementById('undelivered').style.opacity = 1;
+            playFinalNote();
+            setTimeout(() => {
+              document.getElementById('final1').style.opacity = 1;
+              setTimeout(() => {
+                document.getElementById('final2').style.opacity = 1;
+              }, 2000);
+            }, 3000);
+          }, 3000);
+        }, 500);
+      }, 4000);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    applyScroll(currentY);
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

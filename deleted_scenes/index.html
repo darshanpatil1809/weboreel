@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>deleted_scenes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400&family=Special+Elite&display=swap');
+
+  :root {
+    --bg-dark: #080808;
+    --text-main: #e0e0e0;
+    --amber: #ffaa00;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-dark); color: var(--text-main);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Film Grain Overlay */
+  .film-grain {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 100; opacity: 0.15;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+  
+  .vignette {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 90;
+    background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.8) 100%);
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 200;
+    background: transparent; border: 1px solid #444; color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Scroll Engine Container */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%; align-items: center;
+  }
+
+  /* DVD Menu Hero */
+  .hero-dvd {
+    height: 100vh; width: 100vw; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+  }
+  .hero-dvd h1 { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 5px; margin: 0;}
+  .hero-dvd p { font-size: 1.2rem; color: #888;}
+  .play-icon {
+    width: 0; height: 0; border-top: 20px solid transparent; border-bottom: 20px solid transparent;
+    border-left: 30px solid var(--amber); margin: 30px 0; animation: pulse 2s infinite;
+  }
+
+  /* Scene Container */
+  .scene-wrapper {
+    width: 100vw; min-height: 120vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; position: relative;
+    padding: 10vh 0; box-sizing: border-box;
+  }
+
+  /* Clapper Board */
+  .clapper {
+    width: 90vw; max-width: 500px; background: #1a1a1a; border: 3px solid white;
+    padding: 1rem; margin-bottom: 30px; font-family: 'Special Elite', cursive;
+    color: white; transform: rotate(-2deg); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    z-index: 20; position: relative;
+  }
+  .clapper-top {
+    height: 40px; margin: -1rem -1rem 1rem -1rem; border-bottom: 3px solid white;
+    background: repeating-linear-gradient(45deg, white 0px, white 20px, black 20px, black 40px);
+    transform-origin: bottom left; transition: transform 0.1s;
+  }
+  .clapper.snapped .clapper-top { animation: clapperSnap 0.3s ease-out; }
+  .clapper-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #444; padding-top:10px;}
+
+  @keyframes clapperSnap { 0% {transform: rotate(-30deg);} 50% {transform: rotate(0deg);} }
+  @keyframes pulse { 0% {opacity: 0.5;} 50% {opacity: 1;} 100% {opacity: 0.5;} }
+
+  /* Film Frame */
+  .film-frame {
+    width: 95vw; max-width: 800px; aspect-ratio: 16/9; background: #000;
+    border-top: 20px solid #111; border-bottom: 20px solid #111;
+    position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8); overflow: hidden;
+  }
+  /* Sprockets */
+  .film-frame::before, .film-frame::after {
+    content:''; position:absolute; top:0; width: 15px; height: 100%;
+    background-image: radial-gradient(circle, transparent 4px, #111 5px);
+    background-size: 100% 30px; background-position: center; z-index: 30;
+  }
+  .film-frame::before { left: -15px; }
+  .film-frame::after { right: -15px; }
+  
+  .scan-lines { position:absolute; top:0;left:0;width:100%;height:100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; z-index:25; pointer-events: none;}
+
+  /* Scene Content inside frame */
+  .scene-action { font-family: 'DM Sans', sans-serif; font-size: 1.1rem; color: #ccc; text-align: center; max-width: 80%; margin: 5px 0; z-index: 10;}
+  .scene-dialogue { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.4rem; color: white; text-align: center; margin: 10px 0; z-index: 10;}
+  .cut-to { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 3px; margin-top: 20px; z-index: 10;}
+  
+  /* Director's Commentary */
+  .commentary-box {
+    width: 90vw; max-width: 600px; margin-top: 30px; padding: 15px;
+    border-left: 3px solid var(--amber); background: rgba(255,170,0,0.05);
+  }
+  .commentary-title { font-family: 'Bebas Neue', sans-serif; color: var(--amber); margin-bottom: 5px;}
+  .commentary-text { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.2rem; line-height: 1.5; color: #ddd;}
+
+  /* Specific Art */
+  .airport-bg { position:absolute; bottom:0; left:0; width:100%; height:50%; background: linear-gradient(to top, #222, transparent); border-top: 2px solid #333;}
+  .redacted { background: black; color: black; display: inline-block; padding: 0 10px; border-radius: 2px;}
+
+  @media (max-width: 768px) {
+    .film-frame { width: 90vw; }
+    .hero-dvd h1 { font-size: 2.5rem; }
+    .scene-dialogue { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="film-grain"></div>
+<div class="vignette"></div>
+
+<button id="mute-btn">🎬</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <div class="hero-dvd">
+      <h1>DELETED SCENES<br><span style="font-size:2rem; color:var(--amber);">A Life · Extended Cut</span></h1>
+      <p>Not included in the theatrical release.</p>
+      <div class="play-icon"></div>
+      <p style="font-size:0.9rem;">Director's commentary available.</p>
+    </div>
+
+    <!-- SCENE 1 -->
+    <div class="scene-wrapper" id="scene-1">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE 14 · TAKE 3 · AIRPORT · DAY</div>
+        <div class="clapper-grid">
+          <div>DIR: YOU</div><div>CAM: MEMORY</div>
+        </div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="airport-bg"></div>
+        <div class="scene-action">Two people. A departure gate. One leaves. One stays.</div>
+        <div class="scene-action">This was in the original cut.</div>
+        <div class="scene-dialogue">"He said: Take care of yourself."</div>
+        <div class="scene-dialogue">"She said: You too."</div>
+        <div class="scene-dialogue" style="color:var(--amber);">"They both meant: I don't want this."</div>
+        <div class="scene-dialogue">"Neither said that."</div>
+        <div class="cut-to">CUT TO:</div>
+      </div>
+      <div class="commentary-box">
+        <div class="commentary-title">DIRECTOR'S COMMENTARY</div>
+        <div class="commentary-text">"This scene ran 4 minutes. We cut it because the audience started crying too early and couldn't recover for Act 3. The actors knew this scene was cut. They still say it was their best work."</div>
+      </div>
+    </div>
+
+    <!-- SCENE 2 -->
+    <div class="scene-wrapper" id="scene-2">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE 28 · TAKE 17 · INT. KITCHEN · NIGHT</div>
+        <div class="clapper-grid">
+          <div>DIR: YOU</div><div>STATUS: INCOMPLETE</div>
+        </div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="scene-action">This scene was attempted 17 times over 3 years.</div>
+        <div class="scene-action">Takes 1-16: the character opens their mouth and closes it.</div>
+        <div class="scene-dialogue" style="margin-top:20px;">Take 17: they say 'I just wanted—' and stop.</div>
+        <div class="scene-action" style="margin-top:30px; font-family:'Special Elite'; color:var(--amber);">[ FOOTAGE PAUSED ]</div>
+        <div class="scene-action">Take 17 is still in progress.</div>
+      </div>
+      <div class="commentary-box">
+        <div class="commentary-title">DIRECTOR'S COMMENTARY</div>
+        <div class="commentary-text">"We kept shooting this. Every take the character got closer. Take 17 is the closest they've gotten. We left the camera running. The scene may complete itself eventually."</div>
+      </div>
+    </div>
+
+    <!-- SCENE 3 -->
+    <div class="scene-wrapper" id="scene-3">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE 7 · TAKE 1 · INT. APARTMENT · FRIDAY</div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="scene-action">This scene was cut because nothing happens.</div>
+        <div class="scene-action">The character was supposed to go out. They didn't.</div>
+        <div class="scene-action">They made tea. They read.</div>
+        <div class="scene-dialogue" style="font-size:1.8rem; margin:30px 0;">They felt, for a few hours, like themselves.</div>
+      </div>
+      <div class="commentary-box">
+        <div class="commentary-title">DIRECTOR'S COMMENTARY</div>
+        <div class="commentary-text">"The editor wanted this cut. Nothing dramatic happens. But every person who saw the rough cut said this was their favorite scene. The editor still cut it. I've regretted it since."</div>
+      </div>
+    </div>
+
+    <!-- SCENE 4 -->
+    <div class="scene-wrapper" id="scene-4">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE 31 · TAKE 1 · EXT. ROOFTOP · NIGHT</div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="scene-action">Before the character could speak, someone's phone rang.</div>
+        <div class="scene-action">The phone was answered.</div>
+        <div class="scene-dialogue">The moment passed.</div>
+        <div class="scene-action" style="margin-top:20px;">What they were going to say: <span class="redacted">I THINK I LOVE YOU BUT I'M SCARED</span></div>
+      </div>
+      <div class="commentary-box">
+        <div class="commentary-title">DIRECTOR'S COMMENTARY</div>
+        <div class="commentary-text">"We know what they were going to say. We've debated showing it for years. We've decided not to. Some deleted scenes are better unknown."</div>
+      </div>
+    </div>
+
+    <!-- SCENE 5 -->
+    <div class="scene-wrapper" id="scene-5">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE 0 · TAKE 1 · THE OTHER PATH</div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="scene-action">This scene exists in an alternate version of the film that was never made.</div>
+        <div class="scene-action">In it, the character takes the job in the other city.</div>
+        <div class="scene-dialogue">Everything after that is different.</div>
+        <div class="scene-dialogue" style="font-size:1.8rem; color:var(--amber);">Not better. Not worse. Different.</div>
+      </div>
+      <div class="commentary-box">
+        <div class="commentary-title">DIRECTOR'S COMMENTARY</div>
+        <div class="commentary-text">"The cast for this version: identical. The character is the same person in different circumstances. The interesting thing — and the thing that made us cut it — is that they seem equally themselves in both versions."</div>
+      </div>
+    </div>
+
+    <!-- SCENE 6 -->
+    <div class="scene-wrapper" id="scene-6">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE 11 · THE LAST GOOD DAY</div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="scene-action">This scene was not labeled as important during filming.</div>
+        <div class="scene-action">It was an ordinary Tuesday.</div>
+        <div class="scene-dialogue">The character had no idea it was the last ordinary Tuesday before everything changed.</div>
+        <div class="scene-dialogue">So they treated it like an ordinary Tuesday.</div>
+        <div class="scene-action" style="margin-top:20px;">If they had known: they would have looked up more.</div>
+        <div class="scene-dialogue" style="color:var(--amber);">They didn't know.</div>
+      </div>
+      <div class="commentary-box">
+        <div class="commentary-title">DIRECTOR'S COMMENTARY</div>
+        <div class="commentary-text">"We almost didn't include this in the deleted scenes. It's too quiet. But every screening — someone comes up afterward and says: that was the one. That was the scene."</div>
+      </div>
+    </div>
+
+    <!-- SCENE 7 -->
+    <div class="scene-wrapper" id="scene-7">
+      <div class="clapper">
+        <div class="clapper-top"></div>
+        <div style="font-size:1.2rem; margin-bottom:10px;">SCENE ??? · TAKE ??? · LOCATION: TBD</div>
+      </div>
+      <div class="film-frame">
+        <div class="scan-lines"></div>
+        <div class="scene-action">This scene has not been filmed.</div>
+        <div class="scene-action">Production is ongoing.</div>
+        <div class="scene-dialogue">The director notes: we don't film endings before they happen. This is a rule.</div>
+        <div class="scene-dialogue" style="color:var(--amber); margin-top:30px;">What we can tell you: the character is still in it.</div>
+        <div class="scene-action">That's more than we can say for a lot of characters.</div>
+        <div class="scene-dialogue" style="font-size:2rem; margin-top:20px;">The camera is still rolling.</div>
+      </div>
+    </div>
+
+    <!-- POST CREDITS -->
+    <div class="scene-wrapper" style="min-height: 80vh; font-family:'Special Elite', cursive; text-align:center;">
+      <div style="font-size:3rem; margin-bottom: 30px;" id="countdown"></div>
+      <div>All scenes shown are from an actual film.</div>
+      <div>The film is still in production.</div>
+      <div>The running time is unknown.</div>
+      <div style="font-size:2rem; margin-top:50px; color:var(--amber);">You are the director.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.078;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain, projectorSource, toneGain;
+  let isMuted = true;
+  let activeScene = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(255,255,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Projector Whirr
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    projectorSource = audioCtx.createBufferSource();
+    projectorSource.buffer = noiseBuffer; projectorSource.loop = true;
+    
+    const pFilter = audioCtx.createBiquadFilter(); pFilter.type = 'bandpass'; pFilter.frequency.value = 300;
+    const pGain = audioCtx.createGain(); pGain.gain.value = 0.02;
+    projectorSource.connect(pFilter); pFilter.connect(pGain); pGain.connect(masterGain);
+    projectorSource.start();
+
+    // Reusable Tone Gain
+    toneGain = audioCtx.createGain();
+    toneGain.connect(masterGain);
+    toneGain.gain.value = 0;
+  }
+
+  function playClapperSnap() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    
+    // Noise snap
+    const noise = audioCtx.createBufferSource();
+    const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*0.1, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<buffer.length; i++) data[i] = Math.random()*2-1;
+    noise.buffer = buffer;
+    
+    filter.type = 'highpass'; filter.frequency.value = 4000;
+    
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    noise.start();
+  }
+
+  function playSceneMusic(sceneNum) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    // Fade out previous
+    toneGain.gain.setTargetAtTime(0, now, 0.5);
+    
+    setTimeout(() => {
+      if(sceneNum === 1) { // Airport - minor departure
+        playChord([220, 277, 330], 0.03);
+      } else if(sceneNum === 3) { // Stayed home - warm
+        playChord([261.63, 329.63, 392], 0.03);
+      } else if(sceneNum === 6) { // Last good day - slower, deliberate
+        playChord([261.63, 293.66], 0.04);
+      } else if(sceneNum === 7) { // Not filmed - silence
+        // just projector
+      } else if(sceneNum === 8) { // Post credits - piano C
+        playChord([261.63], 0.1, true);
+        if(projectorSource) projectorSource.stop(); // Stop projector
+      }
+    }, 600);
+  }
+
+  function playChord(freqs, vol, fadeLong = false) {
+    toneGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 1);
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(toneGain);
+      osc.start();
+      if(fadeLong) osc.stop(audioCtx.currentTime + 10);
+      else osc.stop(audioCtx.currentTime + 5); // temporary chords per scene
+    });
+  }
+
+  // Animation & Scroll Logic
+  const scenes = document.querySelectorAll('.scene-wrapper');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    
+    let foundScene = -1;
+
+    scenes.forEach((sec, i) => {
+      const rect = sec.getBoundingClientRect();
+      const secCenter = rect.top + currentY + rect.height/2;
+      
+      if(Math.abs(secCenter - centerLine) < vh/1.5) {
+        foundScene = i; // 0 is hero, 1-7 are scenes, 8 is post
+        
+        // Clapper snap animation
+        const clapper = sec.querySelector('.clapper');
+        if(clapper && !clapper.classList.contains('snapped') && Math.abs(secCenter - centerLine) < vh/3) {
+          clapper.classList.add('snapped');
+          playClapperSnap();
+        }
+      }
+    });
+
+    if(foundScene !== -1 && foundScene !== activeScene) {
+      activeScene = foundScene;
+      playSceneMusic(activeScene);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

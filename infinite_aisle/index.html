@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>infinite_aisle</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg-floor: #f5f5f5;
+    --shelf-bg: #e0e0e0;
+    --sign-bg: #111;
+    --text-dark: #111;
+    --warning-red: #d32f2f;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh;
+    background: repeating-linear-gradient(45deg, #eee 0px, #eee 40px, #f5f5f5 40px, #f5f5f5 80px);
+    color: var(--text-dark);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; left: 20px; z-index: 100;
+    background: white; border: 2px solid #ccc; color: #111;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Ceiling Lights */
+  .ceiling {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100vh; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    z-index: 1;
+  }
+  .light-fixture {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 60%; height: 40px; background: #fff; box-shadow: 0 0 50px rgba(255,255,255,1);
+    opacity: 0.8;
+  }
+
+  /* Aisle Sign */
+  .aisle-sign {
+    position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+    background: var(--sign-bg); color: white; font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem; padding: 10px 40px; border-radius: 5px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2); z-index: 50; text-align: center;
+  }
+  .aisle-sign::before, .aisle-sign::after {
+    content:''; position:absolute; top:-50px; width:4px; height:50px; background:#333;
+  }
+  .aisle-sign::before { left: 20px; }
+  .aisle-sign::after { right: 20px; }
+
+  /* Scroll Area */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; align-items: center; width: 100%;
+    padding-top: 200px; padding-bottom: 50vh;
+  }
+
+  /* Shelving and Products */
+  .shelf-row {
+    width: 90vw; max-width: 800px; display: flex; justify-content: center;
+    border-bottom: 20px solid #ccc; box-shadow: 0 10px 10px rgba(0,0,0,0.1);
+    margin-bottom: 10vh; padding-bottom: 20px; position: relative;
+    background: linear-gradient(to top, rgba(0,0,0,0.05), transparent 20px);
+  }
+  .price-tag {
+    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+    background: #ffea00; padding: 5px 15px; font-family: 'Space Mono', monospace; font-weight: bold;
+    border: 1px solid #cca000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 5;
+  }
+
+  .product-card {
+    background: white; border: 1px solid #ddd; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    width: 320px; border-radius: 10px; overflow: hidden; position: relative;
+    transition: transform 0.2s; cursor: pointer;
+  }
+  .product-card:hover { transform: translateY(-10px) scale(1.02); }
+  
+  .product-front { padding: 20px; text-align: center; }
+  .product-brand { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: #555;}
+  .product-title { font-weight: 700; font-size: 1.2rem; margin: 10px 0;}
+  .product-tagline { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #666;}
+  
+  .nutrition-label {
+    border: 2px solid black; padding: 10px; margin: 15px 0; text-align: left;
+    font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+  }
+  .nutrition-header { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; border-bottom: 4px solid black; margin-bottom: 5px;}
+  .nut-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding: 3px 0;}
+  .nut-row.thick { border-bottom: 2px solid black; }
+  
+  .review { background: #f9f9f9; padding: 10px; font-size: 0.85rem; border-left: 3px solid #ccc; text-align: left; margin-bottom: 15px;}
+  .stars { color: #f5b301; letter-spacing: 2px;}
+
+  .add-to-cart-btn {
+    width: 100%; background: #111; color: white; border: none; padding: 15px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .add-to-cart-btn:hover { background: #333; }
+
+  /* Specific Products */
+  .prod-comfort { background: #fdf5e6; }
+  .prod-honest { border: 2px solid rgba(0,0,0,0.1); background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);}
+  .prod-genuine { border: 1px solid #ccc;}
+  .prod-performative { border: 3px solid gold; background: #fffcf0;}
+  .prod-doing { background: #eee; padding: 40px 20px; text-align: center; font-weight:bold; height: 100%; box-sizing: border-box;}
+  .prod-empty { border: 1px dashed #ccc; background: transparent; box-shadow: none;}
+
+  .barcode {
+    display: flex; justify-content: center; height: 30px; margin-top: 15px; opacity: 0.5;
+  }
+  .bar { background: black; height: 100%; margin: 0 1px; }
+
+  /* Cart UI */
+  .cart-panel {
+    position: fixed; bottom: 0; left: 0; width: 100%; background: #111; color: white;
+    padding: 15px 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;
+    z-index: 100; transform: translateY(0); transition: transform 0.3s;
+  }
+  .cart-info { display: flex; align-items: center; gap: 15px; }
+  .cart-icon { font-size: 1.5rem; position: relative;}
+  .cart-count {
+    position: absolute; top: -5px; right: -10px; background: var(--warning-red);
+    color: white; font-size: 0.7rem; width: 18px; height: 18px; border-radius: 50%;
+    display: flex; justify-content: center; align-items: center; font-family: 'Space Mono', monospace;
+  }
+  .checkout-btn {
+    background: white; color: black; border: none; padding: 10px 20px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; cursor: pointer; border-radius: 5px;
+  }
+
+  /* Checkout Summary */
+  .checkout-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.95); z-index: 200; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s;
+  }
+  .checkout-overlay.active { opacity: 1; pointer-events: auto; }
+  .receipt {
+    background: white; padding: 40px; width: 90vw; max-width: 400px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.1); font-family: 'Space Mono', monospace;
+    border-top: 5px solid #111;
+  }
+  .receipt h2 { font-family: 'Bebas Neue', sans-serif; text-align: center; font-size: 2.5rem; margin-top: 0;}
+  .receipt-items { border-top: 1px dashed #ccc; border-bottom: 1px dashed #ccc; padding: 20px 0; margin: 20px 0;}
+  .receipt-item { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem;}
+  .receipt-total { font-size: 1rem; color: #111;}
+  .receipt-change { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-style: italic; text-align: center; margin-top: 30px;}
+
+  @media (max-width: 768px) {
+    .shelf-row { flex-direction: column; align-items: center; gap: 40px; border-bottom: none; box-shadow: none; background: transparent; padding-bottom:0;}
+    .product-card { width: 90vw; max-width: 350px; }
+    .price-tag { bottom: -15px; position: relative; display: inline-block; transform: none; margin-bottom: 20px;}
+    .aisle-sign { font-size: 1.8rem; top: 20px; width: 80vw;}
+  }
+</style>
+</head>
+<body>
+
+<div class="ceiling"><div class="light-fixture"></div></div>
+<div class="aisle-sign">AISLE 7 — LIFE DECISIONS</div>
+<button id="mute-btn">🛒</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- Shelf 1 -->
+    <div class="shelf-row">
+      <div class="product-card prod-comfort">
+        <div class="product-front">
+          <div class="product-brand">STASIS Co.</div>
+          <div class="product-title">Classic Comfort Zone</div>
+          <div class="product-tagline">"Now with Extra Familiar!"</div>
+          
+          <div class="nutrition-label">
+            <div class="nutrition-header">Nutrition Facts</div>
+            <div class="nut-row thick"><span>Serving size</span> <b>Your entire life</b></div>
+            <div class="nut-row"><span>Certainty</span> <b>98%</b></div>
+            <div class="nut-row"><span>Growth</span> <b>0g</b></div>
+            <div class="nut-row"><span>Risk</span> <b>0mg</b></div>
+            <div class="nut-row"><span>Regret</span> <b>may accumulate over time</b></div>
+          </div>
+          
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            "I've been using this for 12 years. Very consistent. Exactly what I expected."
+          </div>
+          <div style="font-size:0.75rem; color:var(--warning-red); margin-bottom:15px;">Warning: May cause stagnation in large doses.</div>
+          
+          <div class="barcode">
+            <div class="bar" style="width:2px"></div><div class="bar" style="width:4px"></div><div class="bar" style="width:1px"></div><div class="bar" style="width:3px"></div><div class="bar" style="width:2px"></div><div class="bar" style="width:5px"></div><div class="bar" style="width:1px"></div><div class="bar" style="width:2px"></div><div class="bar" style="width:3px"></div>
+          </div>
+        </div>
+        <button class="add-to-cart-btn" data-name="Comfort Zone">ADD TO CART</button>
+      </div>
+      <div class="price-tag">₹0.00 (costs more later)</div>
+    </div>
+
+    <!-- Shelf 2 -->
+    <div class="shelf-row">
+      <div class="product-card prod-honest">
+        <div class="product-front">
+          <div class="product-brand">VULNERABLE Co.</div>
+          <div class="product-title">Honest Conversation</div>
+          <div class="product-tagline">Raw Expression · Aged in Silence</div>
+          
+          <div class="nutrition-label">
+            <div class="nutrition-header">Nutrition Facts</div>
+            <div class="nut-row"><span>Difficulty</span> <b>HIGH</b></div>
+            <div class="nut-row"><span>Relief after</span> <b>Significant</b></div>
+            <div class="nut-row"><span>Risk of backfire</span> <b>Present</b></div>
+            <div class="nut-row thick"><span>Duration</span> <b>Depends</b></div>
+            <div style="font-size:0.8rem; margin-top:5px;">Contains: Actual feelings. Unfiltered. May cause tears.</div>
+          </div>
+          
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            "Terrifying. Would recommend. Cannot believe I waited so long."
+          </div>
+          <div class="review">
+            <div class="stars">★★★★☆</div>
+            "Did not go as planned. Still — necessary. 4 stars."
+          </div>
+        </div>
+        <button class="add-to-cart-btn" data-name="Honest Conversation">ADD TO CART</button>
+      </div>
+      <div class="price-tag">Free. Costs everything.</div>
+    </div>
+
+    <!-- Shelf 3: Dual choice -->
+    <div class="shelf-row" style="gap:20px;">
+      <div class="product-card prod-genuine" style="width: 280px;">
+        <div class="product-front">
+          <div class="product-brand">ACCOUNTABILITY</div>
+          <div class="product-title">GENUINE Apology</div>
+          <div class="product-tagline">No Excuses Included</div>
+          <div class="nutrition-label">
+            <div class="nut-row"><span>Defensiveness</span> <b>0%</b></div>
+            <div class="nut-row"><span>Ownership</span> <b>100%</b></div>
+          </div>
+        </div>
+        <button class="add-to-cart-btn" data-name="Genuine Apology">ADD TO CART</button>
+        <div class="price-tag" style="bottom:-40px;">Price: Pride (One time)</div>
+      </div>
+      
+      <div class="product-card prod-performative" style="width: 340px;">
+        <div class="product-front">
+          <div class="product-brand">PR MGT INC.</div>
+          <div class="product-title">PERFORMATIVE Apology</div>
+          <div class="product-tagline">Blame Redistribution Formula™</div>
+          <div class="nutrition-label">
+            <div class="nut-row"><span>"I'm sorry IF"</span> <b>50%</b></div>
+            <div class="nut-row"><span>"You felt"</span> <b>50%</b></div>
+            <div style="font-size:0.7rem; color:red; margin-top:5px;">* "Sorry you feel that way" does not qualify as contents.</div>
+          </div>
+        </div>
+        <button class="add-to-cart-btn" data-name="Performative Apology">ADD TO CART</button>
+        <div class="price-tag" style="bottom:-40px;">Price: Relationship (Over time)</div>
+      </div>
+    </div>
+
+    <!-- Shelf 4 -->
+    <div class="shelf-row" style="gap:20px; align-items:flex-end;">
+      <div class="product-card" style="width:250px; height: 150px;">
+        <div class="prod-doing">
+          THING (DO IT)
+        </div>
+        <button class="add-to-cart-btn" data-name="Doing The Thing">ADD TO CART</button>
+      </div>
+      
+      <div class="product-card" style="width:350px;">
+        <div class="product-front">
+          <div class="product-brand">PROCRASTINATION LT.</div>
+          <div class="product-title">PLANNING TO DO THE THING</div>
+          <div class="product-tagline">Professional Edition — With Overthinking Support</div>
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            (10,000+ Reviews) "I feel so productive just looking at this box."
+          </div>
+        </div>
+        <button class="add-to-cart-btn" data-name="Planning To Do The Thing">ADD TO CART</button>
+      </div>
+    </div>
+
+    <!-- Shelf 5 -->
+    <div class="shelf-row">
+      <div class="product-card prod-empty">
+        <div class="product-front">
+          <div class="product-title">LETTING GO</div>
+          <div class="product-tagline">Net weight: 0g · This is intentional.</div>
+          <div style="text-align:left; font-size:0.85rem; margin-top:20px;">
+            Instructions:<br>
+            1. Identify what you're carrying.<br>
+            2. Set it here.<br>
+            3. Walk away.<br>
+            4. Come back and take it again (this is normal).<br>
+            5. Eventually: don't come back.
+          </div>
+          <div class="review" style="margin-top:20px; background:transparent;">
+            <div class="stars">★★☆☆☆</div>
+            "Still in cart. Not ready."
+          </div>
+        </div>
+        <button class="add-to-cart-btn" data-name="Letting Go">ADD TO CART</button>
+      </div>
+      <div class="price-tag">Nothing. That's the point.</div>
+    </div>
+
+    <!-- Shelf 6 -->
+    <div class="shelf-row">
+      <div style="text-align:center; padding: 100px 0; width:100%;">
+        <div class="price-tag" style="position:static; transform:none; display:inline-block; margin-bottom:20px;">[YOUR PRODUCT HERE]</div>
+        <div style="font-family:'Caveat', cursive; font-size:1.8rem; color:#555;">
+          "We haven't stocked this yet. We're waiting for you to define it."
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Cart UI -->
+<div class="cart-panel">
+  <div class="cart-info">
+    <div class="cart-icon">🛒<div class="cart-count" id="cart-count">0</div></div>
+    <div style="font-family:'Space Mono'; font-size:0.9rem;" id="cart-preview">Cart is empty</div>
+  </div>
+  <button class="checkout-btn" id="checkout-btn">PROCEED WITH CHOICES →</button>
+</div>
+
+<!-- Checkout Screen -->
+<div class="checkout-overlay" id="checkout-overlay">
+  <div class="receipt">
+    <h2>RECEIPT</h2>
+    <div style="text-align:center; margin-bottom:10px;">AISLE 7 — LIFE DECISIONS</div>
+    <div id="date-time" style="text-align:center; font-size:0.8rem;"></div>
+    
+    <div class="receipt-items" id="receipt-items">
+      <!-- Items inject here -->
+    </div>
+    
+    <div class="receipt-total">Total cost: Everything you have.</div>
+    <div class="receipt-change">Change: A different life.</div>
+    
+    <button style="margin-top:40px; width:100%; padding:15px; background:black; color:white; border:none; cursor:pointer;" onclick="location.reload()">RETURN TO STORE</button>
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Cart Logic
+  const cart = [];
+  const cartCountEl = document.getElementById('cart-count');
+  const cartPreviewEl = document.getElementById('cart-preview');
+  const buttons = document.querySelectorAll('.add-to-cart-btn');
+
+  buttons.forEach(btn => {
+    btn.addEventListener('mouseenter', playHoverBeep);
+    btn.addEventListener('click', (e) => {
+      const name = e.target.getAttribute('data-name');
+      cart.push(name);
+      cartCountEl.innerText = cart.length;
+      
+      const btnEl = e.target;
+      const ogText = btnEl.innerText;
+      btnEl.innerText = 'ADDED ✓';
+      btnEl.style.background = '#00cc44';
+      playRegisterBeep();
+      
+      setTimeout(() => {
+        btnEl.innerText = ogText;
+        btnEl.style.background = '#111';
+      }, 1000);
+      
+      updateCartPreview();
+    });
+  });
+
+  function updateCartPreview() {
+    if(cart.length === 0) {
+      cartPreviewEl.innerText = "Cart is empty";
+      return;
+    }
+    const names = cart.slice(-2).join(", ");
+    cartPreviewEl.innerText = cart.length > 2 ? `${names} +${cart.length-2} more` : names;
+  }
+
+  document.getElementById('checkout-btn').addEventListener('click', () => {
+    if(cart.length === 0) return alert("Your cart is empty. Pick something.");
+    
+    document.getElementById('date-time').innerText = new Date().toLocaleString();
+    const itemsContainer = document.getElementById('receipt-items');
+    itemsContainer.innerHTML = '';
+    
+    cart.forEach(item => {
+      itemsContainer.innerHTML += `<div class="receipt-item"><span>${item.toUpperCase()}</span><span>1.00</span></div>`;
+    });
+    
+    document.getElementById('checkout-overlay').classList.add('active');
+    playCheckoutMusic();
+  });
+
+  // Audio System
+  let audioCtx, masterGain, bgOsc1, bgOsc2, bgOsc3, humOsc;
+  let isMuted = true;
+  let ambientActive = false;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'white' : '#e0ffe0';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+    
+    // Fluorescent Hum
+    humOsc = audioCtx.createOscillator();
+    const humGain = audioCtx.createGain();
+    humOsc.type = 'sine'; humOsc.frequency.value = 60;
+    humOsc.connect(humGain); humGain.connect(masterGain);
+    humGain.gain.value = 0.05;
+    humOsc.start();
+    
+    ambientActive = true;
+    playMuzak();
+  }
+
+  let muzakInterval;
+  function playMuzak() {
+    if(!audioCtx) return;
+    const notes = [261.63, 329.63, 392.00, 523.25]; // C major arp
+    let step = 0;
+    
+    muzakInterval = setInterval(() => {
+      if(isMuted || !ambientActive) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = notes[step % notes.length];
+      osc.connect(gain); gain.connect(masterGain);
+      
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.03, audioCtx.currentTime + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+      
+      osc.start(); osc.stop(audioCtx.currentTime + 1.5);
+      step++;
+    }, 500); // 120bpm
+  }
+
+  function playHoverBeep() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square'; osc.frequency.value = 800;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+  }
+
+  function playRegisterBeep() {
+    if(!audioCtx || isMuted) return;
+    const freqs = [600, 800];
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.1);
+      gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + i*0.1 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 0.1);
+      osc.start(audioCtx.currentTime + i*0.1); osc.stop(audioCtx.currentTime + i*0.1 + 0.1);
+    });
+  }
+
+  function playCheckoutMusic() {
+    ambientActive = false; // stops muzak
+    if(humOsc) { humOsc.stop(); humOsc = null; } // stop hum
+    if(!audioCtx || isMuted) return;
+    
+    const freqs = [261.63, 329.63, 392.00]; // Warm C major chord
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 2);
+      osc.start();
+    });
+  }
+
+  // Scroll loop
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    
+    // Volume logic based on scroll speed
+    if(audioCtx && ambientActive && humOsc) {
+      const speed = Math.abs(targetY - currentY);
+      // Supermarket ambient louder when standing still (aisle feels empty)
+      const vol = speed < 1 ? 0.8 : 0.4;
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : vol, audioCtx.currentTime, 0.5);
+    }
+    
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>
