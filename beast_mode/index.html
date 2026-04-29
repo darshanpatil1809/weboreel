@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BEAST MODE | No Excuses</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;1,700&family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,700;1,400&family=Oswald:wght@700&display=swap');
+
+    :root {
+      --black: #030303;
+      --charcoal: #0f0f0f;
+      --blood: #c0001a;
+      --white: #f0f0f0;
+      --grey: #9a9a9a;
+      --neon: #ff2d2d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--black);
+      color: var(--white);
+      overflow-x: hidden;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* OVERLAYS */
+    .noise-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 9999;
+      mix-blend-mode: overlay;
+    }
+    .scanlines {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: repeating-linear-gradient(to bottom, transparent 0px, transparent 1px, rgba(255,255,255,0.02) 1px, rgba(255,255,255,0.02) 2px);
+      pointer-events: none;
+      z-index: 9998;
+    }
+    .vignette {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle, transparent 40%, rgba(3,3,3,0.85) 100%);
+      pointer-events: none;
+      z-index: 9997;
+    }
+
+    /* SCROLL PROGRESS */
+    #scroll-progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 4px;
+      background: var(--blood);
+      width: 100%;
+      transform-origin: left;
+      transform: scaleX(0);
+      z-index: 10001;
+      pointer-events: none;
+    }
+
+    /* VISUALIZER & MUSIC BTN */
+    .beat-visualizer {
+      position: fixed;
+      bottom: 0; left: 0;
+      width: 100vw; height: 40px;
+      z-index: 9996;
+      pointer-events: none;
+    }
+    .phonk-btn {
+      position: fixed;
+      bottom: 50px; right: 30px;
+      background: transparent;
+      color: var(--blood);
+      border: 1px solid var(--blood);
+      padding: 10px 20px;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.1rem;
+      z-index: 10000;
+      cursor: pointer;
+      text-shadow: 0 0 10px rgba(192,0,26,0.5);
+      box-shadow: 0 0 15px rgba(192,0,26,0.2);
+      transition: all 0.3s;
+      outline: none;
+    }
+    .phonk-btn.playing {
+      background: var(--blood);
+      color: var(--white);
+      box-shadow: 0 0 25px rgba(192,0,26,0.8);
+      animation: pulse-glow 0.428s infinite alternate;
+    }
+    @keyframes pulse-glow {
+      from { box-shadow: 0 0 15px rgba(192,0,26,0.4); }
+      to { box-shadow: 0 0 35px rgba(192,0,26,0.9); }
+    }
+
+    /* SIDEBAR TIMELINE */
+    .sidebar {
+      position: fixed;
+      left: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      z-index: 10000;
+    }
+    .sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 5px;
+      width: 2px;
+      background: rgba(255,255,255,0.1);
+      z-index: -1;
+    }
+    .sidebar .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--grey);
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .sidebar .dot.active {
+      background: var(--blood);
+      box-shadow: 0 0 15px var(--blood);
+      transform: scale(1.3);
+    }
+    .sidebar .dot:hover::after {
+      content: attr(data-title);
+      position: absolute;
+      left: 25px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.8);
+      color: var(--white);
+      padding: 4px 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      white-space: nowrap;
+      border-radius: 4px;
+      border: 1px solid var(--blood);
+    }
+
+    /* HERO SECTION */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      overflow: hidden;
+      padding: 2rem;
+    }
+    .hero-bg-shapes {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      opacity: 0.06;
+    }
+    .lightning {
+      position: absolute;
+      background: var(--blood);
+      clip-path: polygon(40% 0%, 100% 0%, 60% 50%, 90% 50%, 20% 100%, 50% 50%, 0% 50%);
+      width: 50vw; height: 80vh;
+      animation: rotateLightning 20s linear infinite;
+    }
+    .lightning:nth-child(1) { top: -10%; left: 10%; }
+    .lightning:nth-child(2) { top: 30%; right: 5%; animation-direction: reverse; width: 30vw;}
+    .lightning:nth-child(3) { bottom: -20%; left: 30%; width: 40vw; }
+    @keyframes rotateLightning { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    
+    .hero-content {
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hero-label {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--grey);
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .hero-title-1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(5rem, 18vw, 14rem);
+      color: var(--white);
+      line-height: 0.85;
+      margin: 0;
+    }
+    .hero-title-2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(5rem, 18vw, 14rem);
+      color: transparent;
+      -webkit-text-stroke: 2px var(--blood);
+      line-height: 0.85;
+      margin: 0;
+    }
+    .hero-subtitle {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      color: var(--grey);
+      font-size: 1.2rem;
+      margin-top: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .hero-text-line {
+      opacity: 0;
+      transform: translateY(60px);
+      animation: heroReveal 1s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    }
+    .hero-text-line:nth-child(1) { animation-delay: 0.2s; }
+    .hero-text-line:nth-child(2) { animation-delay: 0.4s; }
+    .hero-text-line:nth-child(3) { animation-delay: 0.6s; }
+    .hero-text-line:nth-child(4) { animation-delay: 0.8s; }
+    @keyframes heroReveal { to { opacity: 1; transform: translateY(0); } }
+
+    .hero-indicators {
+      position: absolute;
+      bottom: 60px;
+      display: flex;
+      gap: 15px;
+      z-index: 2;
+    }
+    .hero-indicators .dot {
+      width: 8px; height: 8px;
+      background: var(--blood);
+      border-radius: 50%;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: all 0.3s;
+    }
+    .hero-indicators .dot:hover { opacity: 1; transform: scale(1.5); }
+    
+    .down-arrow {
+      position: absolute;
+      bottom: 20px;
+      color: var(--blood);
+      font-size: 1.5rem;
+      animation: pulseArrow 2s infinite;
+    }
+    @keyframes pulseArrow {
+      0%, 100% { transform: translateY(0); opacity: 0.5; }
+      50% { transform: translateY(10px); opacity: 1; }
+    }
+
+    /* SHARED CELEB SECTION STYLES */
+    .celeb-section {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      overflow: hidden;
+      transition: box-shadow 0.08s ease-out; /* For beat sync */
+    }
+    .celeb-section.beat-flash {
+      box-shadow: inset 0 0 60px rgba(192, 0, 26, 0.15), 0 0 40px rgba(192, 0, 26, 0.15);
+    }
+    .celeb-container {
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+    }
+    .layout-left-img { flex-direction: row; }
+    .layout-right-img { flex-direction: row-reverse; }
+    
+    .celeb-img-panel {
+      position: relative;
+      height: 100vh;
+      clip-path: inset(0 100% 0 0);
+      transition: clip-path 0.9s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .celeb-img-panel img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    .in-view .celeb-img-panel { clip-path: inset(0 0 0 0); }
+    
+    .celeb-text-panel {
+      padding: 4rem 6rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      opacity: 0;
+      transition: transform 0.8s ease-out, opacity 0.8s ease-out;
+      z-index: 2;
+    }
+    .layout-left-img .celeb-text-panel { transform: translateX(80px); }
+    .layout-right-img .celeb-text-panel { transform: translateX(-80px); }
+    .in-view .celeb-text-panel { transform: translateX(0); opacity: 1; }
+
+    /* SPECIFIC LAYOUT WIDTHS */
+    #celeb-1 .celeb-img-panel { width: 60%; }
+    #celeb-1 .celeb-text-panel { width: 40%; }
+    #celeb-2 .celeb-img-panel { width: 60%; }
+    #celeb-2 .celeb-text-panel { width: 40%; }
+    #celeb-3 .celeb-img-panel { width: 55%; }
+    #celeb-3 .celeb-text-panel { width: 45%; }
+    #celeb-4 .celeb-img-panel { width: 60%; }
+    #celeb-4 .celeb-text-panel { width: 40%; }
+
+    /* TYPOGRAPHY IN SECTIONS */
+    .celeb-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(3rem, 6vw, 5rem);
+      color: var(--white);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .tag {
+      background: var(--blood);
+      color: var(--white);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      padding: 4px 10px;
+      margin-left: 15px;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .real-identity {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--grey);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    .stats-row {
+      display: flex;
+      gap: 15px;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      border-top: 3px solid var(--blood);
+      padding: 15px 20px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 120px;
+    }
+    .stat-card span {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      color: var(--white);
+      line-height: 1;
+    }
+    .stat-card label {
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.9rem;
+      color: var(--grey);
+      margin-top: 5px;
+      letter-spacing: 1px;
+    }
+    .celeb-quote {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-style: italic;
+      font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+      color: #eaeaea;
+      margin: 2rem 0;
+      line-height: 1.4;
+      border-left: 4px solid var(--blood);
+      padding-left: 1rem;
+    }
+    .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    }
+    .in-view .word {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .call-out {
+      font-family: 'Bebas Neue', sans-serif;
+      color: var(--blood);
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      letter-spacing: 1px;
+      margin-top: 1rem;
+    }
+
+    /* SECTION SPECIFICS */
+    /* Sec 1: Cavill */
+    #celeb-1 .img-overlay {
+      position: absolute;
+      top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.35);
+      -webkit-mask-image: linear-gradient(to right, black 60%, transparent 100%);
+      mask-image: linear-gradient(to right, black 60%, transparent 100%);
+    }
+    .underline-anim { position: relative; display: inline-block; }
+    .underline-anim::after {
+      content: ''; position: absolute;
+      left: 0; bottom: -5px; height: 3px; width: 0;
+      background: var(--blood);
+      transition: width 1s ease-out 0.8s;
+    }
+    .in-view .underline-anim::after { width: 100%; }
+    .watermark {
+      position: absolute;
+      right: 5%; bottom: -5%;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 25rem;
+      color: var(--white);
+      opacity: 0.03;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Sec 2: Hemsworth */
+    #celeb-2 .celeb-text-panel {
+      background: radial-gradient(circle at center, rgba(138, 106, 0, 0.06) 0%, var(--charcoal) 70%);
+    }
+    #celeb-2 .img-overlay {
+      position: absolute; top:0; left:0; right:0; bottom:0;
+      -webkit-mask-image: linear-gradient(to left, black 60%, transparent 100%);
+      mask-image: linear-gradient(to left, black 60%, transparent 100%);
+      background: rgba(0,0,0,0.2);
+    }
+
+    /* Sec 3: Evans */
+    #celeb-3 .celeb-text-panel {
+      background: radial-gradient(circle at center, #00010d 0%, var(--black) 70%);
+    }
+    .evans-callout {
+      display: flex; align-items: center; gap: 15px; color: var(--white);
+    }
+    .shield-icon {
+      width: 25px; height: 30px;
+      border: 2px solid var(--blood);
+      border-top-width: 4px;
+      border-radius: 0 0 15px 15px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .shield-icon::after {
+      content: ''; position: absolute;
+      top: 3px; left: 3px; right: 3px; bottom: 3px;
+      border: 1px solid var(--blood);
+      border-radius: 0 0 10px 10px;
+    }
+
+    /* Sec 4: Aditya */
+    #celeb-4 .celeb-text-panel {
+      background: radial-gradient(circle at center, rgba(74, 31, 0, 0.06) 0%, var(--black) 70%);
+    }
+    .desi-border {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 12px;
+      background: repeating-linear-gradient(45deg, var(--blood) 0, var(--blood) 6px, transparent 6px, transparent 12px);
+    }
+
+    /* Sec 5: Roman Reigns */
+    .roman-reigns {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .roman-bg {
+      position: absolute; top:0; left:0; right:0; bottom:0;
+      background-size: cover; background-position: center top;
+      z-index: 0;
+    }
+    .roman-bg::after {
+      content:''; position:absolute; top:0;left:0;right:0;bottom:0;
+      background: rgba(0,0,0,0.6);
+    }
+    .roman-reigns .center-layout {
+      position: relative; z-index: 2;
+      opacity: 0; transform: translateY(100px);
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.8s ease-out;
+      display: flex; flex-direction: column; align-items: center; width: 100%; padding: 2rem;
+    }
+    .in-view.roman-reigns .center-layout { transform: translateY(0); opacity: 1; }
+    
+    .roman-name-container {
+      display: flex; align-items: center; justify-content: center; gap: 20px;
+    }
+    .slash {
+      width: 12px; height: clamp(4rem, 12vw, 9rem);
+      background: var(--blood);
+      transform: skewX(-20deg);
+    }
+    .roman-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(5rem, 15vw, 11rem);
+      color: var(--white);
+      text-shadow: 0 0 30px rgba(192,0,26,0.6);
+      line-height: 0.9; margin: 0;
+    }
+    .roman-tag {
+      font-family: 'Bebas Neue', sans-serif; color: var(--blood);
+      letter-spacing: 0.4em; font-size: 1.5rem; margin: 1rem 0;
+    }
+    .roman-reigns .stats-row { justify-content: center; width: 100%; max-width: 800px; }
+    .roman-reigns .celeb-quote {
+      border: none; max-width: 700px; text-align: center; padding: 0; font-size: clamp(1.3rem, 3vw, 2rem);
+    }
+    .roman-glow { text-shadow: 0 0 20px rgba(192,0,26,0.8); text-align: center;}
+
+    /* CTA SECTION */
+    .cta-section {
+      min-height: 100vh; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center;
+      position: relative; overflow: hidden; background: var(--black); padding: 2rem;
+    }
+    .pulse-ring {
+      position: absolute; width: 40vw; height: 40vw; border-radius: 50%;
+      background: radial-gradient(circle, rgba(192,0,26,0.15) 0%, transparent 70%);
+      animation: pulseRing 4s infinite alternate ease-in-out; z-index: 0;
+    }
+    @keyframes pulseRing { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.5); opacity: 1; } }
+    .cta-content { z-index: 1; display: flex; flex-direction: column; align-items: center;}
+    .cta-label { font-family: 'DM Sans', sans-serif; color: var(--grey); letter-spacing: 2px; margin-bottom: 1rem; }
+    .cta-title-1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 14vw, 11rem); color: var(--white); line-height: 0.9; margin:0;}
+    .cta-title-2 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 14vw, 11rem); color: transparent; -webkit-text-stroke: 2px var(--blood); line-height: 0.9; margin:0 0 2rem 0;}
+    .cta-p { font-family: 'Barlow Condensed', sans-serif; color: var(--grey); max-width: 500px; font-size: 1.2rem; margin-bottom: 3rem; }
+    
+    .cta-buttons { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .cta-btn-filled {
+      background: var(--blood); color: var(--white); border: none;
+      padding: 1rem 2.5rem; font-family: 'Bebas Neue', sans-serif; font-size: 2rem;
+      cursor: pointer; transition: all 0.3s;
+    }
+    .cta-btn-filled:hover { transform: scale(1.05); background: var(--neon); }
+    .cta-btn-outline {
+      background: transparent; color: var(--white); border: 2px solid var(--blood);
+      padding: 1rem 2.5rem; font-family: 'Bebas Neue', sans-serif; font-size: 2rem;
+      cursor: pointer; transition: all 0.3s;
+    }
+    .cta-btn-outline:hover { background: rgba(192,0,26,0.1); }
+    .cta-tiny { font-family: 'DM Sans', sans-serif; color: var(--grey); font-style: italic; font-size: 0.8rem; margin-top: 2rem; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .layout-left-img, .layout-right-img { flex-direction: column !important; }
+      .celeb-img-panel { width: 100% !important; height: 50vh; }
+      .celeb-text-panel { width: 100% !important; padding: 3rem 2rem; }
+      #celeb-1 .img-overlay { mask-image: linear-gradient(to bottom, black 60%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%); }
+      #celeb-2 .img-overlay { mask-image: linear-gradient(to bottom, black 60%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%); }
+      .sidebar {
+        top: auto; bottom: 100px; left: 50%; transform: translateX(-50%);
+        flex-direction: row; gap: 20px;
+      }
+      .sidebar::before { display: none; }
+      .phonk-btn { bottom: 20px; right: 20px; padding: 8px 15px; font-size: 1rem;}
+      .watermark { font-size: 15rem; bottom: 0; right: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Overlays -->
+  <div class="noise-overlay">
+    <svg width="100%" height="100%">
+      <filter id="noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/>
+      </filter>
+      <rect width="100%" height="100%" filter="url(#noise)"/>
+    </svg>
+  </div>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <!-- UI Elements -->
+  <div id="scroll-progress-bar"></div>
+  
+  <div class="sidebar">
+    <div class="dot active" data-target="hero" title="Start"></div>
+    <div class="dot" data-target="celeb-1" title="Henry Cavill"></div>
+    <div class="dot" data-target="celeb-2" title="Chris Hemsworth"></div>
+    <div class="dot" data-target="celeb-3" title="Chris Evans"></div>
+    <div class="dot" data-target="celeb-4" title="Aditya Roy Kapoor"></div>
+    <div class="dot" data-target="celeb-5" title="Roman Reigns"></div>
+  </div>
+
+  <button id="phonk-toggle" class="phonk-btn">▶ PHONK</button>
+  <canvas id="visualizer" class="beat-visualizer"></canvas>
+
+  <!-- HERO SECTION -->
+  <section class="hero" id="hero">
+    <div class="hero-bg-shapes">
+      <div class="lightning"></div>
+      <div class="lightning"></div>
+      <div class="lightning"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-text-line hero-label">NO EXCUSES. NO SHORTCUTS.</div>
+      <h1 class="hero-text-line hero-title-1">BEAST</h1>
+      <h1 class="hero-text-line hero-title-2">MODE</h1>
+      <div class="hero-text-line hero-subtitle">Five men. One mission. No days off.</div>
+    </div>
+    <div class="hero-indicators">
+      <div class="dot" onclick="scrollToId('celeb-1')"></div>
+      <div class="dot" onclick="scrollToId('celeb-2')"></div>
+      <div class="dot" onclick="scrollToId('celeb-3')"></div>
+      <div class="dot" onclick="scrollToId('celeb-4')"></div>
+      <div class="dot" onclick="scrollToId('celeb-5')"></div>
+    </div>
+    <div class="down-arrow">↓</div>
+  </section>
+
+  <!-- SECTION 1: HENRY CAVILL -->
+  <section class="celeb-section" id="celeb-1">
+    <div class="celeb-container layout-left-img">
+      <div class="celeb-img-panel">
+        <img src="https://imgs.search.brave.com/_kdmYVjvDnfEHyHAUfj25ieCu4qoyjlZE2lG4FvtoH4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJjYXQuY29t/L3cvZnVsbC83LzAv/Yy80NzE3NTEtMzg0/MHgyMTYwLWRlc2t0/b3AtNGstaGVucnkt/Y2F2aWxsLXN1cGVy/bWFuLWJhY2tncm91/bmQtcGhvdG8uanBn" alt="Henry Cavill">
+        <div class="img-overlay"></div>
+      </div>
+      <div class="celeb-text-panel">
+        <div class="watermark">01</div>
+        <h2 class="celeb-name">HENRY CAVILL <span class="tag">THE SUPERMAN BUILD</span></h2>
+        <div class="stats-row">
+          <div class="stat-card"><span>6'1"</span><label>HEIGHT</label></div>
+          <div class="stat-card"><span>245 lbs</span><label>PEAK WEIGHT</label></div>
+          <div class="stat-card"><span>4 AM</span><label>WAKE UP TIME</label></div>
+        </div>
+        <p class="celeb-quote">"While you were sleeping, Henry Cavill was already two hours into his workout. The cape isn't costume — it's earned."</p>
+        <h3 class="call-out underline-anim">YOUR BODY IS YOUR SUPERPOWER.</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: CHRIS HEMSWORTH -->
+  <section class="celeb-section" id="celeb-2">
+    <div class="celeb-container layout-right-img">
+      <div class="celeb-img-panel">
+        <img src="https://imgs.search.brave.com/DrcMCxEbPTX0x-SZI2_Ighaq7ca5IJUl4hsxkzL_Rtw/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tYW5v/Zm1hbnkuY29tL3dw/LWNvbnRlbnQvdXBs/b2Fkcy8yMDI0LzAy/L0NocmlzLUhlbXN3/b3J0aHMtVGhvci1E/aWV0LVdvcmtvdXQt/UGxhbi1DaHJpcy1I/ZW1zd29ydGgtV29y/a291dC5qcGc" alt="Chris Hemsworth">
+        <div class="img-overlay"></div>
+      </div>
+      <div class="celeb-text-panel">
+        <div class="watermark">02</div>
+        <h2 class="celeb-name">CHRIS HEMSWORTH <span class="tag">THE THOR PROTOCOL</span></h2>
+        <div class="real-identity">Actor · Fitness Entrepreneur · Thor in MCU</div>
+        <div class="stats-row">
+          <div class="stat-card"><span>6'3"</span><label>HEIGHT</label></div>
+          <div class="stat-card"><span>220 lbs</span><label>THOR WEIGHT</label></div>
+          <div class="stat-card"><span>6 DAYS</span><label>TRAINING/WEEK</label></div>
+        </div>
+        <p class="celeb-quote">"Chris Hemsworth didn't just play a god. He built the body of one. Every hammer lift, every sprint — he chose discomfort over mediocrity. What's your excuse?"</p>
+        <h3 class="call-out">WORTHY ISN'T GIVEN. IT'S BUILT.</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: CHRIS EVANS -->
+  <section class="celeb-section" id="celeb-3">
+    <div class="celeb-container layout-left-img">
+      <div class="celeb-img-panel">
+        <img src="https://imgs.search.brave.com/yKPI8dB-boAqidKSQj_VyStU95QgvOZvp3dw-vSNIDI/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9md21l/ZGlhLmZhbmRvbXdp/cmUuY29tL3dwLWNv/bnRlbnQvdXBsb2Fk/cy8yMDI1LzA4LzIy/MDkzMjQyL2Nocmlz/LWV2YW5zLWNhcHRh/aW4tYW1lcmljYS10/aGUtd2ludGVyLXNv/bGRpZXItMTI4MHg3/MjAtMS53ZWJwP3dp/ZHRoPTE5MjAmaGVp/Z2h0PTEwODAmcXVh/bGl0eT04NSZzaGFy/cGVuPXRydWUmZm9y/bWF0PXdlYnAmZml0/PWNvbnRhaW4" alt="Chris Evans">
+        <div class="img-overlay"></div>
+      </div>
+      <div class="celeb-text-panel">
+        <div class="watermark">03</div>
+        <h2 class="celeb-name">CHRIS EVANS <span class="tag">THE CAPTAIN'S BLUEPRINT</span></h2>
+        <div class="real-identity">Actor · Captain America in MCU · Body transformation icon</div>
+        <div class="stats-row">
+          <div class="stat-card"><span>6'0"</span><label>HEIGHT</label></div>
+          <div class="stat-card"><span>185 lbs</span><label>PEAK LEAN MASS</label></div>
+          <div class="stat-card"><span>12 WKS</span><label>CAP TRANSFORMATION</label></div>
+        </div>
+        <p class="celeb-quote">"He went from skinny kid to the most iconic physique in superhero history — in 12 weeks of pure grit. Captain America is a mindset before it's a body."</p>
+        <h3 class="call-out evans-callout"><div class="shield-icon"></div> DO YOU WANT TO BE WORTHY OF THE SHIELD?</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: ADITYA ROY KAPOOR -->
+  <section class="celeb-section" id="celeb-4">
+    <div class="celeb-container layout-right-img">
+      <div class="celeb-img-panel">
+        <img src="https://imgs.search.brave.com/lXcajZJsVLBBsS_G9E_kEUdEqFLjKOqVbNup6IHhBGc/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzLzgzL2My/LzY3LzgzYzI2Nzky/ZWVhM2Q5ZDBiZGI3/YTFiYTA0MDYzYjJk/LmpwZw" alt="Aditya Roy Kapoor">
+        <div class="img-overlay"></div>
+      </div>
+      <div class="celeb-text-panel">
+        <div class="desi-border"></div>
+        <div class="watermark">04</div>
+        <h2 class="celeb-name">ADITYA ROY KAPOOR <span class="tag">BOLLYWOOD'S FINEST</span></h2>
+        <div class="real-identity">Actor · Style Icon · Fitness Inspiration</div>
+        <div class="stats-row">
+          <div class="stat-card"><span>6'1"</span><label>HEIGHT</label></div>
+          <div class="stat-card"><span>175 lbs</span><label>LEAN BUILD</label></div>
+          <div class="stat-card"><span>ZERO</span><label>EXCUSES MADE</label></div>
+        </div>
+        <p class="celeb-quote">"Aditya didn't just get fit for a role — he made it his identity. The most dangerous thing a man can do? Decide he's done being average."</p>
+        <h3 class="call-out">DESI BOYS BUILD DIFFERENT.</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: ROMAN REIGNS -->
+  <section class="celeb-section roman-reigns" id="celeb-5">
+    <div class="roman-bg" style="background-image: url('https://imgs.search.brave.com/hwboYnv2uWXWwRzmVUh7oSI0bu31JrUxxGLNy0EhAwA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzL2I2L2Ix/Lzg5L2I2YjE4OWJi/NjVhNzMwZDE5MzVk/NjEzMmFhZmIxMDM2/LmpwZw')"></div>
+    <div class="center-layout">
+      <div class="roman-name-container">
+        <div class="slash"></div>
+        <h2 class="roman-name">ROMAN REIGNS</h2>
+        <div class="slash"></div>
+      </div>
+      <div class="roman-tag">THE TRIBAL CHIEF</div>
+      <div class="real-identity">WWE Universal Champion · Combat Athlete · Built Different</div>
+      
+      <div class="stats-row">
+        <div class="stat-card"><span>6'3"</span><label>HEIGHT</label></div>
+        <div class="stat-card"><span>265 lbs</span><label>WALK-IN WEIGHT</label></div>
+        <div class="stat-card"><span>15 YRS</span><label>GRINDING</label></div>
+        <div class="stat-card"><span>#1</span><label>REGARDLESS</label></div>
+      </div>
+      
+      <p class="celeb-quote">"Roman Reigns survived leukemia, came back, and became the most dominant champion in WWE history. Your skipped leg day has no excuse in this universe."</p>
+      
+      <h3 class="call-out roman-glow">ACKNOWLEDGE YOURSELF.<br>THE GYM IS YOUR RING.</h3>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="cta-section">
+    <div class="pulse-ring"></div>
+    <div class="cta-content">
+      <div class="cta-label">THE ONLY QUESTION THAT MATTERS</div>
+      <h2 class="cta-title-1">ARE YOU</h2>
+      <h2 class="cta-title-2">STARTING TODAY?</h2>
+      <p class="cta-p">"Every one of these men woke up one day and decided. Not tomorrow. Not Monday. Today. The gym doesn't care about your mood. It only counts your reps."</p>
+      
+      <div class="cta-buttons">
+        <button class="cta-btn-filled">YES, LET'S GO →</button>
+        <button class="cta-btn-outline" onclick="scrollToId('hero')">I NEED MORE MOTIVATION</button>
+      </div>
+      <div class="cta-tiny">No subscription. No gear. Just start.</div>
+    </div>
+  </section>
+
+  <script>
+    // --- UTILS & UI LOGIC ---
+    function scrollToId(id) {
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Parse quotes for staggered word animation
+    document.querySelectorAll('.celeb-quote').forEach(quote => {
+      const text = quote.textContent;
+      const words = text.trim().split(/\s+/);
+      quote.innerHTML = '';
+      words.forEach((w, i) => {
+        const span = document.createElement('span');
+        span.className = 'word';
+        span.textContent = w + ' ';
+        span.style.transitionDelay = `${i * 0.2}s`;
+        quote.appendChild(span);
+      });
+    });
+
+    // Intersection Observer
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          entry.target.classList.add('active'); // active for beat sync
+          
+          // Update sidebar
+          document.querySelectorAll('.sidebar .dot').forEach(dot => {
+            dot.classList.remove('active');
+            if (dot.getAttribute('data-target') === entry.target.id) {
+              dot.classList.add('active');
+            }
+          });
+        } else {
+          entry.target.classList.remove('active');
+        }
+      });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.hero, .celeb-section').forEach(sec => observer.observe(sec));
+
+    // Scroll Progress Bar
+    window.addEventListener('scroll', () => {
+      const docHeight = document.body.scrollHeight - window.innerHeight;
+      const progress = window.scrollY / docHeight;
+      document.getElementById('scroll-progress-bar').style.transform = `scaleX(${progress})`;
+    });
+
+    // Sidebar click
+    document.querySelectorAll('.sidebar .dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        scrollToId(dot.getAttribute('data-target'));
+      });
+    });
+
+    // --- PHONK AUDIO GENERATION (WEB AUDIO API) ---
+    let audioCtx;
+    let isPlaying = false;
+    let audioInitialized = false;
+    let nextNoteTime = 0;
+    let current16thNote = 0;
+    const lookahead = 25.0; // ms
+    const scheduleAheadTime = 0.1; // s
+    let timerID;
+
+    let masterGain, analyser, convolver, noiseBuffer;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.7;
+      
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 128;
+      
+      masterGain.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      
+      // Reverb Convolver
+      convolver = audioCtx.createConvolver();
+      const length = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        const channel = buffer.getChannelData(c);
+        for (let i = 0; i < length; i++) {
+          const t = i / audioCtx.sampleRate;
+          channel[i] = (Math.random() * 2 - 1) * Math.exp(-t * 3);
+        }
+      }
+      convolver.buffer = buffer;
+      const reverbGain = audioCtx.createGain();
+      reverbGain.gain.value = 0.3;
+      convolver.connect(reverbGain);
+      reverbGain.connect(masterGain);
+
+      // Pre-generate white noise
+      const noiseSize = audioCtx.sampleRate * 1;
+      noiseBuffer = audioCtx.createBuffer(1, noiseSize, audioCtx.sampleRate);
+      const out = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseSize; i++) {
+        out[i] = Math.random() * 2 - 1;
+      }
+    }
+
+    // Distortion curve for bass
+    const curveLength = 4000;
+    const distCurve = new Float32Array(curveLength);
+    for (let i = 0; i < curveLength; ++i) {
+      const x = i * 2 / curveLength - 1;
+      distCurve[i] = Math.tanh(x * 4);
+    }
+
+    function playKick(time) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(masterGain);
+      
+      osc.frequency.setValueAtTime(150, time);
+      osc.frequency.exponentialRampToValueAtTime(40, time + 0.08);
+      
+      gain.gain.setValueAtTime(1, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+      
+      osc.start(time);
+      osc.stop(time + 0.2);
+    }
+
+    function playSnare(time) {
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 2000;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(1, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      gain.connect(convolver); // Reverb on snare
+      
+      noise.start(time);
+      noise.stop(time + 0.15);
+    }
+
+    function playHiHat(time) {
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 8000;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.5, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + 0.06);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      
+      noise.start(time);
+      noise.stop(time + 0.06);
+    }
+
+    function playBass(freq, time) {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sawtooth';
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 200;
+      
+      const distortion = audioCtx.createWaveShaper();
+      distortion.curve = distCurve;
+      distortion.oversample = '4x';
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.35, time);
+      gain.gain.setTargetAtTime(0.01, time + 0.3, 0.1);
+      
+      osc.connect(filter);
+      filter.connect(distortion);
+      distortion.connect(gain);
+      gain.connect(masterGain);
+      
+      osc.frequency.setValueAtTime(freq, time);
+      osc.start(time);
+      osc.stop(time + 0.4);
+    }
+
+    function playMelody(freq, time) {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'square';
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 800;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.08, time);
+      gain.gain.setTargetAtTime(0.01, time + 0.1, 0.05);
+      
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      gain.connect(convolver);
+      
+      osc.frequency.setValueAtTime(freq, time);
+      osc.start(time);
+      osc.stop(time + 0.214);
+    }
+
+    function triggerBeatSync() {
+      const activeSections = document.querySelectorAll('.celeb-section.active');
+      activeSections.forEach(sec => {
+        sec.classList.add('beat-flash');
+        setTimeout(() => {
+          sec.classList.remove('beat-flash');
+        }, 80);
+      });
+    }
+
+    function scheduleNote(beatNumber, time) {
+      // Kick (every beat)
+      if (beatNumber % 4 === 0) {
+        playKick(time);
+        triggerBeatSync();
+      }
+      // Snare (beats 2 and 4)
+      if (beatNumber % 16 === 4 || beatNumber % 16 === 12) {
+        playSnare(time);
+      }
+      // Hi-hat (every 8th note)
+      if (beatNumber % 2 === 0) {
+        playHiHat(time);
+      }
+      // Melody (every 8th note)
+      if (beatNumber % 2 === 0) {
+        const melodyPattern = [261, 220, 196, 220, 261, 246, 220, 196];
+        const noteIdx = (beatNumber / 2) % 8;
+        playMelody(melodyPattern[noteIdx], time);
+      }
+      // Bassline (cycling every beat)
+      if (beatNumber % 4 === 0) {
+        const bassPattern = [55, 55, 41, 46, 55, 55, 41, 41];
+        const noteIdx = (beatNumber / 4) % 8;
+        playBass(bassPattern[noteIdx], time);
+      }
+    }
+
+    function nextNote() {
+      const secondsPerBeat = 60.0 / 140.0;
+      const secondsPer16th = secondsPerBeat / 4;
+      nextNoteTime += secondsPer16th;
+      current16thNote++;
+      if (current16thNote === 16) {
+        current16thNote = 0;
+      }
+    }
+
+    function scheduler() {
+      while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+        scheduleNote(current16thNote, nextNoteTime);
+        nextNote();
+      }
+      timerID = setTimeout(scheduler, lookahead);
+    }
+
+    function drawVisualizer() {
+      if (!isPlaying) return;
+      requestAnimationFrame(drawVisualizer);
+      
+      const canvas = document.getElementById('visualizer');
+      const ctx = canvas.getContext('2d');
+      
+      // Handle canvas resize
+      if(canvas.width !== window.innerWidth) {
+        canvas.width = window.innerWidth;
+        canvas.height = 40;
+      }
+      
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteFrequencyData(dataArray);
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const barWidth = (canvas.width / bufferLength) * 2.5;
+      let x = 0;
+      
+      for(let i = 0; i < bufferLength; i++) {
+        const barHeight = (dataArray[i] / 255) * canvas.height;
+        
+        const gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
+        gradient.addColorStop(0, '#c0001a');
+        gradient.addColorStop(1, '#ff2d2d');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        
+        x += barWidth + 1;
+      }
+    }
+
+    function startAudioInteraction() {
+      if (audioInitialized) return;
+      audioInitialized = true;
+      initAudio();
+      audioCtx.resume().then(() => {
+        isPlaying = true;
+        nextNoteTime = audioCtx.currentTime + 0.1;
+        scheduler();
+        drawVisualizer();
+        document.getElementById('phonk-toggle').innerHTML = '⏸ PHONK';
+        document.getElementById('phonk-toggle').classList.add('playing');
+      });
+    }
+
+    // Bind to interactions for AudioContext
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, startAudioInteraction, { once: true });
+    });
+
+    document.getElementById('phonk-toggle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!audioInitialized) {
+        startAudioInteraction();
+      } else {
+        if (isPlaying) {
+          isPlaying = false;
+          clearTimeout(timerID);
+          masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+          e.target.innerHTML = '▶ PHONK';
+          e.target.classList.remove('playing');
+          
+          // Clear visualizer
+          const canvas = document.getElementById('visualizer');
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+          isPlaying = true;
+          audioCtx.resume();
+          masterGain.gain.setTargetAtTime(0.7, audioCtx.currentTime, 0.1);
+          nextNoteTime = audioCtx.currentTime + 0.1;
+          scheduler();
+          drawVisualizer();
+          e.target.innerHTML = '⏸ PHONK';
+          e.target.classList.add('playing');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Monkey Math</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@600&family=DM+Sans:wght@700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'DM Sans', sans-serif;
+            user-select: none;
+        }
+
+        #app {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(180deg, #0a1628 0%, #1a3a2a 100%);
+        }
+
+        /* Background Layers */
+        .bg-layer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .mountains {
+            height: 60%;
+            background: linear-gradient(to top, #0f2b2b 0%, #1a3a2a 50%, transparent 100%);
+            clip-path: polygon(0 100%, 0 50%, 15% 35%, 30% 60%, 55% 25%, 75% 55%, 100% 40%, 100% 100%);
+            filter: blur(2px);
+            z-index: 1;
+        }
+
+        .canopy {
+            height: 50%;
+            background: #0c2016;
+            clip-path: polygon(0 100%, 0 40%, 10% 25%, 25% 45%, 45% 15%, 65% 55%, 85% 25%, 100% 45%, 100% 100%);
+            filter: blur(1px);
+            z-index: 2;
+            bottom: 5%;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 22%;
+            background: radial-gradient(ellipse at 50% 100%, #3e2723 0%, #1b100e 100%);
+            box-shadow: inset 0 30px 40px -20px #2e7d32;
+            z-index: 3;
+        }
+
+        /* Particles */
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .firefly {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #cddc39;
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px #cddc39;
+            animation: float 10s infinite ease-in-out alternate, blink 3s infinite alternate;
+            opacity: 0;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            33% {
+                transform: translate(30px, -40px);
+            }
+
+            66% {
+                transform: translate(-20px, -80px);
+            }
+
+            100% {
+                transform: translate(10px, -120px);
+            }
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        /* Scene Container */
+        .scene-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 900px;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Shadows */
+        .shadow {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            filter: blur(5px);
+            z-index: 4;
+        }
+
+        .tree-shadow {
+            bottom: 16%;
+            right: 5%;
+            width: 140px;
+            height: 30px;
+            margin-right: -20px;
+        }
+
+        .monkey-shadow {
+            bottom: 16%;
+            right: 45%;
+            width: 100px;
+            height: 20px;
+            margin-right: -10px;
+            transition: all 0.3s;
+        }
+
+        /* Tree */
+        .tree {
+            position: absolute;
+            bottom: 18%;
+            right: 5%;
+            width: 100px;
+            height: 55vh;
+            min-height: 400px;
+            z-index: 6;
+            perspective: 1000px;
+        }
+
+        .trunk {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%) rotateX(5deg);
+            transform-origin: bottom;
+            width: 50px;
+            height: 100%;
+            border-radius: 15px 15px 0 0;
+            background: repeating-linear-gradient(90deg, #4e342e, #4e342e 8px, #3e2723 8px, #3e2723 16px);
+            box-shadow: inset 15px 0 20px rgba(0, 0, 0, 0.6), inset -10px 0 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .leaves {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            z-index: 2;
+        }
+
+        .leaf-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0% 50%;
+        }
+
+        .leaf {
+            width: 180px;
+            height: 60px;
+            background: #2e7d32;
+            border-radius: 50% 50% 0 50%;
+            box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.4);
+            animation: leafSway 4s ease-in-out infinite alternate;
+            transform-origin: 0% 50%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .leaf::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #81c784;
+            transform: translateY(-50%);
+        }
+
+        @keyframes leafSway {
+            0% {
+                transform: rotate(-5deg) translateY(0);
+            }
+
+            100% {
+                transform: rotate(5deg) translateY(5px);
+            }
+        }
+
+        .bananas-bunch {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 80px;
+            z-index: 5;
+        }
+
+        .banana {
+            width: 16px;
+            height: 50px;
+            background: #fdd835;
+            border-radius: 50% 50% 50% 50% / 80% 80% 20% 20%;
+            position: absolute;
+            left: 22px;
+            top: 10px;
+            transform-origin: top center;
+            box-shadow: inset -2px -4px 6px rgba(245, 127, 23, 0.5), 0 0 8px rgba(253, 216, 53, 0.6);
+        }
+
+        .banana::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: #558b2f;
+            border-radius: 2px;
+        }
+
+        .banana.falling {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+            animation: fall 0.8s cubic-bezier(0.25, 0.1, 0.3, 1.4) forwards;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            80% {
+                transform: translate(calc(var(--target-x) - var(--start-x)), calc(var(--target-y) - var(--start-y))) rotate(180deg) scale(1);
+            }
+
+            100% {
+                transform: translate(calc(var(--target-x) - var(--start-x)), calc(var(--target-y) - var(--start-y))) rotate(220deg) scale(0);
+            }
+        }
+
+        .sparkle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+            animation: sparkleAnim 0.5s forwards;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes sparkleAnim {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Monkey */
+        .monkey {
+            position: absolute;
+            bottom: 18%;
+            right: 45%;
+            width: 100px;
+            height: 120px;
+            z-index: 6;
+        }
+
+        .monkey-body {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 80px;
+            background: #5d4037;
+            border-radius: 40px 40px 30px 30px;
+        }
+
+        .monkey-belly {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: #d7ccc8;
+            border-radius: 50%;
+        }
+
+        .monkey-head {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            background: #5d4037;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .monkey-face {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56px;
+            height: 46px;
+            background: #d7ccc8;
+            border-radius: 30px 30px 20px 20px;
+            transition: background 0.3s;
+            overflow: hidden;
+        }
+
+        .monkey-brow {
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 4px;
+            background: #3e2723;
+            border-radius: 2px;
+            transition: all 0.2s;
+            opacity: 0;
+            z-index: 3;
+        }
+
+        .monkey-eye {
+            position: absolute;
+            top: 12px;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        .monkey-eye.left {
+            left: 10px;
+        }
+
+        .monkey-eye.right {
+            right: 10px;
+        }
+
+        .monkey-pupil {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 8px;
+            height: 8px;
+            background: #000;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .monkey-nostril {
+            position: absolute;
+            top: 26px;
+            width: 3px;
+            height: 4px;
+            background: #8d6e63;
+            border-radius: 50%;
+        }
+
+        .monkey-nostril.left {
+            left: 22px;
+        }
+
+        .monkey-nostril.right {
+            right: 22px;
+        }
+
+        .monkey-mouth {
+            position: absolute;
+            top: 34px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 2px;
+            background: #3e2723;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .monkey-ear {
+            position: absolute;
+            top: -25px;
+            width: 24px;
+            height: 24px;
+            background: #5d4037;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .monkey-ear::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #d7ccc8;
+            border-radius: 50%;
+        }
+
+        .monkey-ear.left {
+            left: 0px;
+        }
+
+        .monkey-ear.right {
+            right: 0px;
+        }
+
+        .monkey-arm {
+            position: absolute;
+            top: 10px;
+            width: 18px;
+            height: 50px;
+            background: #5d4037;
+            border-radius: 10px;
+            transform-origin: top center;
+            transition: transform 0.3s;
+            z-index: 1;
+        }
+
+        .monkey-arm.left {
+            left: -5px;
+            transform: rotate(15deg);
+        }
+
+        .monkey-arm.right {
+            right: -5px;
+            transform: rotate(-15deg);
+        }
+
+        .monkey-leg {
+            position: absolute;
+            bottom: -5px;
+            width: 20px;
+            height: 30px;
+            background: #3e2723;
+            border-radius: 10px;
+            z-index: 0;
+        }
+
+        .monkey-leg.left {
+            left: 10px;
+        }
+
+        .monkey-leg.right {
+            right: 10px;
+        }
+
+        .monkey-tail {
+            position: absolute;
+            bottom: 10px;
+            left: -25px;
+            width: 40px;
+            height: 50px;
+            border: 8px solid #5d4037;
+            border-top-color: transparent;
+            border-right-color: transparent;
+            border-radius: 0 0 0 30px;
+            transform-origin: right bottom;
+        }
+
+        /* Monkey Animations */
+        .monkey.idle .monkey-body {
+            animation: idleBreath 2s infinite ease-in-out;
+            transform-origin: bottom center;
+        }
+
+        @keyframes idleBreath {
+
+            0%,
+            100% {
+                transform: translateX(-50%) scaleY(1);
+            }
+
+            50% {
+                transform: translateX(-50%) scaleY(1.03);
+            }
+        }
+
+        .monkey.happy {
+            animation: happyJump 1.5s ease-in-out;
+        }
+
+        .monkey.happy .monkey-arm.left {
+            transform: rotate(-150deg);
+        }
+
+        .monkey.happy .monkey-arm.right {
+            transform: rotate(150deg);
+        }
+
+        .monkey.happy .monkey-mouth {
+            height: 12px;
+            border-radius: 0 0 12px 12px;
+            top: 32px;
+            background: #d32f2f;
+        }
+
+        .monkey.happy .monkey-tail {
+            animation: tailWag 0.3s infinite alternate;
+        }
+
+        @keyframes happyJump {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            20%,
+            60% {
+                transform: translateY(-30px);
+            }
+
+            40%,
+            80% {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes tailWag {
+            0% {
+                transform: rotate(-15deg);
+            }
+
+            100% {
+                transform: rotate(15deg);
+            }
+        }
+
+        .monkey.happy~.monkey-shadow {
+            animation: shadowShrink 1.5s ease-in-out;
+        }
+
+        @keyframes shadowShrink {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            20%,
+            60% {
+                transform: scale(0.6);
+                opacity: 0.2;
+            }
+
+            40%,
+            80% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+        }
+
+        .monkey.angry {
+            animation: angryShake 1s ease-in-out;
+        }
+
+        .monkey.angry .monkey-arm.left {
+            transform: rotate(130deg);
+        }
+
+        .monkey.angry .monkey-arm.right {
+            transform: rotate(-130deg);
+        }
+
+        .monkey.angry .monkey-face {
+            background: #ffcdd2;
+        }
+
+        .monkey.angry .monkey-brow {
+            width: 36px;
+            opacity: 1;
+        }
+
+        .monkey.angry .monkey-mouth {
+            width: 16px;
+            height: 8px;
+            border-radius: 8px;
+            top: 34px;
+        }
+
+        @keyframes angryShake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-8px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(8px);
+            }
+        }
+
+        .monkey.eating .monkey-mouth {
+            height: 16px;
+            border-radius: 50%;
+            top: 30px;
+            animation: chomp 0.2s 3 alternate;
+        }
+
+        @keyframes chomp {
+            0% {
+                height: 4px;
+            }
+
+            100% {
+                height: 16px;
+            }
+        }
+
+        .monkey.wave .monkey-arm.right {
+            animation: waveArm 1s ease-in-out;
+            transform-origin: top center;
+        }
+
+        @keyframes waveArm {
+
+            0%,
+            100% {
+                transform: rotate(-15deg);
+            }
+
+            25%,
+            75% {
+                transform: rotate(-130deg);
+            }
+
+            50% {
+                transform: rotate(-90deg);
+            }
+        }
+
+        /* UI */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 8vh;
+        }
+
+        .score-badge {
+            position: absolute;
+            top: 3vh;
+            left: 3vw;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .score-card {
+            background: rgba(46, 125, 50, 0.85);
+            backdrop-filter: blur(5px);
+            border: 2px solid #81c784;
+            border-radius: 0 30px 0 30px;
+            padding: 10px 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .score-text {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.5rem;
+            color: #ffd700;
+            margin: 0;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .banana-tracker {
+            display: flex;
+            gap: 4px;
+            margin-top: 5px;
+        }
+
+        .tracker-icon {
+            font-size: 1.2rem;
+            filter: grayscale(100%) opacity(0.3);
+            transition: all 0.3s;
+        }
+
+        .tracker-icon.filled {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.1);
+        }
+
+        .streak-indicator {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            color: #ff9800;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: none;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+            border: 1px solid rgba(255, 152, 0, 0.5);
+        }
+
+        .streak-indicator.active {
+            display: block;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .question-card {
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 24px;
+            padding: 3vh 5vw;
+            text-align: center;
+            pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            max-width: 90%;
+        }
+
+        .question-text {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            color: #fff;
+            margin: 0 0 20px 0;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .option-btn {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 50px;
+            padding: 10px 35px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 100px;
+            outline: none;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+            border-color: rgba(255, 215, 0, 0.6);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+        }
+
+        .option-btn:active {
+            transform: translateY(1px);
+        }
+
+        .option-btn.correct {
+            background: rgba(76, 175, 80, 0.4);
+            border-color: #4caf50;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        }
+
+        .option-btn.wrong {
+            background: rgba(244, 67, 54, 0.4);
+            border-color: #f44336;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
+            animation: btnShake 0.6s;
+        }
+
+        @keyframes btnShake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20%,
+            60% {
+                transform: translateX(-5px);
+            }
+
+            40%,
+            80% {
+                transform: translateX(5px);
+            }
+        }
+
+        /* Premium Details overlays */
+        .overlay-scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(to bottom, transparent, transparent 1px, rgba(0, 0, 0, 0.03) 1px, rgba(0, 0, 0, 0.03) 2px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .overlay-vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, rgba(0, 0, 0, 0.6) 150%);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .intro-fade {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 2000;
+            transition: opacity 1.2s ease-in-out;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Backgrounds -->
+        <div class="bg-layer mountains"></div>
+        <div class="bg-layer canopy"></div>
+        <div class="ground"></div>
+
+        <div class="particles" id="particles"></div>
+
+        <div class="scene-container">
+            <div class="shadow tree-shadow"></div>
+            <div class="monkey-shadow shadow"></div>
+
+            <div class="tree">
+                <div class="trunk"></div>
+                <div class="leaves">
+                    <div class="leaf-wrapper" style="transform: rotate(-20deg); top: -20px; left: -10px;">
+                        <div class="leaf"></div>
+                    </div>
+                    <div class="leaf-wrapper" style="transform: rotate(160deg); top: -10px; left: 10px;">
+                        <div class="leaf"></div>
+                    </div>
+                    <div class="leaf-wrapper" style="transform: rotate(20deg); top: -40px; left: -5px;">
+                        <div class="leaf"></div>
+                    </div>
+                    <div class="leaf-wrapper" style="transform: rotate(140deg); top: -30px; left: 5px;">
+                        <div class="leaf"></div>
+                    </div>
+                    <div class="leaf-wrapper" style="transform: rotate(-60deg); top: 10px; left: -15px;">
+                        <div class="leaf"></div>
+                    </div>
+                    <div class="leaf-wrapper" style="transform: rotate(220deg); top: 15px; left: 15px;">
+                        <div class="leaf"></div>
+                    </div>
+                    <div class="leaf-wrapper" style="transform: rotate(80deg); top: -50px; left: 0px;">
+                        <div class="leaf"></div>
+                    </div>
+                </div>
+                <div class="bananas-bunch" id="bananas-bunch"></div>
+            </div>
+
+            <div class="monkey idle" id="monkey">
+                <div class="monkey-tail"></div>
+                <div class="monkey-leg left"></div>
+                <div class="monkey-leg right"></div>
+                <div class="monkey-body">
+                    <div class="monkey-belly"></div>
+                    <div class="monkey-arm left"></div>
+                    <div class="monkey-arm right"></div>
+                    <div class="monkey-head">
+                        <div class="monkey-ear left"></div>
+                        <div class="monkey-ear right"></div>
+                        <div class="monkey-face">
+                            <div class="monkey-brow"></div>
+                            <div class="monkey-eye left">
+                                <div class="monkey-pupil"></div>
+                            </div>
+                            <div class="monkey-eye right">
+                                <div class="monkey-pupil"></div>
+                            </div>
+                            <div class="monkey-nostril left"></div>
+                            <div class="monkey-nostril right"></div>
+                            <div class="monkey-mouth"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ui-layer">
+            <div class="score-badge">
+                <div class="score-card">
+                    <p class="score-text" id="score-val">0</p>
+                    <div class="banana-tracker">
+                        <span class="tracker-icon">🍌</span>
+                        <span class="tracker-icon">🍌</span>
+                        <span class="tracker-icon">🍌</span>
+                        <span class="tracker-icon">🍌</span>
+                        <span class="tracker-icon">🍌</span>
+                    </div>
+                </div>
+                <div class="streak-indicator" id="streak">
+                    🔥 <span id="streak-count">3</span>
+                </div>
+            </div>
+
+            <div class="question-card">
+                <h1 class="question-text" id="question-text"></h1>
+                <div class="options" id="options"></div>
+            </div>
+        </div>
+
+        <div class="overlay-scanlines"></div>
+        <div class="overlay-vignette"></div>
+        <div class="intro-fade" id="intro-fade"></div>
+    </div>
+
+    <script>
+        // Audio System
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playCorrect() {
+            initAudio();
+            const t = audioCtx.currentTime;
+            const freqs = [523, 659, 784];
+            freqs.forEach((f, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, t + i * 0.08);
+                gain.gain.setValueAtTime(0, t + i * 0.08);
+                gain.gain.linearRampToValueAtTime(0.1, t + i * 0.08 + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.3);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(t + i * 0.08); osc.stop(t + i * 0.08 + 0.3);
+            });
+        }
+
+        function playWrong() {
+            initAudio();
+            const t = audioCtx.currentTime;
+            const freqs = [220, 180];
+            freqs.forEach((f, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(f, t + i * 0.15);
+                gain.gain.setValueAtTime(0, t + i * 0.15);
+                gain.gain.linearRampToValueAtTime(0.1, t + i * 0.15 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + i * 0.15 + 0.15);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(t + i * 0.15); osc.stop(t + i * 0.15 + 0.15);
+            });
+        }
+
+        function playCatch() {
+            initAudio();
+            const t = audioCtx.currentTime;
+            // 400Hz
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, t);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.2, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(t); osc.stop(t + 0.05);
+            // 800Hz
+            osc2 = audioCtx.createOscillator();
+            gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(800, t);
+            gain2.gain.setValueAtTime(0, t);
+            gain2.gain.linearRampToValueAtTime(0.1, t + 0.01);
+            gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.03);
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            osc2.start(t); osc2.stop(t + 0.03);
+        }
+
+        let ambientStarted = false;
+        function startAmbient() {
+            if (ambientStarted) return;
+            initAudio();
+            ambientStarted = true;
+
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 80;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400;
+
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0.015;
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+
+            setInterval(() => {
+                const targetFreq = 200 + Math.random() * 600;
+                const targetVol = 0.01 + Math.random() * 0.02;
+                filter.frequency.linearRampToValueAtTime(targetFreq, audioCtx.currentTime + 2);
+                gain.gain.linearRampToValueAtTime(targetVol, audioCtx.currentTime + 2);
+            }, 3000);
+        }
+
+        document.addEventListener('click', () => {
+            if (!ambientStarted) startAmbient();
+        });
+
+        // Particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 8; i++) {
+            const f = document.createElement('div');
+            f.className = 'firefly';
+            f.style.left = Math.random() * 100 + 'vw';
+            f.style.top = Math.random() * 70 + 30 + 'vh';
+            f.style.animationDelay = Math.random() * 5 + 's, ' + Math.random() * 3 + 's';
+            f.style.animationDuration = (8 + Math.random() * 4) + 's, ' + (2 + Math.random() * 2) + 's';
+            particlesContainer.appendChild(f);
+        }
+
+        // Game State
+        let score = 0;
+        let streak = 0;
+        let bananasGiven = 0;
+        let currentCorrectAnswer = 0;
+        let questionActive = true;
+
+        const questionEl = document.getElementById('question-text');
+        const optionsEl = document.getElementById('options');
+        const scoreEl = document.getElementById('score-val');
+        const streakEl = document.getElementById('streak');
+        const streakCountEl = document.getElementById('streak-count');
+        const trackers = document.querySelectorAll('.tracker-icon');
+        const monkey = document.getElementById('monkey');
+        const bunch = document.getElementById('bananas-bunch');
+
+        function renderBananas() {
+            bunch.innerHTML = '';
+            const rotations = [-25, -5, 15, 35, -45];
+            for (let i = 0; i < 5; i++) {
+                const b = document.createElement('div');
+                b.className = 'banana';
+                b.style.transform = `rotate(${rotations[i]}deg)`;
+                bunch.appendChild(b);
+            }
+        }
+
+        function generateQuestion() {
+            const ops = ['+', '-', '×'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let a, b, answer;
+
+            if (op === '+') {
+                a = Math.floor(Math.random() * 12) + 1;
+                b = Math.floor(Math.random() * 12) + 1;
+                answer = a + b;
+            } else if (op === '-') {
+                a = Math.floor(Math.random() * 12) + 2;
+                b = Math.floor(Math.random() * (a - 1)) + 1;
+                answer = a - b;
+            } else {
+                a = Math.floor(Math.random() * 9) + 1;
+                b = Math.floor(Math.random() * 9) + 1;
+                answer = a * b;
+            }
+
+            currentCorrectAnswer = answer;
+            questionEl.textContent = `${a} ${op} ${b} = ?`;
+
+            let wrongs = new Set();
+            while (wrongs.size < 2) {
+                let offset = Math.floor(Math.random() * 4) + 1;
+                let w = Math.random() > 0.5 ? answer + offset : answer - offset;
+                if (w >= 0 && w !== answer) {
+                    wrongs.add(w);
+                }
+            }
+
+            const options = [answer, ...Array.from(wrongs)].sort(() => Math.random() - 0.5);
+
+            optionsEl.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => handleAnswer(opt, btn);
+                optionsEl.appendChild(btn);
+            });
+            questionActive = true;
+        }
+
+        function handleAnswer(ans, btn) {
+            if (!questionActive) return;
+            startAmbient();
+
+            if (ans === currentCorrectAnswer) {
+                questionActive = false;
+                btn.classList.add('correct');
+                playCorrect();
+                score += 10;
+                streak++;
+                scoreEl.textContent = score;
+
+                if (streak >= 3) {
+                    streakEl.classList.add('active');
+                    streakCountEl.textContent = streak;
+                }
+
+                triggerCorrectAnimation();
+            } else {
+                btn.classList.add('wrong');
+                playWrong();
+                streak = 0;
+                streakEl.classList.remove('active');
+                triggerWrongAnimation();
+                setTimeout(() => {
+                    btn.classList.remove('wrong');
+                }, 600);
+            }
+        }
+
+        function triggerCorrectAnimation() {
+            monkey.className = 'monkey happy';
+
+            const bananas = Array.from(bunch.querySelectorAll('.banana')).filter(b => !b.classList.contains('hidden-banana'));
+            if (bananas.length > 0) {
+                const bIndex = Math.floor(Math.random() * bananas.length);
+                const banana = bananas[bIndex];
+                const rect = banana.getBoundingClientRect();
+
+                const monkeyMouth = document.querySelector('.monkey-mouth').getBoundingClientRect();
+
+                const clone = banana.cloneNode(true);
+                clone.classList.add('falling');
+                const startX = rect.left;
+                const startY = rect.top;
+                const targetX = monkeyMouth.left + monkeyMouth.width / 2 - rect.width / 2;
+                const targetY = monkeyMouth.top + monkeyMouth.height / 2;
+
+                clone.style.setProperty('--start-x', startX + 'px');
+                clone.style.setProperty('--start-y', startY + 'px');
+                clone.style.setProperty('--target-x', targetX + 'px');
+                clone.style.setProperty('--target-y', targetY + 'px');
+                clone.style.left = startX + 'px';
+                clone.style.top = startY + 'px';
+                clone.style.margin = '0';
+                clone.style.transform = 'none';
+
+                document.body.appendChild(clone);
+                banana.classList.add('hidden-banana');
+                banana.style.visibility = 'hidden';
+
+                setTimeout(() => {
+                    clone.remove();
+                    playCatch();
+                    monkey.className = 'monkey eating';
+
+                    bananasGiven++;
+                    updateTrackers();
+
+                    if (bananasGiven === 5) {
+                        setTimeout(resetBananas, 500);
+                    }
+
+                    setTimeout(() => {
+                        monkey.className = 'monkey idle';
+                        generateQuestion();
+                    }, 600);
+                }, 800);
+            } else {
+                setTimeout(() => {
+                    monkey.className = 'monkey idle';
+                    generateQuestion();
+                }, 1500);
+            }
+        }
+
+        function triggerWrongAnimation() {
+            monkey.className = 'monkey angry';
+            setTimeout(() => {
+                monkey.className = 'monkey idle';
+            }, 1000);
+        }
+
+        function updateTrackers() {
+            trackers.forEach((t, i) => {
+                if (i < bananasGiven) t.classList.add('filled');
+                else t.classList.remove('filled');
+            });
+        }
+
+        function resetBananas() {
+            bananasGiven = 0;
+            updateTrackers();
+            const bananas = bunch.querySelectorAll('.banana');
+            bananas.forEach(b => {
+                b.classList.remove('hidden-banana');
+                b.style.visibility = 'visible';
+            });
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            bunch.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 500);
+        }
+
+        // Init
+        renderBananas();
+        generateQuestion();
+
+        window.onload = () => {
+            const introFade = document.getElementById('intro-fade');
+            introFade.style.opacity = '0';
+            setTimeout(() => {
+                introFade.style.display = 'none';
+                monkey.className = 'monkey wave';
+                setTimeout(() => {
+                    monkey.className = 'monkey idle';
+                }, 1000);
+            }, 1200);
+        };
+    </script>
+</body>
+
+</html>
