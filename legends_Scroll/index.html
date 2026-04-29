@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEGENDS | Cinematic Biographies</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-label: 'Bebas Neue', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Sticky Nav */
+        .sticky-nav {
+            position: fixed;
+            left: 2vw;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .sticky-nav.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #444;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .nav-dot::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            border: 1px solid transparent;
+            transition: all 0.4s ease;
+        }
+
+        .nav-dot.active {
+            background: var(--nav-color);
+            box-shadow: 0 0 15px var(--nav-color);
+        }
+
+        .nav-dot.active::after {
+            border-color: var(--nav-color);
+            animation: pulseDot 2s infinite;
+        }
+
+        @keyframes pulseDot {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+        }
+
+        .hero-title {
+            font-family: var(--font-label);
+            font-size: clamp(5rem, 18vw, 15rem);
+            letter-spacing: 0.05em;
+            margin-bottom: -15px;
+            background: linear-gradient(to right, #c8a96e, #f5c518, #e63946, #74b8f5, #e00000);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: heroIn 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+        }
+
+        .hero-subtitle {
+            font-family: var(--font-heading);
+            font-size: clamp(1.2rem, 3vw, 2.5rem);
+            font-style: italic;
+            color: #888;
+            margin-bottom: 40px;
+            animation: fadeIn 1s ease 1s both;
+        }
+
+        .hero-lines {
+            display: flex;
+            gap: 15px;
+            animation: fadeIn 1s ease 1.5s both;
+        }
+
+        .hero-lines .line {
+            width: 50px;
+            height: 4px;
+            border-radius: 2px;
+            transform: scaleX(0);
+            transform-origin: left;
+            animation: expandLine 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        .hero-lines .line:nth-child(1) {
+            animation-delay: 1.6s;
+        }
+
+        .hero-lines .line:nth-child(2) {
+            animation-delay: 1.7s;
+        }
+
+        .hero-lines .line:nth-child(3) {
+            animation-delay: 1.8s;
+        }
+
+        .hero-lines .line:nth-child(4) {
+            animation-delay: 1.9s;
+        }
+
+        .hero-lines .line:nth-child(5) {
+            animation-delay: 2.0s;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 5vh;
+            font-family: var(--font-label);
+            font-size: 2.5rem;
+            color: #fff;
+            cursor: pointer;
+            animation: bounce 2s infinite, fadeIn 1s ease 2.5s both;
+        }
+
+        /* Keyframes */
+        @keyframes heroIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9) translateY(40px);
+                filter: blur(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes expandLine {
+            to {
+                transform: scaleX(1);
+            }
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-20px);
+            }
+
+            60% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Celeb Sections */
+        .celeb-section {
+            display: flex;
+            background-color: var(--bg);
+            min-height: 120vh;
+            /* allows parallax scrolling effect */
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-container {
+            width: 50%;
+            height: 100%;
+        }
+
+        .photo {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateX(120px);
+            opacity: 0;
+            transition: all 700ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .content-container {
+            width: 50%;
+            min-height: 120vh;
+            padding: 15vh 8vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .bg-number {
+            position: absolute;
+            top: 10%;
+            right: 5%;
+            font-family: var(--font-label);
+            font-size: clamp(10rem, 30vw, 30rem);
+            line-height: 0.8;
+            color: var(--accent);
+            opacity: 0.05;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Typography inside sections */
+        .badge {
+            display: inline-block;
+            font-family: var(--font-label);
+            letter-spacing: 0.1em;
+            font-size: 1.2rem;
+            color: var(--bg);
+            background: var(--accent);
+            padding: 6px 18px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+        }
+
+        .celeb-name {
+            font-family: var(--font-heading);
+            font-size: clamp(3.5rem, 6vw, 7rem);
+            line-height: 1.05;
+            margin-bottom: 25px;
+            position: relative;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .celeb-name::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 8px;
+            width: 100%;
+            height: 14px;
+            background: var(--accent);
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .meta-info {
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 35px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .meta-info strong {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .bio {
+            font-size: clamp(1.1rem, 1.4vw, 1.3rem);
+            line-height: 1.7;
+            margin-bottom: 45px;
+            color: #eee;
+        }
+
+        .stats-grid {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 45px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 20px 25px;
+            border-radius: 12px;
+            min-width: 140px;
+            flex: 1;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 700ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .stat-val {
+            font-family: var(--font-label);
+            font-size: 3.5rem;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #aaa;
+            font-weight: 700;
+        }
+
+        .pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pill {
+            padding: 8px 18px;
+            border: 1px solid var(--accent);
+            border-radius: 25px;
+            font-size: 0.9rem;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Scroll Animations */
+        .content-block {
+            opacity: 0;
+            transform: translateX(-120px);
+            transition: all 700ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .celeb-section.is-visible .photo {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .celeb-section.is-visible .content-block {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .celeb-section.is-visible .stat-card {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Stagger Delays */
+        .celeb-section.is-visible .stagger-1 {
+            transition-delay: 0ms;
+        }
+
+        .celeb-section.is-visible .stagger-2 {
+            transition-delay: 150ms;
+        }
+
+        .celeb-section.is-visible .stagger-3 {
+            transition-delay: 300ms;
+        }
+
+        .celeb-section.is-visible .stagger-card-1 {
+            transition-delay: 350ms;
+        }
+
+        .celeb-section.is-visible .stagger-card-2 {
+            transition-delay: 450ms;
+        }
+
+        .celeb-section.is-visible .stagger-card-3 {
+            transition-delay: 550ms;
+        }
+
+        svg {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            max-height: 80vh;
+            filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Music Toggle */
+        .music-toggle {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .music-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .music-toggle.muted {
+            opacity: 0.6;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 900px) {
+            .celeb-section {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .photo-container {
+                width: 100%;
+                height: 60vh;
+            }
+
+            .photo {
+                height: 60vh;
+                position: relative;
+                /* Remove sticky for mobile stacking */
+                top: auto;
+                transform: translateY(100px);
+                /* Slide UP instead of left/right on mobile */
+            }
+
+            .celeb-section.is-visible .photo {
+                transform: translateY(0);
+            }
+
+            .content-container {
+                width: 100%;
+                min-height: auto;
+                padding: 5vh 8vw 15vh 8vw;
+            }
+
+            .content-block {
+                transform: translateY(50px);
+            }
+
+            .celeb-section.is-visible .content-block {
+                transform: translateY(0);
+            }
+
+            .bg-number {
+                top: -10%;
+                right: -10%;
+                font-size: 60vw;
+            }
+
+            .sticky-nav {
+                left: auto;
+                right: 3vw;
+            }
+
+            .celeb-section {
+                flex-direction: column;
+                min-height: auto;
+                padding: 10vh 0;
+            }
+
+            .photo-container {
+                width: 100%;
+                height: 45vh;
+                padding-top: 20px;
+                /* Mobile: Less top space */
+                margin-top: 0;
+            }
+
+            .content-container {
+                width: 100%;
+                min-height: auto;
+                padding: 8vh 8vw 15vh 8vw;
+            }
+
+            .celeb-section.is-visible .content-block {
+                transform: translateY(0);
+            }
+
+            .bg-number {
+                top: -5%;
+                right: -5%;
+                font-size: 50vw;
+            }
+
+            /* Force Left alignment on mobile */
+            .celeb-section .content-container {
+                align-items: flex-start !important;
+                text-align: left !important;
+            }
+
+            .celeb-section .celeb-name {
+                font-size: 8vw;
+                /* Smaller for mobile */
+                margin-left: 0 !important;
+                transform: none !important;
+            }
+
+            .photo img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 20px;
+                transition: transform 0.5s ease;
+            }
+
+            .photo img:hover {
+                transform: scale(1.05);
+            }
+
+            .celeb-name {
+                white-space: normal;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Procedural Background Music -->
+    <button id="musicToggle" class="music-toggle muted" title="Toggle Music">🔇</button>
+
+    <!-- Sticky Nav -->
+    <nav class="sticky-nav" id="stickyNav">
+        <div class="nav-dot" data-index="0"></div>
+        <div class="nav-dot" data-index="1"></div>
+        <div class="nav-dot" data-index="2"></div>
+        <div class="nav-dot" data-index="3"></div>
+        <div class="nav-dot" data-index="4"></div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1 class="hero-title">LEGENDS</h1>
+        <p class="hero-subtitle">Five icons. One scroll.</p>
+        <div class="hero-lines">
+            <div class="line" style="background: #c8a96e"></div>
+            <div class="line" style="background: #f5c518"></div>
+            <div class="line" style="background: #e63946"></div>
+            <div class="line" style="background: #74b8f5"></div>
+            <div class="line" style="background: #e00000"></div>
+        </div>
+        <div class="scroll-indicator" onclick="document.getElementById('amitabh').scrollIntoView()">↓</div>
+    </section>
+
+    <!-- 1. Amitabh Bachchan -->
+    <section id="amitabh" class="celeb-section" data-color="#c8a96e" style="--bg: #1a0a0a; --accent: #c8a96e;">
+        <div class="photo-container">
+            <img src="https://imgs.search.brave.com/zadxFzO5j3orO28Kg57m_iaJpXVTmOHLT_g-kHs4IRA/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvNDYy/NjI1MTc4L3Bob3Rv/L2luZGlhbi1ib2xs/eXdvb2QtYWN0b3It/YW1pdGFiaC1iYWNo/Y2hhbi1hdHRlbmRz/LWFuLWV2ZW50LW9y/Z2FuaXNlZC1ieS10/aGUtcm90YXJ5LWNs/dWItb2YuanBnP3M9/NjEyeDYxMiZ3PTAm/az0yMCZjPTYtQ2p4/RkktSm1QV01jb0RE/NzY1bXV1X3ladFhk/YUtFWXZ0bno4dHcx/dXc9"
+                style="width:100%; height:100%; object-fit:cover; border-radius:20px;">
+            <circle cx="250" cy="300" r="160" fill="var(--accent)" opacity="0.15" filter="blur(20px)" />
+            <circle cx="250" cy="300" r="220" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.4"
+                stroke-dasharray="4 12" />
+
+            <path d="M120 600 C 120 420, 190 380, 250 380 C 310 380, 380 420, 380 600 Z" fill="var(--accent)"
+                opacity="0.25" />
+            <path d="M190 380 C 180 260, 190 180, 250 180 C 310 180, 320 260, 310 380 Z" fill="var(--accent)"
+                opacity="0.4" />
+
+            <!-- Glasses -->
+            <rect x="200" y="250" width="40" height="25" rx="4" fill="none" stroke="var(--bg)" stroke-width="4" />
+            <rect x="260" y="250" width="40" height="25" rx="4" fill="none" stroke="var(--bg)" stroke-width="4" />
+            <line x1="240" y1="262" x2="260" y2="262" stroke="var(--bg)" stroke-width="4" />
+            <line x1="190" y1="262" x2="200" y2="262" stroke="var(--bg)" stroke-width="4" />
+            <line x1="300" y1="262" x2="310" y2="262" stroke="var(--bg)" stroke-width="4" />
+
+            <!-- Mic -->
+            <rect x="235" y="420" width="30" height="70" rx="15" fill="var(--bg)" stroke="var(--accent)"
+                stroke-width="3" />
+            <path d="M 220 450 A 30 30 0 0 0 280 450" fill="none" stroke="var(--accent)" stroke-width="4" />
+            <line x1="250" y1="480" x2="250" y2="520" stroke="var(--accent)" stroke-width="4" />
+            <line x1="220" y1="520" x2="280" y2="520" stroke="var(--accent)" stroke-width="4" />
+            </svg>
+        </div>
+        </div>
+        <div class="content-container">
+            <div class="bg-number">786</div>
+
+            <div class="content-block stagger-1">
+                <div class="badge">Shahenshah of Bollywood • Big B</div>
+                <h2 class="celeb-name">Amitabh<br>Bachchan</h2>
+                <div class="meta-info">
+                    <span><strong>Born:</strong> 11 Oct 1942, Prayagraj, India</span>
+                    <span><strong>Nationality:</strong> Indian • Actor</span>
+                </div>
+            </div>
+
+            <div class="content-block stagger-2 bio">
+                <p>Starred in 200+ films. Iconic "Angry Young Man" of Bollywood. Breakthrough: Zanjeer (1973). Biggest
+                    films: Sholay, Deewar, Black, Piku, Pink. Hosted Kaun Banega Crorepati.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stagger-card-1">
+                    <div class="stat-val">200+</div>
+                    <div class="stat-label">Films</div>
+                </div>
+                <div class="stat-card stagger-card-2">
+                    <div class="stat-val">4</div>
+                    <div class="stat-label">National Awards</div>
+                </div>
+                <div class="stat-card stagger-card-3">
+                    <div class="stat-val">17</div>
+                    <div class="stat-label">Filmfare Awards</div>
+                </div>
+            </div>
+
+            <div class="content-block stagger-3 pills">
+                <span class="pill">Padma Vibhushan (2015)</span>
+                <span class="pill">Dadasaheb Phalke (2019)</span>
+                <span class="pill">Madame Tussauds</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. MS Dhoni -->
+    <section id="dhoni" class="celeb-section" data-color="#f5c518" style="--bg: #070d1a; --accent: #f5c518;">
+        <div class="photo-container">
+            <img src="https://e0.pxfuel.com/wallpapers/659/363/desktop-wallpaper-ms-dhoni-ipl-2021-and-mobile.jpg"
+                style="width:100%; height:100%; object-fit:cover; border-radius:20px;">
+            <circle cx="250" cy="300" r="160" fill="var(--accent)" opacity="0.15" filter="blur(20px)" />
+            <circle cx="250" cy="300" r="220" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.4"
+                stroke-dasharray="4 12" />
+
+            <path d="M120 600 C 120 420, 190 380, 250 380 C 310 380, 380 420, 380 600 Z" fill="var(--accent)"
+                opacity="0.25" />
+            <path d="M190 380 C 180 260, 190 180, 250 180 C 310 180, 320 260, 310 380 Z" fill="var(--accent)"
+                opacity="0.4" />
+
+            <!-- Helmet Grill -->
+            <path d="M 190 260 Q 250 300 310 260" fill="none" stroke="var(--bg)" stroke-width="6"
+                stroke-linecap="round" />
+            <path d="M 195 285 Q 250 325 305 285" fill="none" stroke="var(--bg)" stroke-width="6"
+                stroke-linecap="round" />
+            <line x1="250" y1="240" x2="250" y2="305" stroke="var(--bg)" stroke-width="6" />
+
+            <text x="250" y="520" font-family="'Bebas Neue', sans-serif" font-size="140" fill="var(--bg)"
+                text-anchor="middle" font-weight="bold">7</text>
+            </svg>
+        </div>
+        </div>
+        <div class="content-container">
+            <div class="bg-number">07</div>
+
+            <div class="content-block stagger-1">
+                <div class="badge">Captain Cool • Thala</div>
+                <h2 class="celeb-name">M.S.<br>Dhoni</h2>
+                <div class="meta-info">
+                    <span><strong>Born:</strong> 7 Jul 1981, Ranchi, Jharkhand</span>
+                    <span><strong>Nationality:</strong> Indian • Cricketer</span>
+                </div>
+            </div>
+
+            <div class="content-block stagger-2 bio">
+                <p>Wicketkeeper-batsman. Only captain to win all 3 ICC limited-overs titles. ODI highest score by
+                    keeper: 183*. Most stumpings in ODI history (123). Led CSK to 5 IPL titles.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stagger-card-1">
+                    <div class="stat-val">3</div>
+                    <div class="stat-label">ICC Trophies</div>
+                </div>
+                <div class="stat-card stagger-card-2">
+                    <div class="stat-val">17,000+</div>
+                    <div class="stat-label">Int'l Runs</div>
+                </div>
+                <div class="stat-card stagger-card-3">
+                    <div class="stat-val">123</div>
+                    <div class="stat-label">Stumpings</div>
+                </div>
+            </div>
+
+            <div class="content-block stagger-3 pills">
+                <span class="pill">Padma Bhushan (2018)</span>
+                <span class="pill">Khel Ratna (2007)</span>
+                <span class="pill">ICC Hall of Fame</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Virat Kohli -->
+    <section id="kohli" class="celeb-section" data-color="#e63946" style="--bg: #061210; --accent: #e63946;">
+        <div class="photo-container">
+            <img src="https://w0.peakpx.com/wallpaper/233/967/HD-wallpaper-virat-kohli-angry-look-king-kohli-indian-cricketer.jpg"
+                style="width:100%; height:100%; object-fit:cover; border-radius:20px;">
+            <circle cx="250" cy="300" r="160" fill="var(--accent)" opacity="0.15" filter="blur(20px)" />
+            <circle cx="250" cy="300" r="220" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.4"
+                stroke-dasharray="4 12" />
+
+            <path d="M120 600 C 120 420, 190 380, 250 380 C 310 380, 380 420, 380 600 Z" fill="var(--accent)"
+                opacity="0.25" />
+            <path d="M190 380 C 180 260, 190 180, 250 180 C 310 180, 320 260, 310 380 Z" fill="var(--accent)"
+                opacity="0.4" />
+
+            <!-- Sharp Beard -->
+            <path d="M 200 310 L 250 360 L 300 310 Q 250 330 200 310 Z" fill="var(--bg)" />
+            <path d="M 190 280 L 210 280 L 200 310 Z" fill="var(--bg)" />
+            <path d="M 310 280 L 290 280 L 300 310 Z" fill="var(--bg)" />
+
+            <text x="250" y="520" font-family="'Bebas Neue', sans-serif" font-size="140" fill="var(--bg)"
+                text-anchor="middle" font-weight="bold">18</text>
+
+            <!-- Bat Handle -->
+            <rect x="300" y="100" width="20" height="150" fill="var(--accent)" transform="rotate(30 300 100)" />
+            </svg>
+        </div>
+        </div>
+        <div class="content-container">
+            <div class="bg-number">18</div>
+
+            <div class="content-block stagger-1">
+                <div class="badge">Chase Master • King Kohli</div>
+                <h2 class="celeb-name">Virat<br>Kohli</h2>
+                <div class="meta-info">
+                    <span><strong>Born:</strong> 5 Nov 1988, Delhi, India</span>
+                    <span><strong>Nationality:</strong> Indian • Cricketer</span>
+                </div>
+            </div>
+
+            <div class="content-block stagger-2 bio">
+                <p>Most ODI centuries ever. Won 2008 U19 WC,
+                    2011 ODI WC, 2013 CT, 2024 T20 WC. Record 765 runs in single WC edition (2023).</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stagger-card-1">
+                    <div class="stat-val">80+</div>
+                    <div class="stat-label">Centuries</div>
+                </div>
+                <div class="stat-card stagger-card-2">
+                    <div class="stat-val">765</div>
+                    <div class="stat-label">Runs ('23 WC)</div>
+                </div>
+                <div class="stat-card stagger-card-3">
+                    <div class="stat-val">Multiple</div>
+                    <div class="stat-label">ICC Awards</div>
+                </div>
+            </div>
+
+            <div class="content-block stagger-3 pills">
+                <span class="pill">Padma Shri (2017)</span>
+                <span class="pill">T20 WC Winner (2024)</span>
+                <span class="pill">RCB Top Scorer</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Lionel Messi -->
+    <section id="messi" class="celeb-section" data-color="#74b8f5" style="--bg: #04081a; --accent: #74b8f5;">
+        <div class="photo-container">
+            <img src="https://wallpapercave.com/wp/wp11948236.jpg"
+                style="width:100%; height:100%; object-fit:cover; border-radius:20px;">
+            <circle cx="250" cy="300" r="160" fill="var(--accent)" opacity="0.15" filter="blur(20px)" />
+            <circle cx="250" cy="300" r="220" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.4"
+                stroke-dasharray="4 12" />
+
+            <path d="M120 600 C 120 420, 190 380, 250 380 C 310 380, 380 420, 380 600 Z" fill="var(--accent)"
+                opacity="0.25" />
+            <path d="M190 380 C 180 260, 190 180, 250 180 C 310 180, 320 260, 310 380 Z" fill="var(--accent)"
+                opacity="0.4" />
+
+            <!-- Captain Armband -->
+            <path d="M 140 460 L 160 440 L 190 480 L 170 500 Z" fill="#fff" />
+            <rect x="150" y="450" width="25" height="10" fill="#74b8f5" transform="rotate(-35 150 450)" />
+
+            <text x="250" y="520" font-family="'Bebas Neue', sans-serif" font-size="140" fill="var(--bg)"
+                text-anchor="middle" font-weight="bold">10</text>
+
+            <!-- Football -->
+            <circle cx="360" cy="480" r="35" fill="var(--bg)" stroke="var(--accent)" stroke-width="4" />
+            <path d="M 360 460 L 375 475 L 370 495 L 350 495 L 345 475 Z" fill="none" stroke="var(--accent)"
+                stroke-width="3" />
+            <line x1="360" y1="460" x2="360" y2="445" stroke="var(--accent)" stroke-width="3" />
+            <line x1="375" y1="475" x2="395" y2="475" stroke="var(--accent)" stroke-width="3" />
+            <line x1="370" y1="495" x2="380" y2="510" stroke="var(--accent)" stroke-width="3" />
+            <line x1="350" y1="495" x2="340" y2="510" stroke="var(--accent)" stroke-width="3" />
+            <line x1="345" y1="475" x2="325" y2="475" stroke="var(--accent)" stroke-width="3" />
+            </svg>
+        </div>
+        </div>
+        <div class="content-container">
+            <div class="bg-number">10</div>
+
+            <div class="content-block stagger-1">
+                <div class="badge">La Pulga • The Atomic Flea</div>
+                <h2 class="celeb-name">Lionel<br>Messi</h2>
+                <div class="meta-info">
+                    <span><strong>Born:</strong> 24 Jun 1987, Rosario, Argentina</span>
+                    <span><strong>Nationality:</strong> Argentine • Footballer</span>
+                </div>
+            </div>
+
+            <div class="content-block stagger-2 bio">
+                <p>Record 8 Ballon d'Or awards. 2022 FIFA World Cup winner + Golden Ball. 2021 Copa América winner.
+                    winner. Most goals in a calendar year: 91 (2012). Most assists in international football: 61.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stagger-card-1">
+                    <div class="stat-val">8</div>
+                    <div class="stat-label">Ballon d'Or</div>
+                </div>
+                <div class="stat-card stagger-card-2">
+                    <div class="stat-val">800+</div>
+                    <div class="stat-label">Career Goals</div>
+                </div>
+                <div class="stat-card stagger-card-3">
+                    <div class="stat-val">474</div>
+                    <div class="stat-label">La Liga Goals</div>
+                </div>
+            </div>
+
+            <div class="content-block stagger-3 pills">
+                <span class="pill">World Cup (2022)</span>
+                <span class="pill">4x UCL Winner</span>
+                <span class="pill">10x La Liga</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Cristiano Ronaldo -->
+    <section id="ronaldo" class="celeb-section" data-color="#e00000" style="--bg: #0d0d12; --accent: #e00000;">
+        <div class="photo-container">
+            <img src="https://i.ytimg.com/vi/IAc7G_hUCOY/oar2.jpg?sqp=-oaymwEkCJUDENAFSFqQAgHyq4qpAxMIARUAAAAAJQAAyEI9AICiQ3gB&rs=AOn4CLCMVlGgLRAYrme6MxmI_bMZFtfc2Q"
+                style="width:100%; height:100%; object-fit:cover; border-radius:20px;">
+            <circle cx="250" cy="300" r="160" fill="var(--accent)" opacity="0.15" filter="blur(20px)" />
+            <circle cx="250" cy="300" r="220" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.4"
+                stroke-dasharray="4 12" />
+
+            <path d="M120 600 C 120 420, 190 380, 250 380 C 310 380, 380 420, 380 600 Z" fill="var(--accent)"
+                opacity="0.25" />
+            <path d="M190 380 C 180 260, 190 180, 250 180 C 310 180, 320 260, 310 380 Z" fill="var(--accent)"
+                opacity="0.4" />
+
+            <!-- Hair -->
+            <path d="M 195 200 Q 230 140 280 170 Q 250 180 240 200 Z" fill="var(--bg)" />
+            <path d="M 280 170 Q 300 160 305 190 Q 290 180 280 170 Z" fill="var(--bg)" />
+
+            <text x="250" y="520" font-family="'Bebas Neue', sans-serif" font-size="140" fill="var(--bg)"
+                text-anchor="middle" font-weight="bold">7</text>
+
+            <!-- Football -->
+            <circle cx="140" cy="480" r="35" fill="var(--bg)" stroke="var(--accent)" stroke-width="4" />
+            <path d="M 140 460 L 155 475 L 150 495 L 130 495 L 125 475 Z" fill="none" stroke="var(--accent)"
+                stroke-width="3" />
+            <line x1="140" y1="460" x2="140" y2="445" stroke="var(--accent)" stroke-width="3" />
+            <line x1="155" y1="475" x2="175" y2="475" stroke="var(--accent)" stroke-width="3" />
+            <line x1="150" y1="495" x2="160" y2="510" stroke="var(--accent)" stroke-width="3" />
+            <line x1="130" y1="495" x2="120" y2="510" stroke="var(--accent)" stroke-width="3" />
+            <line x1="125" y1="475" x2="105" y2="475" stroke="var(--accent)" stroke-width="3" />
+            </svg>
+        </div>
+        </div>
+        <div class="content-container">
+            <div class="bg-number">07</div>
+
+            <div class="content-block stagger-1">
+                <div class="badge">CR7 • GOAT</div>
+                <h2 class="celeb-name">Cristiano<br>Ronaldo</h2>
+                <div class="meta-info">
+                    <span><strong>Born:</strong> 5 Feb 1985, Funchal, Madeira, Portugal</span>
+                    <span><strong>Nationality:</strong> Portuguese • Footballer</span>
+                </div>
+            </div>
+
+            <div class="content-block stagger-2 bio">
+                <p>First player to 800+ career goals. Most international goals ever (143). Most Champions League goals
+                    (140). Highest-paid athlete 5 times. First person to reach Most followed athlete globally.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card stagger-card-1">
+                    <div class="stat-val">5</div>
+                    <div class="stat-label">Ballon d'Or</div>
+                </div>
+                <div class="stat-card stagger-card-2">
+                    <div class="stat-val">143</div>
+                    <div class="stat-label">Int'l Goals</div>
+                </div>
+                <div class="stat-card stagger-card-3">
+                    <div class="stat-val">140</div>
+                    <div class="stat-label">UCL Goals</div>
+                </div>
+            </div>
+
+            <div class="content-block stagger-3 pills">
+                <span class="pill">UEFA Euro (2016)</span>
+                <span class="pill">5x UCL Winner</span>
+                <span class="pill">1B+ Followers</span>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const sections = document.querySelectorAll('.celeb-section');
+            const navDots = document.querySelectorAll('.nav-dot');
+            const stickyNav = document.getElementById('stickyNav');
+            const hero = document.querySelector('.hero');
+
+            // Observer for activating sections and animations
+            const sectionObserverOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.35
+            };
+
+            const sectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+
+                        // Update Navigation Dots
+                        const index = Array.from(sections).indexOf(entry.target);
+                        navDots.forEach(dot => dot.classList.remove('active'));
+                        if (navDots[index]) {
+                            navDots[index].classList.add('active');
+                            const color = entry.target.getAttribute('data-color');
+                            stickyNav.style.setProperty('--nav-color', color);
+                        }
+                    }
+                });
+            }, sectionObserverOptions);
+
+            sections.forEach(section => sectionObserver.observe(section));
+
+            // Observer to show/hide sticky nav when leaving/entering hero
+            const heroObserver = new IntersectionObserver((entries) => {
+                if (!entries[0].isIntersecting) {
+                    stickyNav.classList.add('visible');
+                } else {
+                    stickyNav.classList.remove('visible');
+                }
+            }, { threshold: 0.5 });
+            heroObserver.observe(hero);
+
+            // Smooth Scroll for Dots
+            navDots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    sections[index].scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+
+            // Procedural Web Audio API Cinematic Drone
+            let audioCtx;
+            let masterGain;
+            let isPlaying = false;
+            const musicToggle = document.getElementById('musicToggle');
+
+            function initAudio() {
+                if(audioCtx) return;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0;
+
+                // Lowpass filter for dark mood
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 300;
+                filter.Q.value = 5;
+
+                masterGain.connect(filter);
+                filter.connect(audioCtx.destination);
+
+                // Create drone frequencies (A minor chord spread out)
+                const freqs = [55.00, 110.00, 164.81, 220.00, 329.63]; 
+                
+                freqs.forEach((f, i) => {
+                    const osc = audioCtx.createOscillator();
+                    osc.type = i % 2 === 0 ? 'sawtooth' : 'sine';
+                    osc.frequency.value = f;
+
+                    const oscGain = audioCtx.createGain();
+                    oscGain.gain.value = 0.2;
+
+                    // LFO for volume pulsing
+                    const lfo = audioCtx.createOscillator();
+                    lfo.type = 'sine';
+                    lfo.frequency.value = 0.05 + Math.random() * 0.1; // Very slow
+                    const lfoGain = audioCtx.createGain();
+                    lfoGain.gain.value = 0.15;
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(oscGain.gain);
+
+                    osc.connect(oscGain);
+                    oscGain.connect(masterGain);
+
+                    osc.start();
+                    lfo.start();
+                });
+            }
+
+            musicToggle.addEventListener('click', () => {
+                if (!audioCtx) initAudio();
+                
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                if (isPlaying) {
+                    masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 1);
+                    musicToggle.innerHTML = '🔇';
+                    musicToggle.classList.add('muted');
+                } else {
+                    masterGain.gain.setTargetAtTime(1, audioCtx.currentTime, 2);
+                    musicToggle.innerHTML = '🔊';
+                    musicToggle.classList.remove('muted');
+                }
+                isPlaying = !isPlaying;
+            });
+        });
+    </script>
+</body>
+
+</html>
