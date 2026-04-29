@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>train_menu</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&family=DM+Sans:wght@300;400&family=Playfair+Display:wght@400;900&family=Special+Elite&display=swap');
+
+  :root {
+    --bg-dark: #080605;
+    --parchment: #f5f0e0;
+    --gold: #d4a843;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-dark); color: var(--parchment);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid var(--gold); color: var(--gold);
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Restaurant Header */
+  .header {
+    position: fixed; top: 0; left: 0; width: 100%; text-align: center;
+    padding: 2rem 0; z-index: 50; background: linear-gradient(to bottom, #080605, transparent);
+  }
+  .header h1 { font-family: 'Special Elite', monospace; font-size: 3rem; color: var(--gold); margin: 0; letter-spacing: 5px;}
+  .header .subtitle { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #888; font-size: 1.2rem;}
+  .header .details { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px;}
+  .hr-floral {
+    width: 200px; height: 20px; margin: 10px auto;
+    background: radial-gradient(circle at 50% 50%, var(--gold) 2px, transparent 3px) center / 20px 20px no-repeat;
+    border-bottom: 1px solid var(--gold);
+  }
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; padding-top: 20vh; box-sizing: border-box;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; align-items: center; padding-bottom: 50vh;
+  }
+
+  /* Menu Cards */
+  .course-card {
+    width: 90vw; max-width: 600px; min-height: 400px;
+    background: var(--parchment); color: #222; margin-bottom: 20vh;
+    padding: 3rem 2rem; box-sizing: border-box; text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative;
+    opacity: 0; transform: translateY(60px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .course-card.active { opacity: 1; transform: translateY(0); }
+  
+  .course-num { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--gold); font-weight: 900;}
+  .dish-name { font-family: 'Playfair Display', serif; font-size: 2rem; margin: 1rem 0; font-weight: 900;}
+  .description { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.5rem; line-height: 1.4; margin-bottom: 2rem;}
+  .origin { font-family: 'DM Sans', sans-serif; font-weight: 300; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #555;}
+  .chef-note { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.2rem; color: #a00; margin-top: auto; border-top: 1px solid #ddd; padding-top: 1rem; width: 100%;}
+  .wine-pairing { font-family: 'DM Sans', sans-serif; font-weight: 300; font-size: 0.8rem; background: #eee; padding: 5px 10px; margin-top: 1rem;}
+
+  /* CSS Plating Art */
+  .plating { width: 200px; height: 150px; position: relative; margin: 1rem 0; display:flex; justify-content:center; align-items:center;}
+  
+  /* I */
+  .plate-circle { width: 120px; height: 120px; border-radius: 50%; background: #fff; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1), 5px 5px 15px rgba(0,0,0,0.2);}
+  .watermelon { width: 30px; height: 30px; background: #ff4d4d; position:absolute; }
+  .snow { width: 4px; height: 4px; background: #fff; border-radius: 50%; position:absolute;}
+  
+  /* II */
+  .plate-oval { width: 160px; height: 100px; border-radius: 50%; background: #eee; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1), 5px 5px 15px rgba(0,0,0,0.2);}
+  .bread { width: 70px; height: 50px; background: #8b5e1a; border-radius: 40px; position:absolute; left: 40px; box-shadow: inset -2px -2px 5px rgba(0,0,0,0.5);}
+  .butter { width: 20px; height: 20px; background: #ffcc00; border-radius: 50%; position:absolute; right: 50px;}
+  
+  /* III */
+  .fish-slice { width: 40px; height: 15px; background: #ffe6e6; position:absolute; transform: rotate(-10deg); border-left: 2px solid #ff9999;}
+  .gel { width: 8px; height: 8px; background: #ffcc00; border-radius: 50%; position:absolute; opacity:0.8;}
+  
+  /* IV */
+  .slate { width: 150px; height: 100px; background: #333; position:absolute; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);}
+  .quenelle { width: 40px; height: 20px; background: #5c3a21; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; position:absolute; box-shadow: inset -2px -2px 5px rgba(0,0,0,0.5);}
+  .brioche { width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 30px solid #d4a373; position:absolute; transform:rotate(15deg);}
+  
+  /* V */
+  .glass { width: 40px; height: 60px; border: 2px solid rgba(255,255,255,0.8); border-top: none; border-radius: 0 0 10px 10px; position:absolute; background: rgba(0,0,0,0.05);}
+  .sorbet { width: 36px; height: 36px; background: #fff; border-radius: 50%; position:absolute; top: -10px; left: 2px; box-shadow: inset -2px -2px 5px #ccc;}
+  .petal { width: 10px; height: 15px; background: #ff99cc; border-radius: 50% 0 50% 0; position:absolute; top: -5px;}
+  
+  /* VI */
+  .rib { width: 80px; height: 50px; background: #3d1a00; border-radius: 5px; position:absolute; left: 60px;}
+  .bone { width: 20px; height: 4px; background: #eee; position:absolute; left: 45px; top: 23px;}
+  .sauce-pool { width: 100px; height: 60px; background: #1a0a00; border-radius: 50%; position:absolute; z-index:-1;}
+  .truffle { width: 15px; height: 15px; border: 1px solid #111; border-radius: 50%; position:absolute; }
+  
+  /* VII */
+  .tuile { width: 40px; height: 40px; background: transparent; border: 2px solid #d4a843; transform: rotate(45deg); position:absolute; top: -20px;}
+  
+  /* VIII */
+  .choc-sphere { width: 60px; height: 60px; background: #2d1606; border-radius: 50%; position:absolute; overflow:hidden;}
+  .pour-anim { width: 10px; height: 100px; background: #8b5e1a; position:absolute; top: -100px; left: 25px; transform-origin: top; transform: scaleY(0); transition: transform 2s ease;}
+  .active .pour-anim { transform: scaleY(1.2); }
+  
+  /* Bill */
+  .bill-card { background: #111; color: var(--gold); border: 1px solid #333; font-family: 'Space Mono'; padding: 2rem; width: 300px; margin: 0 auto 20vh; opacity:0; transition: 1s;}
+  .bill-card.active { opacity: 1; }
+  .bill-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem;}
+  .bill-total { border-top: 1px dashed var(--gold); margin-top: 1rem; padding-top: 1rem; font-size: 1.2rem; font-weight: bold;}
+
+  @media (max-width: 768px) {
+    .header h1 { font-size: 2rem; }
+    .course-card { width: 95vw; padding: 1.5rem 1rem; }
+    .dish-name { font-size: 1.5rem; }
+    .description { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🍽️</button>
+
+<div class="header">
+  <h1>ORIGINE</h1>
+  <div class="subtitle">A seasonal tasting menu by Chef Arjun Mehta</div>
+  <div class="details">Eight courses · Reserve pairing available</div>
+  <div class="hr-floral"></div>
+</div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- Pre-text -->
+    <div style="font-family:'Cormorant Garamond'; font-size: 2rem; font-style:italic; margin: 10vh 0; text-align:center; max-width:600px; opacity:0.8;">
+      "We begin when you are ready."
+    </div>
+
+    <!-- Course 1 -->
+    <div class="course-card">
+      <div class="course-num">I.</div>
+      <div class="dish-name">Compressed Watermelon · Feta Snow · Tajín</div>
+      <div class="plating">
+        <div class="plate-circle"></div>
+        <div class="watermelon" style="top:50px; left:70px"></div>
+        <div class="watermelon" style="top:70px; left:90px; transform:rotate(15deg)"></div>
+        <div class="snow" style="top:40px; left:60px"></div><div class="snow" style="top:80px; left:80px"></div><div class="snow" style="top:60px; left:110px"></div>
+      </div>
+      <div class="description">The meal begins with contrast. Sweet yields to salt. The Tajín reminds you: every pleasure needs an edge.</div>
+      <div class="origin">Watermelon: Nashik valley. Feta: Thessaly, Greece. Tajín: Jalisco, Mexico.</div>
+      <div class="chef-note">Don't eat the components separately. The point is the collision.</div>
+    </div>
+
+    <div style="font-family:'Cormorant Garamond'; font-size: 2rem; margin: 10vh 0; text-align:center;">
+      "This is where restaurants reveal themselves."
+    </div>
+
+    <!-- Course 2 -->
+    <div class="course-card">
+      <div class="course-num">II.</div>
+      <div class="dish-name">House-baked sourdough · Cultured butter · Volcanic salt</div>
+      <div class="plating">
+        <div class="plate-oval"></div>
+        <div class="bread" style="top:40px;"></div>
+        <div class="butter" style="top:50px;"></div>
+      </div>
+      <div class="description">The bread took 72 hours. The butter took 3 days. We give you 8 minutes to eat both.</div>
+      <div class="chef-note">Tear it. Do not cut it.</div>
+    </div>
+
+    <!-- Course 3 -->
+    <div class="course-card">
+      <div class="course-num">III.</div>
+      <div class="dish-name">Hamachi Crudo · Yuzu · Micro herbs · Dashi gel</div>
+      <div class="plating">
+        <div class="plate-oval"></div>
+        <div class="fish-slice" style="top:60px; left:50px;"></div>
+        <div class="fish-slice" style="top:65px; left:80px; transform:rotate(0deg)"></div>
+        <div class="fish-slice" style="top:60px; left:110px; transform:rotate(10deg)"></div>
+        <div class="gel" style="top:50px; left:70px"></div><div class="gel" style="top:80px; left:100px"></div>
+      </div>
+      <div class="origin">Hamachi: Kagoshima, Japan. Yuzu: Kochi prefecture.</div>
+      <div class="wine-pairing">Paired with: Blanc de Blancs Champagne · 2019</div>
+    </div>
+
+    <!-- Course 4 -->
+    <div class="course-card">
+      <div class="course-num">IV.</div>
+      <div class="dish-name">Duck Liver Parfait · Black Garlic · Toasted Brioche</div>
+      <div class="plating">
+        <div class="slate"></div>
+        <div class="quenelle" style="top:40px; left:60px;"></div>
+        <div class="brioche" style="top:60px; left:20px;"></div>
+      </div>
+      <div class="chef-note">The liver is soft enough to spread with a glance. The brioche required three attempts to perfect. We kept the third.</div>
+    </div>
+
+    <!-- Course 5 -->
+    <div class="course-card" style="background:#111; color:#fff; border: 1px solid #333;">
+      <div class="course-num">V.</div>
+      <div class="dish-name">Lychee · Rose water · Frozen</div>
+      <div class="plating">
+        <div class="glass">
+          <div class="sorbet"></div>
+          <div class="petal"></div>
+        </div>
+      </div>
+      <div class="description" style="margin: 0;">A pause.</div>
+    </div>
+
+    <!-- Course 6 -->
+    <div class="course-card">
+      <div class="course-num">VI.</div>
+      <div class="dish-name">72-Hour Short Rib · Bone Marrow Jus · Root Vegetable Confit</div>
+      <div class="plating">
+        <div class="plate-circle"></div>
+        <div class="sauce-pool" style="top:40px; left:50px;"></div>
+        <div class="bone"></div>
+        <div class="rib" style="top:30px;"></div>
+        <div class="truffle" style="top:80px; left:60px;"></div><div class="truffle" style="top:75px; left:110px;"></div>
+      </div>
+      <div class="description" style="font-size: 1.8rem; font-weight:bold;">The rib was carved on Monday. You're eating it Thursday. Those four days are in every bite.</div>
+      <div class="wine-pairing">Paired with: Barolo DOCG · Giacomo Conterno · 2016 · Italy</div>
+    </div>
+
+    <!-- Course 7 -->
+    <div class="course-card">
+      <div class="course-num">VII.</div>
+      <div class="dish-name">Yuzu Curd · Compressed Pear · Almond Tuile</div>
+      <div class="plating">
+        <div class="glass">
+          <div style="width:100%; height:20px; background:#ffcc00; position:absolute; bottom:0; opacity:0.8;"></div>
+          <div class="tuile"></div>
+        </div>
+      </div>
+      <div class="chef-note">A dessert pretending to be a starter pretending to be an interlude.</div>
+    </div>
+
+    <!-- Course 8 -->
+    <div class="course-card" id="dessert-card">
+      <div class="course-num">VIII.</div>
+      <div class="dish-name">Valrhona Chocolate Sphere · Warm Caramel Sauce</div>
+      <div class="plating">
+        <div class="plate-circle"></div>
+        <div class="choc-sphere" style="top:30px; left:70px;">
+          <div class="pour-anim"></div>
+        </div>
+      </div>
+      <div class="chef-note">At the table: we pour the sauce. The sphere melts open. What's inside: exactly what you expected. Which is itself unexpected.</div>
+      <div class="description" style="margin-top:2rem;">A meal is a temporary thing. But a good meal leaves a permanent mark.</div>
+    </div>
+
+    <!-- Bill -->
+    <div class="bill-card" id="bill">
+      <div style="text-align:center; margin-bottom: 1rem; font-family:'Special Elite'; font-size:1.5rem;">THE BILL</div>
+      <div class="bill-row"><span>Tasting Menu x1</span><span>₹12,500</span></div>
+      <div class="bill-row"><span>Reserve Pairing x1</span><span>₹8,000</span></div>
+      <div class="bill-total bill-row"><span>TOTAL</span><span id="bill-amount">---</span></div>
+      <div style="font-size: 0.7rem; text-align:center; margin-top:2rem; color:#888;">Service: Included.<br>Memories: Complimentary.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.068; // slow, fine dining pacing
+  const wrapper = document.getElementById('wrapper');
+  const cards = document.querySelectorAll('.course-card, .bill-card');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.5; // slower scroll multiplier
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY);
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeOscillators = [];
+  let currentActiveCard = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(212,168,67,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+
+    // Restaurant ambient
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    osc1.type = 'sine'; osc1.frequency.value = 110;
+    osc2.type = 'sine'; osc2.frequency.value = 220;
+    
+    const ambGain = audioCtx.createGain();
+    ambGain.gain.value = 0.02;
+    
+    osc1.connect(ambGain); osc2.connect(ambGain);
+    ambGain.connect(masterGain);
+    osc1.start(); osc2.start();
+
+    // Occasional cutlery clink
+    setInterval(() => {
+      if(!isMuted) {
+        const clink = audioCtx.createOscillator();
+        const cGain = audioCtx.createGain();
+        clink.type = 'triangle'; clink.frequency.value = 2000 + Math.random()*1000;
+        clink.connect(cGain); cGain.connect(masterGain);
+        cGain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+        cGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        clink.start(); clink.stop(audioCtx.currentTime + 0.1);
+      }
+    }, 5000 + Math.random()*5000);
+  }
+
+  function playCourseMusic(index) {
+    if(!audioCtx || isMuted) return;
+    
+    activeOscillators.forEach(o => {
+      o.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 1);
+      setTimeout(()=>o.osc.stop(), 2000);
+    });
+    activeOscillators = [];
+
+    let freqs = [];
+    let type = 'sine';
+    
+    switch(index) {
+      case 0: freqs = [329, 392]; break; // Amuse
+      case 2: freqs = [294, 349]; break; // Cold
+      case 4: freqs = [440]; type = 'triangle'; break; // Intermezzo (clean, single note)
+      case 5: freqs = [196, 247, 294]; break; // Main (rich)
+      case 7: freqs = [261, 329, 392, 523]; break; // Dessert (sweet, resolving)
+      default: return; // no special music
+    }
+
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 1);
+      osc.start();
+      activeOscillators.push({osc, gain});
+    });
+  }
+
+  function checkCards() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    
+    let activeFound = -1;
+
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.top + currentY + rect.height/2;
+      
+      // If card is within the middle 60% of the screen
+      if(Math.abs(cardCenter - centerLine) < vh * 0.4) {
+        if(!card.classList.contains('active')) {
+          card.classList.add('active');
+          activeFound = index;
+          
+          if(card.id === 'dessert-card') {
+            // trigger pour animation
+            setTimeout(() => {
+              card.querySelector('.choc-sphere').classList.add('active');
+            }, 500);
+          }
+          if(card.id === 'bill') {
+            setTimeout(() => {
+              document.getElementById('bill-amount').innerText = '₹20,500';
+            }, 1000);
+          }
+        }
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    if(activeFound !== -1 && activeFound !== currentActiveCard) {
+      currentActiveCard = activeFound;
+      playCourseMusic(currentActiveCard);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkCards();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

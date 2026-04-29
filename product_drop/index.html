@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>product_drop</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300;400&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-dark: #050505;
+    --accent-white: #f5f5f5;
+    --accent-gold: #d4a843;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-dark); color: var(--accent-white);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid #333; color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  #scroll-container {
+    width: 100vw; height: 100vh;
+  }
+  
+  .content-wrapper {
+    display: flex; flex-direction: column; align-items: center;
+    width: 100%; transform: translateY(0);
+  }
+
+  section {
+    width: 100vw; height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    position: relative; overflow: hidden;
+  }
+
+  /* Typography */
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 8rem; margin: 0; letter-spacing: 5px; line-height: 1;}
+  .gold-title { color: var(--accent-gold); font-size: 2rem; font-family: 'Bebas Neue', sans-serif; letter-spacing: 8px;}
+  .story-text { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 2.5rem; max-width: 800px; line-height: 1.4; opacity: 0; transform: translateY(20px); transition: 1s ease;}
+  .spec-text { font-family: 'Space Mono', monospace; font-size: 1rem; color: #888; text-transform: uppercase;}
+  
+  .revealed .story-text { opacity: 1; transform: translateY(0); }
+
+  /* Shoe CSS Art */
+  .shoe-container {
+    width: 300px; height: 150px; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); z-index: 10; opacity: 0;
+    transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .shoe-visible { opacity: 1; }
+  
+  .shoe-art {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d; animation: rotateShoe 20s linear infinite;
+  }
+  @keyframes rotateShoe { 0% {transform: rotateY(0deg);} 100% {transform: rotateY(360deg);} }
+
+  .upper {
+    position: absolute; top: 0; left: 20px; width: 260px; height: 100px;
+    background: #111; clip-path: polygon(0% 50%, 20% 20%, 50% 10%, 80% 30%, 100% 80%, 100% 100%, 0% 100%);
+    border-radius: 10px; border-top: 1px dashed #333;
+  }
+  .midsole {
+    position: absolute; bottom: 30px; left: 10px; width: 280px; height: 20px;
+    background: var(--accent-white); border-radius: 10px;
+  }
+  .sole {
+    position: absolute; bottom: 20px; left: 10px; width: 280px; height: 10px;
+    background: #1a1a1a; border-radius: 5px;
+  }
+  .air-unit {
+    position: absolute; bottom: 32px; left: 200px; width: 40px; height: 16px;
+    background: rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 0 10px rgba(212,168,67,0.3);
+  }
+  .brand-tag {
+    position: absolute; top: 40px; left: 40px; width: 10px; height: 20px;
+    background: var(--accent-gold);
+  }
+  .laces {
+    position: absolute; top: 20px; left: 120px; width: 60px; height: 40px;
+    background: repeating-linear-gradient(45deg, transparent, transparent 5px, var(--accent-white) 5px, var(--accent-white) 7px);
+  }
+
+  /* Section 2: Design */
+  .sketches { position: relative; width: 100vw; height: 100vh; display:flex; justify-content:center; align-items:center; }
+  .sketch { position: absolute; width: 200px; height: 100px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50% 50% 0 0; opacity: 0.3;}
+  .rejected { border-color: #331111; }
+  .rejected::after { content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:red; transform:rotate(20deg); }
+  .chosen { border: 2px solid var(--accent-gold); opacity: 1; z-index: 5;}
+  
+  .swatches { display: flex; gap: 10px; margin-top: 2rem; z-index: 10; position:absolute; bottom: 20vh;}
+  .swatch { width: 30px; height: 30px; background: #333; border-radius: 50%; opacity: 0.3;}
+  .swatch.active { background: #050505; border: 2px solid var(--accent-gold); opacity: 1;}
+
+  /* Section 4: Details */
+  .zoom-panels { display: flex; gap: 2rem; z-index: 10; }
+  .zoom-panel { width: 200px; height: 200px; border-radius: 50%; border: 1px solid #333; overflow: hidden; position: relative; display: flex; justify-content:center; align-items:center;}
+  .zoom-1 { background: repeating-linear-gradient(45deg, #111, #111 10px, #050505 10px, #050505 20px); }
+  .zoom-2 { background: radial-gradient(circle, #222 2px, transparent 2px); background-size: 10px 10px; }
+  .zoom-3 { background: #1a1a1a; box-shadow: inset 0 0 20px #000; }
+  
+  /* Section 6: Numbers */
+  .rarity-bar { width: 80%; max-width: 600px; height: 4px; background: #333; margin-top: 2rem; position: relative;}
+  .rarity-fill { height: 100%; background: var(--accent-gold); width: 0%; transition: width 1s; }
+  
+  /* Section 7: Countdown */
+  .countdown { font-family: 'Space Mono', monospace; font-size: 6rem; color: var(--accent-white); }
+  .pulse-bg { animation: pulseBg 1s infinite; }
+  @keyframes pulseBg { 0% {background: rgba(255,255,255,0.05);} 100% {background: var(--bg-dark);} }
+
+  /* Section 8: Drop */
+  .drop-white { background: #fff !important; color: #000 !important; transition: background 0.1s; }
+  .buy-btn {
+    background: var(--accent-gold); color: #000; border: none; padding: 1.5rem 4rem;
+    font-family: 'Bebas Neue', sans-serif; font-size: 2rem; cursor: pointer;
+    letter-spacing: 2px; margin-top: 2rem; transition: transform 0.1s;
+  }
+  .buy-btn:active { transform: scale(0.95); }
+
+  @media (max-width: 768px) {
+    h1 { font-size: 4rem; }
+    .story-text { font-size: 1.5rem; padding: 0 1rem;}
+    .countdown { font-size: 3rem; }
+    .shoe-container { transform: translate(-50%, -50%) scale(0.6); }
+    .zoom-panels { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">👟</button>
+
+<!-- Fixed shoe that appears in middle sections -->
+<div class="shoe-container" id="main-shoe">
+  <div class="shoe-art">
+    <div class="upper"></div>
+    <div class="laces"></div>
+    <div class="brand-tag"></div>
+    <div class="midsole"></div>
+    <div class="air-unit"></div>
+    <div class="sole"></div>
+  </div>
+</div>
+
+<div id="scroll-container">
+  <div class="content-wrapper" id="wrapper">
+
+    <!-- Section 1 -->
+    <section id="sec-1">
+      <div class="story-text" style="transition-delay: 0s;">Every shoe starts as a problem.</div>
+      <div class="story-text" style="transition-delay: 0.5s; margin-top:1rem;">What does it feel like to walk on nothing?</div>
+      <div class="story-text" style="transition-delay: 1s; margin-top:1rem;">We spent 3 years finding out.</div>
+    </section>
+
+    <!-- Section 2 -->
+    <section id="sec-2">
+      <div class="sketches">
+        <div class="sketch rejected" style="transform: rotate(-10deg) translate(-50px, -20px)"></div>
+        <div class="sketch rejected" style="transform: rotate(15deg) translate(50px, 20px)"></div>
+        <div class="sketch chosen" style="transform: scale(1.2)"></div>
+      </div>
+      <div class="swatches">
+        <div class="swatch"></div><div class="swatch"></div><div class="swatch active"></div><div class="swatch"></div>
+      </div>
+      <div style="position:absolute; bottom: 10vh; font-family:'DM Sans';">47 prototypes. 3 materials rejected. 1 sole redesigned 11 times.</div>
+    </section>
+
+    <!-- Section 3 -->
+    <section id="sec-3">
+      <!-- Shoe becomes visible here via JS -->
+      <h1 id="reveal-title" style="opacity:0; transition: 1s; z-index: 1;">VOID-001</h1>
+      <div class="gold-title" style="z-index: 1;">OBSIDIAN</div>
+      <div class="spec-text" style="margin-top: 150px; z-index: 1;">Weight: 285g · Sole: Recycled Carbon · Upper: Triple-Weave Mesh</div>
+    </section>
+
+    <!-- Section 4 -->
+    <section id="sec-4">
+      <div class="zoom-panels">
+        <div>
+          <div class="zoom-panel zoom-1"></div>
+          <p class="spec-text" style="margin-top:1rem">Upper Weave</p>
+        </div>
+        <div style="margin-top: 50px;">
+          <div class="zoom-panel zoom-2"></div>
+          <p class="spec-text" style="margin-top:1rem">Midsole Foam</p>
+        </div>
+        <div>
+          <div class="zoom-panel zoom-3"></div>
+          <p class="spec-text" style="margin-top:1rem">Heel Counter</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5 -->
+    <section id="sec-5">
+      <div class="story-text">"This shoe was designed for night runs through empty cities."</div>
+      <div class="story-text" style="margin-top:1rem;">"For the commute that starts before sunrise."</div>
+      <div class="story-text" style="margin-top:1rem;">"For the miles no one clocks but you."</div>
+    </section>
+
+    <!-- Section 6 -->
+    <section id="sec-6">
+      <h1>ONLY 500 PAIRS.</h1>
+      <p style="font-size:1.5rem">Globally.</p>
+      <div class="spec-text" style="margin-top:1rem">72 countries. 500 pairs. 500 people.</div>
+      <div class="spec-text" style="margin-top:1rem; color:var(--accent-gold)">#0001 — #0500</div>
+      <div class="rarity-bar"><div class="rarity-fill" id="rarity-fill"></div></div>
+    </section>
+
+    <!-- Section 7 -->
+    <section id="sec-7">
+      <div class="spec-text" style="font-size: 2rem;">DROPS IN:</div>
+      <div class="countdown" id="countdown">00:00:15</div>
+    </section>
+
+    <!-- Section 8 -->
+    <section id="sec-8">
+      <h1 style="color:black">AVAILABLE NOW</h1>
+      <p style="font-family:'Space Mono'; color:#333; font-size:2rem; font-weight:bold;">₹14,999</p>
+      <button class="buy-btn" id="buy-btn">ADD TO CART</button>
+      <p id="purchase-msg" style="font-family:'Space Mono'; color:black; font-weight:bold; height:20px;"></p>
+      <p id="remaining-count" style="font-family:'Space Mono'; color:#666;">Pairs remaining: 253</p>
+      <div style="position:absolute; bottom:5vh; font-family:'Cormorant Garamond'; font-style:italic; font-size:1.5rem; color:#333;">"Thank you for waiting."</div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // Smooth scroll
+  let currentY = 0, targetY = 0;
+  const ease = 0.09;
+  const wrapper = document.getElementById('wrapper');
+  const sections = document.querySelectorAll('section');
+  const maxScroll = (sections.length - 1) * window.innerHeight;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio system
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeOscillators = [];
+  let currentSection = 0;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '👟' : '🔊';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.5, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.5;
+    updateAudioForSection(0);
+  }
+
+  function playFrequencies(freqs, type='sine', continuous=false) {
+    if(!audioCtx || isMuted) return;
+    
+    activeOscillators.forEach(o => {
+      o.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+      setTimeout(()=>o.osc.stop(), 1000);
+    });
+    activeOscillators = [];
+    
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = f;
+      gain.gain.value = 0;
+      
+      osc.connect(gain); gain.connect(masterGain);
+      osc.start();
+      
+      if(continuous) {
+        gain.gain.setTargetAtTime(0.1 / freqs.length, audioCtx.currentTime, 1);
+        activeOscillators.push({osc, gain});
+      } else {
+        gain.gain.setTargetAtTime(0.2, audioCtx.currentTime + i*0.1, 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+        setTimeout(()=>osc.stop(), 1000);
+      }
+    });
+  }
+
+  function playSoundEffect(type) {
+    if(!audioCtx || isMuted) return;
+    if(type === 'bass') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = 80;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+      osc.start(); osc.stop(audioCtx.currentTime + 1);
+    } else if (type === 'tick') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.value = 1000;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+    } else if (type === 'cheer') {
+      // Noise burst
+      const bufferSize = audioCtx.sampleRate * 1;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+      const src = audioCtx.createBufferSource();
+      src.buffer = noiseBuffer;
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+      src.connect(gain); gain.connect(masterGain);
+      src.start();
+      
+      playFrequencies([261,329,392,523], 'sine', false);
+    }
+  }
+
+  function updateAudioForSection(index) {
+    if(index === currentSection) return;
+    currentSection = index;
+    
+    switch(index) {
+      case 0: playFrequencies([40], 'sine', true); break;
+      case 2: playFrequencies([110,220,330], 'sine', true); break;
+      case 3: playFrequencies([220,330], 'sine', true); break;
+      case 4: playFrequencies([261,329,392], 'triangle', true); break;
+      case 5: playSoundEffect('bass'); playFrequencies([], 'sine', true); break;
+      case 6: playFrequencies([150, 200], 'sawtooth', true); break;
+      case 7: playSoundEffect('cheer'); break;
+    }
+  }
+
+  // Animation and Scroll logic
+  const shoe = document.getElementById('main-shoe');
+  const rarityFill = document.getElementById('rarity-fill');
+  let countdownStarted = false;
+  let timerVal = 15;
+  const countdownEl = document.getElementById('countdown');
+  const sec7 = document.getElementById('sec-7');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const index = Math.round(currentY / vh);
+    
+    updateAudioForSection(index);
+
+    // Reveal text
+    sections.forEach((sec, i) => {
+      if(i === index) sec.classList.add('revealed');
+    });
+
+    // Shoe visibility logic
+    if(index >= 2 && index <= 5) {
+      shoe.classList.add('shoe-visible');
+      if(index === 2) document.getElementById('reveal-title').style.opacity = 1;
+    } else {
+      shoe.classList.remove('shoe-visible');
+    }
+    
+    // Adjust shoe style based on scroll velocity
+    const velocity = Math.abs(targetY - currentY);
+    if(velocity > 20) {
+      shoe.style.filter = `blur(${Math.min(velocity*0.1, 5)}px)`;
+    } else {
+      shoe.style.filter = 'blur(0px)';
+    }
+
+    // Rarity bar
+    if(index === 5) rarityFill.style.width = '100%';
+
+    // Countdown
+    if(index === 6 && !countdownStarted) {
+      countdownStarted = true;
+      const int = setInterval(() => {
+        timerVal--;
+        playSoundEffect('tick');
+        
+        let m = Math.floor(timerVal / 60);
+        let s = timerVal % 60;
+        countdownEl.innerText = `00:0${m}:${s < 10 ? '0'+s : s}`;
+        
+        if(timerVal <= 5) {
+          sec7.classList.add('pulse-bg');
+        }
+        
+        if(timerVal <= 0) {
+          clearInterval(int);
+          targetY = maxScroll; // force to drop section
+        }
+      }, 1000);
+    }
+    
+    // Drop section white flash
+    if(index === 7) {
+      document.body.style.background = '#fff';
+      document.body.style.color = '#000';
+    } else {
+      document.body.style.background = '#050505';
+      document.body.style.color = '#f5f5f5';
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Buy logic
+  let pairs = 253;
+  document.getElementById('buy-btn').addEventListener('click', () => {
+    if(pairs > 0) {
+      pairs--;
+      document.getElementById('remaining-count').innerText = `Pairs remaining: ${pairs}`;
+      document.getElementById('purchase-msg').innerText = `PAIR #${500-pairs} SECURED`;
+      playSoundEffect('tick'); // small click
+    }
+  });
+
+</script>
+</body>
+</html>

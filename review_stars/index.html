@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>review_stars</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --text: #111111;
+    --star-gold: #fbbf24;
+    --star-empty: #e5e7eb;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: white; border: 1px solid #ccc; color: #333;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+
+  /* Product Header Fixed */
+  .product-header {
+    position: fixed; top: 0; left: 0; width: 100%;
+    padding: 1rem 2rem; border-bottom: 1px solid #eaeaea; background: white;
+    display: flex; align-items: center; gap: 20px; z-index: 50; box-sizing: border-box;
+  }
+  .prod-img { width: 50px; height: 50px; background: #f0f0f0; border-radius: 5px; display:flex; justify-content:center; align-items:center;}
+  .prod-title { font-weight: bold; font-size: 1.2rem;}
+  .prod-meta { color: #666; font-size: 0.9rem;}
+  
+  .total-stars { position:absolute; right: 20px; font-size: 1.5rem; color: var(--star-gold); display:flex; gap:5px;}
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+    padding-top: 100px; box-sizing: border-box;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; align-items: center; width: 100%; transform: translateY(0);
+    padding-bottom: 50vh;
+  }
+
+  /* Review Cards */
+  .review-card {
+    width: 90vw; max-width: 600px; background: white;
+    border: 1px solid #eaeaea; border-radius: 10px; padding: 2rem;
+    margin-bottom: 5vh; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    opacity: 0; transform: translateY(20px); transition: all 0.5s ease;
+  }
+  .active { opacity: 1; transform: translateY(0); }
+
+  .stars { color: var(--star-empty); font-size: 1.5rem; margin-bottom: 1rem; letter-spacing: 2px;}
+  .stars span.filled { color: var(--star-gold); }
+  
+  .review-title { font-weight: 900; font-size: 1.2rem; margin-bottom: 0.5rem;}
+  .review-body { font-size: 1rem; line-height: 1.6; color: #333;}
+  .review-meta { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: #888; margin-top: 1rem; display:flex; justify-content:space-between;}
+  
+  .helpful { background: #f3f4f6; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem;}
+
+  /* Narrative Progression styles */
+  .review-card.dark { background: #111; color: white; border-color: #333; }
+  .review-card.dark .review-body { color: #ccc; }
+  .review-card.dark .stars span.filled { color: #ff4444; }
+
+  @media (max-width: 768px) {
+    .product-header { padding: 1rem; }
+    .total-stars { display: none; }
+    .review-card { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">⭐</button>
+
+<div class="product-header">
+  <div class="prod-img">☕</div>
+  <div>
+    <div class="prod-title">Aura™ Ceramic Coffee Mug, 12oz</div>
+    <div class="prod-meta">Color: Matte White | Style: Minimalist</div>
+  </div>
+  <div class="total-stars">★★★★☆ <span style="color:#111; font-size:1rem; align-self:center; margin-left:10px;">(4.2 / 128 Reviews)</span></div>
+</div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 5 Stars -->
+    <div class="review-card">
+      <div class="stars"><span class="filled">★</span><span class="filled">★</span><span class="filled">★</span><span class="filled">★</span><span class="filled">★</span></div>
+      <div class="review-title">Perfect morning mug.</div>
+      <div class="review-body">Exactly what I was looking for. The matte finish feels premium, it holds heat well, and the handle is perfectly sized. Highly recommend.</div>
+      <div class="review-meta"><span>By Sarah J. on Oct 12, 2023</span><span class="helpful">12 people found this helpful</span></div>
+    </div>
+
+    <!-- 4 Stars -->
+    <div class="review-card">
+      <div class="stars"><span class="filled">★</span><span class="filled">★</span><span class="filled">★</span><span class="filled">★</span><span>★</span></div>
+      <div class="review-title">Great, but stains easily.</div>
+      <div class="review-body">I love the shape and weight of it. However, because it's matte white on the inside too, coffee rings form immediately. You have to scrub it pretty hard. Still my go-to mug though.</div>
+      <div class="review-meta"><span>By Mark D. on Nov 05, 2023</span><span class="helpful">45 people found this helpful</span></div>
+    </div>
+
+    <!-- 3 Stars -->
+    <div class="review-card">
+      <div class="stars"><span class="filled">★</span><span class="filled">★</span><span class="filled">★</span><span>★</span><span>★</span></div>
+      <div class="review-title">It's just a mug.</div>
+      <div class="review-body">I bought this because Instagram influencers kept posting it. It holds liquid. It is white. I paid $28 for it. I am giving it 3 stars not because the mug is bad, but because I am re-evaluating my life choices.</div>
+      <div class="review-meta"><span>By Emily R. on Dec 01, 2023</span><span class="helpful">312 people found this helpful</span></div>
+    </div>
+
+    <!-- 2 Stars -->
+    <div class="review-card">
+      <div class="stars"><span class="filled">★</span><span class="filled">★</span><span>★</span><span>★</span><span>★</span></div>
+      <div class="review-title">He took the mug.</div>
+      <div class="review-body">I bought two of these. One for me, one for my fiancé. We broke up last week. When he moved out, he took the second mug. I am drinking from mine right now. It tastes like bitterness and wasted time. The ceramic chips easily on the rim.</div>
+      <div class="review-meta"><span>By Anonymous on Jan 14, 2024</span><span class="helpful">89 people found this helpful</span></div>
+    </div>
+
+    <!-- 1 Star -->
+    <div class="review-card dark" id="dark-card">
+      <div class="stars"><span class="filled">★</span><span>★</span><span>★</span><span>★</span><span>★</span></div>
+      <div class="review-title">DO NOT BUY. HAUNTED.</div>
+      <div class="review-body">I drop it, it does not break. I throw it away, it appears back in the cabinet. I pour coffee into it, but when I look inside, the coffee is staring back at me. I haven't slept in four days. The mug knows what I did in 1999.</div>
+      <div class="review-meta"><span>By The_Watcher on Feb 29, 2024</span><span class="helpful">6,660 people found this helpful</span></div>
+    </div>
+
+    <!-- Empty narrative -->
+    <div style="font-family:'Space Mono'; font-size:1rem; color:#888; text-align:center; margin-top:10vh;">
+      There are no more reviews for this product.
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  const cards = document.querySelectorAll('.review-card');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let currentActive = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'white' : '#fef3c7';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+    
+    // Background office/typing hum
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 400;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.05;
+
+    noiseSource.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    noiseSource.start();
+  }
+
+  function playReviewSound(rating) {
+    if(!audioCtx || isMuted) return;
+    
+    if(rating === 1) {
+      // Scary drone for 1 star
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.value = 50;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 1);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 4);
+      osc.start(); osc.stop(audioCtx.currentTime + 4);
+      
+      document.body.style.background = '#0a0a0a';
+      document.querySelector('.product-header').style.background = '#111';
+      document.querySelector('.product-header').style.color = 'white';
+      document.querySelector('.prod-meta').style.color = '#888';
+      document.querySelector('.total-stars').style.color = '#ff4444';
+      
+    } else {
+      // Pleasant chime for others, degrading pitch based on rating
+      const freqs = [0, 0, 200, 300, 500, 800]; // index is rating
+      const f = freqs[rating];
+      if(!f) return;
+      
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+      osc.start(); osc.stop(audioCtx.currentTime + 1);
+      
+      document.body.style.background = 'var(--bg)';
+      document.querySelector('.product-header').style.background = 'white';
+      document.querySelector('.product-header').style.color = 'black';
+      document.querySelector('.total-stars').style.color = 'var(--star-gold)';
+    }
+  }
+
+  function checkCards() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    
+    let activeFound = -1;
+
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.top + currentY + rect.height/2;
+      
+      if(Math.abs(cardCenter - centerLine) < vh * 0.3) {
+        if(!card.classList.contains('active')) {
+          card.classList.add('active');
+          activeFound = index;
+        }
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    if(activeFound !== -1 && activeFound !== currentActive) {
+      currentActive = activeFound;
+      const rating = 5 - currentActive; // 0th card = 5 stars, 4th = 1 star
+      playReviewSound(rating);
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkCards();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

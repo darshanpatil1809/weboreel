@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cart_confessions</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@500;700&family=Cormorant+Garamond:ital,wght@1,400;1,600&family=DM+Sans:wght@400;500;700&display=swap');
+
+  :root {
+    --bg-light: #ffffff;
+    --text-main: #333;
+    --accent: #e53935;
+    --dark-panel: #111;
+  }
+  
+  body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-main);
+    overflow: hidden;
+  }
+
+  /* Audio icon */
+  #mute-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: #f0f0f0; border: none; font-size: 24px; cursor: pointer;
+    border-radius: 50%; width: 50px; height: 50px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+
+  /* Progress bar */
+  #progress-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 4px; background: #eee; z-index: 100;
+  }
+  #progress-bar {
+    height: 100%; width: 0%; background: var(--text-main); transition: width 0.1s;
+  }
+  #progress-label {
+    position: fixed; top: 10px; right: 20px; font-size: 0.7rem; letter-spacing: 1px; z-index: 100; font-weight: bold;
+  }
+
+  /* Header */
+  header {
+    padding: 2rem 5vw; border-bottom: 1px solid #eee; background: white;
+    position: fixed; width: 100%; top: 0; z-index: 50; box-sizing: border-box;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cart-count { font-weight: bold; font-size: 1.2rem; }
+  .cart-total { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 2px;}
+
+  /* Scroll Engine */
+  #scroll-container {
+    padding-top: 100px;
+    height: 100vh;
+    box-sizing: border-box;
+  }
+  .items-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 0 10rem 0;
+    transform: translateY(0);
+  }
+
+  /* Product Card */
+  .product-card {
+    width: 90vw; max-width: 800px; min-height: 400px;
+    margin-bottom: 4rem; border: 1px solid #eaeaea; border-radius: 8px;
+    position: relative; overflow: hidden; background: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    display: flex; flex-direction: column;
+  }
+  .product-top {
+    padding: 2rem; display: flex; gap: 2rem;
+  }
+  .product-art {
+    width: 150px; height: 150px; background: #f9f9f9; border-radius: 8px;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .product-info { flex: 1; }
+  .product-name { font-size: 1.5rem; font-weight: bold; margin: 0 0 0.5rem 0; }
+  .product-price { font-size: 1.25rem; color: #666; margin: 0 0 1rem 0; }
+  .rating { color: #f5a623; letter-spacing: 2px; }
+
+  /* Confession Panel */
+  .confession-panel {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+    background: var(--dark-panel); color: white;
+    padding: 2rem; box-sizing: border-box;
+    transform: translateY(100%);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .product-card.revealed .confession-panel { transform: translateY(0); }
+
+  .confess-line { opacity: 0; transform: translateY(10px); transition: all 0.5s ease; margin-bottom: 1rem; }
+  
+  .reason-given { font-family: 'Caveat', cursive; font-size: 1.5rem; color: #aaa; }
+  .actual-reason { font-family: 'Caveat', cursive; font-size: 2rem; color: #fff; }
+  .the-truth { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.8rem; color: #eee; border-left: 2px solid #555; padding-left: 1rem; margin: 1.5rem 0;}
+  .status { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--accent); letter-spacing: 1px;}
+  .status.warm { color: #d4a843; }
+
+  /* Specific CSS Art */
+  .sneaker { width: 100px; height: 50px; background: #eee; clip-path: polygon(0 40%, 30% 20%, 80% 20%, 100% 50%, 100% 100%, 0 100%); border-bottom: 8px solid #ccc; position:relative;}
+  .sneaker::after {content:''; position:absolute; top:20px; left:60px; width:20px; height:20px; background: #ddd; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);}
+  
+  .book { width: 80px; height: 120px; background: #ffd166; border-left: 15px solid #ef476f; box-shadow: 5px 5px 10px rgba(0,0,0,0.1); position:relative;}
+  .book::after {content:'Atomic'; position:absolute; top: 10px; left: 5px; font-family: 'DM Sans'; font-size:8px; font-weight:bold;}
+  
+  .cream { width: 50px; height: 80px; background: linear-gradient(to right, #fdfbfb, #ebedee); border-radius: 50% 50% 5px 5px; position:relative; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1);}
+  .cream::before {content:''; position:absolute; top:-15px; left:15px; width:20px; height:15px; background: #silver;}
+  
+  .guitar { width: 60px; height: 120px; background: #d4a373; border-radius: 30px 30px 40px 40px; position:relative;}
+  .guitar::before {content:''; position:absolute; top:30px; left:20px; width:20px; height:20px; background:#333; border-radius:50%;}
+  .guitar::after {content:''; position:absolute; top:-40px; left:25px; width:10px; height:70px; background:#111;}
+  
+  .organizer { width: 100px; height: 100px; border: 4px solid #eee; display:grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap:4px; background:#ccc;}
+  .organizer div { background: white; }
+  
+  .phone { width: 70px; height: 140px; border: 4px solid #333; border-radius: 10px; background: #4CAF50; display:flex; justify-content:center; align-items:center; color:white; font-weight:bold;}
+  
+  .ticket { width: 120px; height: 60px; background: white; border: 1px dashed #ccc; display:flex; justify-content:space-between; padding:10px; box-sizing:border-box;}
+  .ticket div { width: 30px; height: 30px; border-bottom: 2px solid #0055cc;}
+
+  /* Grand Total */
+  .grand-total {
+    width: 90vw; max-width: 800px; text-align: center; padding: 4rem 2rem;
+    border-top: 2px solid #eee; margin-top: 2rem;
+  }
+  .total-label { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; margin-bottom: 2rem;}
+  .checkout-btn {
+    background: #000; color: #fff; border: none; padding: 1rem 3rem; font-size: 1.2rem;
+    font-family: 'DM Sans', sans-serif; font-weight: bold; cursor: pointer; border-radius: 4px;
+    margin-bottom: 1rem; transition: background 0.2s;
+  }
+  .checkout-btn:hover { background: #333; }
+  .final-truth { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #666; font-size: 1.2rem;}
+
+  @media (max-width: 768px) {
+    .product-top { flex-direction: column; align-items: center; text-align: center; }
+    .confession-panel { padding: 1.5rem; }
+    .actual-reason { font-size: 1.5rem; }
+    .the-truth { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🛒</button>
+<div id="progress-container"><div id="progress-bar"></div></div>
+<div id="progress-label">SELF-AWARENESS: 0% COMPLETE</div>
+
+<header>
+  <div class="cart-count">MY CART (7 items)</div>
+  <div class="cart-total" id="header-total">₹0.00</div>
+</header>
+
+<div id="scroll-container">
+  <div class="items-wrapper" id="wrapper">
+
+    <!-- Item 1 -->
+    <div class="product-card" data-price="4299">
+      <div class="product-top">
+        <div class="product-art"><div class="sneaker"></div></div>
+        <div class="product-info">
+          <h2 class="product-name">UltraBoost Pro X — White/Silver</h2>
+          <p class="product-price">₹4,299</p>
+          <div class="rating">★★★★☆ <span style="color:#999; font-size:0.9rem">(2,847 reviews)</span></div>
+        </div>
+      </div>
+      <div class="confession-panel">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "I'm going to start running in January."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "I saw someone fit on Instagram and panicked."</div>
+        <div class="confess-line the-truth">THE TRUTH: "I haven't run since 2019. I run from commitment. That counts."</div>
+        <div class="confess-line status">STATUS: STILL IN BOX. JANUARY WAS 8 MONTHS AGO.</div>
+      </div>
+    </div>
+
+    <!-- Item 2 -->
+    <div class="product-card" data-price="599">
+      <div class="product-top">
+        <div class="product-art"><div class="book"></div></div>
+        <div class="product-info">
+          <h2 class="product-name">Atomic Habits: Tiny Changes, Remarkable Results</h2>
+          <p class="product-price">₹599</p>
+          <div class="rating">★★★★★ <span style="color:#999; font-size:0.9rem">(12,042 reviews)</span></div>
+        </div>
+      </div>
+      <div class="confession-panel">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "I'm going to optimize my entire life."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "I feel behind. I thought buying it would count as reading it."</div>
+        <div class="confess-line the-truth">THE TRUTH: "I read the first 40 pages. The habit I formed was buying self-help books."</div>
+        <div class="confess-line status">STATUS: READ: 40/320 PAGES · BOOKMARKED: PAGE 41 SINCE MARCH</div>
+      </div>
+    </div>
+
+    <!-- Item 3 -->
+    <div class="product-card" data-price="2800">
+      <div class="product-top">
+        <div class="product-art"><div class="cream"></div></div>
+        <div class="product-info">
+          <h2 class="product-name">La Mer Crème de la Mer — 30ml</h2>
+          <p class="product-price">₹2,800</p>
+          <div class="rating">★★★★☆ <span style="color:#999; font-size:0.9rem">(834 reviews)</span></div>
+        </div>
+      </div>
+      <div class="confession-panel">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "Skincare is self-care. I deserve it."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "Someone told me I looked tired. This was my response."</div>
+        <div class="confess-line the-truth">THE TRUTH: "I am tired. No cream fixes tired. I haven't slept well since 2022."</div>
+        <div class="confess-line status">STATUS: USED 3 TIMES · SITTING NEXT TO ₹200 CREAM THAT WORKS BETTER</div>
+      </div>
+    </div>
+
+    <!-- Item 4 -->
+    <div class="product-card" data-price="8500">
+      <div class="product-top">
+        <div class="product-art"><div class="guitar"></div></div>
+        <div class="product-info">
+          <h2 class="product-name">Fender CD-60S Acoustic Guitar — Natural</h2>
+          <p class="product-price">₹8,500</p>
+          <div class="rating">★★★★★ <span style="color:#999; font-size:0.9rem">(4,112 reviews)</span></div>
+        </div>
+      </div>
+      <div class="confession-panel">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "Music is healing. I've always wanted to learn."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "A breakup. Everything within 72 hours of a breakup is someone else's decision."</div>
+        <div class="confess-line the-truth">THE TRUTH: "The guitar is leaning against the wall. The wall is patient. I am not."</div>
+        <div class="confess-line status">STATUS: CAN PLAY: 3 CHORDS · SONGS PLAYABLE: 0 · INTENTIONS: STILL HIGH</div>
+      </div>
+    </div>
+
+    <!-- Item 5 -->
+    <div class="product-card" data-price="1999">
+      <div class="product-top">
+        <div class="product-art"><div class="organizer"><div></div><div></div><div></div><div></div></div></div>
+        <div class="product-info">
+          <h2 class="product-name">IKEA KALLAX Desk Organization System</h2>
+          <p class="product-price">₹1,999</p>
+          <div class="rating">★★★★☆ <span style="color:#999; font-size:0.9rem">(1,440 reviews)</span></div>
+        </div>
+      </div>
+      <div class="confession-panel">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "If my space is organized, my mind will be organized."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "I cleaned for 20 minutes and instead of finishing, I started planning systems."</div>
+        <div class="confess-line the-truth">THE TRUTH: "The organizer is in a pile of unorganized things. It fits right in."</div>
+        <div class="confess-line status">STATUS: ASSEMBLED: PARTIALLY · LOST 3 SCREWS · ACCEPTING THIS IS MY LIFE NOW</div>
+      </div>
+    </div>
+
+    <!-- Item 6 -->
+    <div class="product-card" data-price="999">
+      <div class="product-top">
+        <div class="product-art"><div class="phone">App</div></div>
+        <div class="product-info">
+          <h2 class="product-name">BetterHelp Premium — 1 Month Subscription</h2>
+          <p class="product-price">₹999/month</p>
+          <div class="rating">★★★★☆ <span style="color:#999; font-size:0.9rem">(8,201 reviews)</span></div>
+        </div>
+      </div>
+      <div class="confession-panel">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "I should talk to someone."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "Same."</div>
+        <div class="confess-line the-truth" style="border-left-color: #555;">THE TRUTH: "I opened the app 14 times. I typed 'I feel—' and closed it 14 times. Progress is non-linear."</div>
+        <div class="confess-line status" style="color: #4CAF50;">STATUS: ACTIVE · ACTUALLY GOING NEXT TUESDAY · THIS TIME FOR REAL</div>
+      </div>
+    </div>
+
+    <!-- Item 7 -->
+    <div class="product-card" data-price="3200" id="final-card">
+      <div class="product-top">
+        <div class="product-art"><div class="ticket"><div></div><div></div></div></div>
+        <div class="product-info">
+          <h2 class="product-name">IndiGo — Bangalore to Goa (One Way)</h2>
+          <p class="product-price">₹3,200</p>
+          <p style="color:#666; font-size:0.9rem;">No Return Date Selected</p>
+        </div>
+      </div>
+      <div class="confession-panel" style="background: #1a1a24;">
+        <div class="confess-line reason-given">REASON GIVEN TO SELF: "I need a break."</div>
+        <div class="confess-line actual-reason">ACTUAL REASON: "I need a break."</div>
+        <div class="confess-line the-truth" style="border-left-color: #d4a843;">THE TRUTH: "This one. This is the honest one. I need a break. That's enough reason."</div>
+        <div class="confess-line status warm">STATUS: BOOKED. LEAVE DATE: IN 12 DAYS. RETURN DATE: UNKNOWN.</div>
+        <div class="confess-line" style="font-family:'Cormorant Garamond'; color:#d4a843; font-style:italic; text-align:center; margin-top:1rem; font-size:1.5rem;">"Some purchases are correct."</div>
+      </div>
+    </div>
+
+    <div class="grand-total">
+      <div class="total-label" id="final-total">TOTAL: ₹0.00</div>
+      <p style="font-family: 'Caveat'; font-size: 1.5rem; color:#666;">COST IN REAL TERMS: 1 honest conversation with yourself</p>
+      <p style="font-family: 'Caveat'; font-size: 1.5rem; color:#666; margin-bottom: 2rem;">ESTIMATED DELIVERY OF HAPPINESS: Variable</p>
+      <button class="checkout-btn">PROCEED TO CHECKOUT</button>
+      <p class="final-truth">Or close the tab and go outside.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.082;
+  const wrapper = document.getElementById('wrapper');
+  const cards = document.querySelectorAll('.product-card');
+  const progressBar = document.getElementById('progress-bar');
+  const progressLabel = document.getElementById('progress-label');
+  const headerTotal = document.getElementById('header-total');
+  const finalTotal = document.getElementById('final-total');
+
+  let maxScroll = 0;
+  function updateMaxScroll() {
+    maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight);
+  }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStart = 0;
+  window.addEventListener('touchstart', e => touchStart = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStart - e.touches[0].clientY) * 1.5;
+    touchStart = e.touches[0].clientY;
+  }, { passive: false });
+
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let currentAmbient = null;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '🛒' : '🔊';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+
+    // Ambient mall
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    currentAmbient = audioCtx.createBufferSource();
+    currentAmbient.buffer = noiseBuffer;
+    currentAmbient.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 800;
+    
+    const hum = audioCtx.createOscillator();
+    hum.type = 'sine';
+    hum.frequency.value = 110;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.025;
+
+    currentAmbient.connect(filter);
+    filter.connect(gain);
+    hum.connect(gain);
+    gain.connect(masterGain);
+    
+    currentAmbient.start();
+    hum.start();
+  }
+
+  function playSound(type) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    if(type === 'cart') {
+      [523, 659, 784].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(masterGain);
+        
+        gain.gain.setValueAtTime(0, now + i*0.08);
+        gain.gain.linearRampToValueAtTime(0.1, now + i*0.08 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i*0.08 + 0.1);
+        
+        osc.start(now + i*0.08);
+        osc.stop(now + i*0.08 + 0.1);
+      });
+    } else if(type === 'hope') {
+      [392, 494, 587, 784].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(masterGain);
+        
+        gain.gain.setValueAtTime(0, now + i*0.1);
+        gain.gain.linearRampToValueAtTime(0.15, now + i*0.1 + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i*0.1 + 0.5);
+        
+        osc.start(now + i*0.1);
+        osc.stop(now + i*0.1 + 0.6);
+      });
+    } else if(type === 'dim') {
+      if(masterGain) masterGain.gain.setTargetAtTime(0.2, now, 0.5);
+      setTimeout(() => {
+        if(masterGain && !isMuted) masterGain.gain.setTargetAtTime(0.8, audioCtx.currentTime, 1);
+      }, 2000);
+    }
+  }
+
+  let runningTotal = 0;
+  const currencyFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    let newTotal = 0;
+    
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const isVisible = (rect.top < vh * 0.6);
+      
+      if(isVisible) {
+        newTotal += parseInt(card.dataset.price);
+        if(!card.classList.contains('revealed')) {
+          card.classList.add('revealed');
+          
+          if(card.id === 'final-card') playSound('hope');
+          else {
+            playSound('cart');
+            setTimeout(()=>playSound('dim'), 300);
+          }
+          
+          // Animate text lines
+          const lines = card.querySelectorAll('.confess-line');
+          lines.forEach((line, i) => {
+            setTimeout(() => {
+              line.style.opacity = 1;
+              line.style.transform = 'translateY(0)';
+            }, 200 * (i+1));
+          });
+        }
+      } else {
+        if(card.classList.contains('revealed')) {
+          card.classList.remove('revealed');
+          const lines = card.querySelectorAll('.confess-line');
+          lines.forEach(line => {
+            line.style.opacity = 0;
+            line.style.transform = 'translateY(10px)';
+          });
+        }
+      }
+    });
+
+    if(runningTotal !== newTotal) {
+      runningTotal = newTotal;
+      const formatted = currencyFormatter.format(runningTotal);
+      headerTotal.innerText = formatted;
+      finalTotal.innerText = 'TOTAL: ' + formatted;
+    }
+
+    // Progress bar
+    let progress = 0;
+    if(maxScroll > 0) progress = (currentY / maxScroll) * 100;
+    progressBar.style.width = `${progress}%`;
+    progressLabel.innerText = `SELF-AWARENESS: ${Math.round(progress)}% COMPLETE`;
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  
+  tick();
+</script>
+</body>
+</html>

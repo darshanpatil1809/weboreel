@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>climate_clock</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300;400&family=Playfair+Display:ital,wght@1,400;1,700&family=Space+Mono&display=swap');
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: #111; color: #fff; font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid rgba(255,255,255,0.5); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  #scroll-container {
+    width: 100vw; height: 100vh;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%; transform: translateY(0);
+  }
+
+  section {
+    width: 100vw; height: 100vh; position: relative;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    overflow: hidden; box-sizing: border-box; padding: 2rem;
+  }
+
+  /* Typography */
+  h1 { font-family: 'Playfair Display', serif; font-style: italic; font-size: 4rem; margin-bottom: 1rem; text-align: center;}
+  .data { font-family: 'Space Mono', monospace; font-size: 1.2rem; color: #ff4d4d; letter-spacing: 1px; margin-bottom: 1rem; text-align: center;}
+  .elegy { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 2rem; max-width: 800px; text-align: center; color: #ccc;}
+  
+  /* Disappearance System Base */
+  .fade-layer { transition: opacity 0.1s, filter 0.1s; }
+
+  /* Section 1: Coral Reef */
+  .ocean { width: 100%; height: 60%; position: absolute; bottom: 0; display:flex; justify-content:center; align-items:flex-end;}
+  .coral-cluster { position: relative; width: 400px; height: 200px; }
+  .coral { position: absolute; bottom: 0; transform-origin: bottom center; }
+  .coral-1 { width: 80px; height: 120px; background: #ff6b35; clip-path: polygon(40% 100%, 60% 100%, 50% 50%, 80% 20%, 60% 40%, 30% 10%, 40% 50%); left: 50px;}
+  .coral-2 { width: 100px; height: 150px; background: #ff6699; border-radius: 50px 50px 0 0; left: 150px; }
+  .coral-3 { width: 60px; height: 100px; background: #8b00ff; clip-path: polygon(0% 0%, 100% 0%, 80% 100%, 20% 100%); left: 280px; }
+  .fish { position: absolute; width: 30px; height: 15px; background: #ffcc00; clip-path: polygon(0 50%, 80% 0, 100% 50%, 80% 100%); animation: swim 4s infinite alternate ease-in-out;}
+  @keyframes swim { 0% {transform: translateX(0) translateY(0);} 100% {transform: translateX(100px) translateY(-20px);} }
+
+  /* Section 2: Glacier */
+  .glacier-container { position: relative; width: 300px; height: 400px; display:flex; align-items:flex-end; justify-content:center;}
+  .glacier { width: 250px; height: 350px; background: linear-gradient(to bottom, #fff, #b3d9ff); clip-path: polygon(20% 0, 80% 10%, 100% 100%, 0 100%); transform-origin: bottom center; transition: height 0.1s; }
+  .water-pool { position: absolute; bottom: 0; width: 350px; height: 20px; background: #3399ff; border-radius: 50%; transition: height 0.1s, width 0.1s; opacity: 0.8;}
+
+  /* Section 3: Species */
+  .species-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; max-width: 800px; margin: 2rem auto; }
+  .species-item { text-align: center; }
+  .species-art { width: 60px; height: 60px; background: #555; border-radius: 50%; margin: 0 auto 10px; position:relative;}
+  /* Pseudo-shapes for animals */
+  .species-item:nth-child(1) .species-art { background: #8b5a2b; border-radius: 50% 50% 20% 20%;}
+  .species-item:nth-child(2) .species-art { background: #a9a9a9; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);}
+  .species-item:nth-child(3) .species-art { background: #d2b48c; }
+  .species-item:nth-child(4) .species-art { background: #fff; }
+  
+  .species-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+
+  /* Section 4: Forests */
+  .forest-container { position:relative; width: 80vw; height: 200px; display:flex; justify-content:space-between; align-items:flex-end; margin-top: 2rem;}
+  .tree { width: 40px; height: 120px; position:relative; transform-origin: bottom center; transition: transform 0.5s ease-in;}
+  .tree::before { content:''; position:absolute; bottom:0; left:15px; width:10px; height:40px; background:#5c3a21;}
+  .tree::after { content:''; position:absolute; bottom:30px; left:0; width:40px; height:90px; background:#2d5a27; clip-path: polygon(50% 0%, 100% 100%, 0% 100%);}
+  .tree.fallen { transform: rotate(85deg); filter: grayscale(100%); opacity: 0.3;}
+
+  /* Section 5: Ocean Levels */
+  .city-marker { position:absolute; bottom: 20%; font-family:'Space Mono'; color:white; z-index: 10; transition: opacity 0.2s;}
+  .ocean-rise { position:absolute; bottom:0; left:0; width:100%; height:10%; background:rgba(0,105,148,0.7); z-index: 5; transition: height 0.1s;}
+
+  /* Section 6: Hope */
+  .hope-section { background: #0a1a10; transition: background 1s; }
+  .sun { width: 100px; height: 100px; background: #ffcc00; border-radius: 50%; box-shadow: 0 0 50px #ffcc00; position:absolute; top: 10%; right: 10%; opacity: 0;}
+
+  /* Section 7: Clock */
+  .clock-display { font-family: 'Space Mono', monospace; font-size: 5rem; color: #ff3333; text-shadow: 0 0 20px rgba(255,51,51,0.5); margin: 2rem 0;}
+
+  @media (max-width: 768px) {
+    h1 { font-size: 2.5rem; }
+    .elegy { font-size: 1.2rem; }
+    .species-grid { grid-template-columns: repeat(2, 1fr); }
+    .clock-display { font-size: 2.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🌍</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- Section 1: Coral -->
+    <section>
+      <h1>The Coral Reefs</h1>
+      <div class="data">50% of Great Barrier Reef coral dead since 1995</div>
+      <div class="data" id="coral-year" style="font-size:2rem; color:#fff">1995</div>
+      <div class="ocean">
+        <div class="coral-cluster">
+          <div class="coral coral-1 fade-layer" data-disappear="0.05"></div>
+          <div class="coral coral-2 fade-layer" data-disappear="0.08"></div>
+          <div class="coral coral-3 fade-layer" data-disappear="0.12"></div>
+          <div class="fish fade-layer" data-disappear="0.06" style="top:20px; left:10px"></div>
+          <div class="fish fade-layer" data-disappear="0.09" style="top:50px; left:100px; animation-delay:1s"></div>
+          <div class="fish fade-layer" data-disappear="0.13" style="top:30px; left:200px; animation-delay:0.5s"></div>
+        </div>
+      </div>
+      <div class="elegy fade-layer" data-disappear="-1" style="position:absolute; bottom:5vh">
+        "The reef is not gone yet. But it is bleached. Bleaching is the reef asking for help in the only language it has."
+      </div>
+    </section>
+
+    <!-- Section 2: Glaciers -->
+    <section>
+      <h1>The Glaciers</h1>
+      <div class="data">1,300,000 Olympic swimming pools of ice melted per day globally</div>
+      <div class="glacier-container">
+        <div class="glacier fade-layer" id="glacier" data-disappear="0.2"></div>
+        <div class="water-pool" id="water-pool"></div>
+      </div>
+      <div class="elegy" style="margin-top:2rem">"A glacier is time made solid. We are melting time."</div>
+    </section>
+
+    <!-- Section 3: Species -->
+    <section>
+      <h1>The Species</h1>
+      <div class="species-grid">
+        <div class="species-item fade-layer" data-disappear="0.32"><div class="species-art"></div><div class="species-name">Passenger Pigeon</div></div>
+        <div class="species-item fade-layer" data-disappear="0.35"><div class="species-art"></div><div class="species-name">Tasmanian Tiger</div></div>
+        <div class="species-item fade-layer" data-disappear="0.38"><div class="species-art"></div><div class="species-name">Dodo</div></div>
+        <div class="species-item fade-layer" data-disappear="0.41"><div class="species-art"></div><div class="species-name">Baiji Dolphin</div></div>
+      </div>
+      <div class="data" id="species-text" style="opacity:0; transition:0.5s">
+        In 1970, there were 2x as many wild animals on Earth as today.<br>That was 54 years ago.
+      </div>
+    </section>
+
+    <!-- Section 4: Forest -->
+    <section>
+      <h1>The Forests</h1>
+      <div class="data" id="football-fields">0 football fields lost while scrolling</div>
+      <div class="forest-container" id="forest">
+        <!-- Trees generated via JS -->
+      </div>
+      <div class="elegy" id="forest-text" style="opacity:0; transition:0.5s; margin-top:2rem">"The Amazon loses an area the size of a football pitch every minute."</div>
+    </section>
+
+    <!-- Section 5: Ocean Levels -->
+    <section>
+      <h1>The Coastlines</h1>
+      <div class="data">At 2°C warming, 400 million people face annual flooding</div>
+      <div style="position:relative; width:100%; height:400px; border-bottom: 2px solid #555;">
+        <div class="city-marker" style="left:20%; bottom:30px" id="city-1">Miami</div>
+        <div class="city-marker" style="left:50%; bottom:60px" id="city-2">Mumbai</div>
+        <div class="city-marker" style="left:80%; bottom:20px" id="city-3">Jakarta</div>
+        <div class="ocean-rise" id="ocean-rise"></div>
+      </div>
+    </section>
+
+    <!-- Section 6: Hope -->
+    <section class="hope-section" id="hope-sec">
+      <div class="sun" id="hope-sun"></div>
+      <h1>What We Have Left</h1>
+      <div class="data" style="color:#00cc66">Solar power is now the cheapest energy in human history.</div>
+      <div class="data" style="color:#00cc66">The ozone hole is healing. This took 20 years of policy.</div>
+      <div class="data" style="color:#00cc66">In 2023, renewables powered 30% of global electricity.</div>
+    </section>
+
+    <!-- Section 7: Clock -->
+    <section>
+      <h1>The Climate Clock</h1>
+      <div class="clock-display" id="climate-clock">05:214:08:42</div>
+      <div class="data">Time remaining to 1.5°C threshold</div>
+      <div class="elegy" style="margin-top:2rem; max-width:1000px;">
+        "The coral is bleached but not dead. The glacier is smaller but still there. The last forest is still standing."<br><br>
+        <span style="color:#fff">"What happens next is not written yet."</span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // Setup Forest
+  const forest = document.getElementById('forest');
+  for(let i=0; i<15; i++) {
+    const tree = document.createElement('div');
+    tree.className = 'tree';
+    tree.dataset.disappear = 0.45 + (i * 0.01);
+    forest.appendChild(tree);
+  }
+
+  // Scroll engine
+  let currentY = 0, targetY = 0;
+  const ease = 0.07;
+  const wrapper = document.getElementById('wrapper');
+  const maxScroll = 6 * window.innerHeight; // 7 sections (0 to 6)
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Real-time counters
+  let startTime = Date.now();
+  setInterval(() => {
+    const seconds = Math.floor((Date.now() - startTime) / 1000);
+    const fields = (seconds / 60).toFixed(1);
+    document.getElementById('football-fields').innerText = `${fields} football fields lost while scrolling`;
+  }, 5000);
+
+  // Climate clock (fake countdown for effect)
+  let years = 5, days = 214, hours = 8, mins = 42, secs = 15;
+  setInterval(() => {
+    secs--;
+    if(secs < 0) { secs = 59; mins--; }
+    if(mins < 0) { mins = 59; hours--; }
+    
+    document.getElementById('climate-clock').innerText = 
+      `0${years}:${days}:${hours < 10 ? '0'+hours : hours}:${mins < 10 ? '0'+mins : mins}:${secs < 10 ? '0'+secs : secs}`;
+    
+    playSound('tick');
+  }, 1000);
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeOscillators = [];
+  let currentSection = 0;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '🌍' : '🔊';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+    updateAudioState(0);
+  }
+
+  function playSound(type) {
+    if(!audioCtx || isMuted) return;
+    if(type === 'tick' && currentSection === 6) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.value = 800;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+    } else if (type === 'vanish') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; 
+      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.5);
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+    }
+  }
+
+  let coralBaseFreqs = [261,329,392,523];
+  
+  function updateAudioState(progress) {
+    if(!audioCtx || isMuted) return;
+    
+    const section = Math.floor(progress * 6);
+    currentSection = section;
+
+    // Clean old
+    if(Math.random() < 0.1) {
+       activeOscillators.forEach(o => {
+          o.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+          setTimeout(()=>o.osc.stop(), 1000);
+       });
+       activeOscillators = [];
+    }
+
+    if(activeOscillators.length === 0) {
+      let freqs = [];
+      if(section === 0) {
+        // Coral bleaching - lose notes as progress increases in section 0
+        const localProg = progress / 0.16; // 0 to 1 in sec 1
+        freqs = [...coralBaseFreqs];
+        if(localProg > 0.3) freqs.pop();
+        if(localProg > 0.6) freqs.pop();
+        if(localProg > 0.9) freqs.pop();
+      } else if (section === 5) {
+        // Hope - rich major chord
+        freqs = [261,329,392,523];
+      } else {
+        freqs = [261]; // stark single note
+      }
+
+      freqs.forEach(f => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f;
+        osc.connect(gain); gain.connect(masterGain);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 1);
+        osc.start();
+        activeOscillators.push({osc, gain});
+      });
+    }
+  }
+
+  let previousScroll = 0;
+
+  function checkDisappearance(progress) {
+    // Determine if scrolling backward
+    const isBackward = progress < previousScroll;
+    previousScroll = progress;
+
+    // Coral Year text
+    const yearProg = Math.min(1, Math.max(0, progress / 0.16));
+    document.getElementById('coral-year').innerText = Math.floor(1995 + (yearProg * 29));
+
+    // Elements with data-disappear
+    document.querySelectorAll('[data-disappear]').forEach(el => {
+      const elProg = parseFloat(el.dataset.disappear);
+      if(elProg < 0) return; // Skip non-disappearing
+
+      if(progress > elProg) {
+        // Falling tree specific logic
+        if(el.classList.contains('tree')) {
+          if(!el.classList.contains('fallen')) {
+             el.classList.add('fallen');
+             playSound('vanish');
+          }
+          if(isBackward) el.classList.remove('fallen'); // Restore briefly
+        } else {
+          // Standard fade/desaturate
+          const gone = Math.min(1, (progress - elProg) / 0.05); // fades over 5% scroll
+          el.style.opacity = Math.max(0, 1 - gone);
+          el.style.filter = `saturate(${Math.max(0, 100 - gone * 100)}%) blur(${gone * 2}px)`;
+          
+          if(gone > 0.1 && gone < 0.2 && !isBackward && el.classList.contains('species-item')) playSound('vanish');
+        }
+      } else {
+        el.style.opacity = 1;
+        el.style.filter = 'none';
+        if(el.classList.contains('tree')) el.classList.remove('fallen');
+      }
+    });
+
+    // Custom: Glacier
+    const glacier = document.getElementById('glacier');
+    const water = document.getElementById('water-pool');
+    if(progress > 0.16 && progress < 0.33) {
+      const gProg = (progress - 0.16) / 0.17;
+      glacier.style.height = `${350 * (1 - gProg)}px`;
+      water.style.height = `${20 + (gProg * 100)}px`;
+      water.style.width = `${350 + (gProg * 100)}px`;
+    }
+
+    // Species text reveal
+    if(progress > 0.43) document.getElementById('species-text').style.opacity = 1;
+    else document.getElementById('species-text').style.opacity = 0;
+
+    // Forest text reveal
+    if(progress > 0.6) document.getElementById('forest-text').style.opacity = 1;
+    else document.getElementById('forest-text').style.opacity = 0;
+
+    // Ocean Rise
+    if(progress > 0.66 && progress < 0.83) {
+      const oProg = (progress - 0.66) / 0.17;
+      document.getElementById('ocean-rise').style.height = `${10 + oProg * 60}%`;
+      
+      if(oProg > 0.2) document.getElementById('city-3').style.opacity = 0; else document.getElementById('city-3').style.opacity = 1;
+      if(oProg > 0.5) document.getElementById('city-1').style.opacity = 0; else document.getElementById('city-1').style.opacity = 1;
+      if(oProg > 0.8) document.getElementById('city-2').style.opacity = 0; else document.getElementById('city-2').style.opacity = 1;
+    }
+
+    // Hope section
+    if(progress > 0.8) {
+      document.getElementById('hope-sun').style.opacity = 1;
+    } else {
+      document.getElementById('hope-sun').style.opacity = 0;
+    }
+
+    updateAudioState(progress);
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    
+    if(maxScroll > 0) {
+      const progress = currentY / maxScroll;
+      checkDisappearance(progress);
+    }
+
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

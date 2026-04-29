@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>startup_graveyard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400;700&family=Playfair+Display:ital,wght@1,400&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #0a0d08;
+    --stone: #2c302a;
+    --text-dim: #889988;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: #ddd; font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: rgba(0,0,0,0.5); border: 1px solid #444; color: #888;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* Graveyard Environment */
+  #environment {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 1; display: flex; flex-direction: column;
+  }
+  .sky { flex: 1; background: radial-gradient(circle at 60% 10%, #1a2218 0%, var(--bg) 60%); position: relative; }
+  .moon { position: absolute; top: 10%; right: 20%; width: 60px; height: 60px; background: #ffe; border-radius: 50%; box-shadow: 0 0 40px #ffe; opacity: 0.8;}
+  .ground { height: 15vh; background: #080a06; border-top: 2px solid #111510; position: relative; display:flex; justify-content:center;}
+  
+  .mist {
+    position: absolute; bottom: 10vh; left: -100%; width: 200%; height: 200px;
+    background: linear-gradient(to top, rgba(200,220,200,0.1), transparent);
+    filter: blur(10px); animation: drift 40s linear infinite;
+  }
+  @keyframes drift { 0% {transform: translateX(0);} 100% {transform: translateX(-50%);} }
+
+  .tree { position: absolute; left: 5%; bottom: 15vh; width: 10px; height: 300px; background: #050604; }
+  .tree::after { content:''; position:absolute; top: 50px; left: 10px; width: 100px; height: 5px; background: #050604; transform: rotate(-20deg); }
+  .owl { position: absolute; top: 30px; left: 50px; width: 15px; height: 20px; background: #020202; border-radius: 10px 10px 0 0; }
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+    overflow: hidden; padding-top: 30vh;
+  }
+  .wrapper {
+    display: flex; width: auto; align-items: flex-end; padding-bottom: 10vh;
+    padding-left: 20vw; padding-right: 50vw; gap: 30vw; transform: translateX(0);
+  }
+
+  /* Tombstones */
+  .tombstone-group { display: flex; align-items: flex-end; gap: 40px; position: relative; }
+  
+  .tombstone {
+    background: var(--stone); box-shadow: inset 5px 5px 10px rgba(255,255,255,0.05), inset -5px -5px 10px rgba(0,0,0,0.5), 10px 10px 20px rgba(0,0,0,0.8);
+    display: flex; flex-direction: column; align-items: center; padding: 20px; text-align: center;
+    position: relative;
+  }
+  .tombstone::before { content:''; position:absolute; bottom:-10px; left:-5%; width:110%; height:20px; background:#0a1a06; clip-path: polygon(0% 100%, 10% 0%, 20% 100%, 30% 10%, 40% 100%, 50% 0%, 60% 100%, 70% 20%, 80% 100%, 90% 10%, 100% 100%); z-index:5; }
+
+  /* Specific shapes */
+  .ts-classic { width: 180px; height: 260px; border-radius: 90px 90px 0 0; }
+  .ts-modern { width: 160px; height: 240px; border-radius: 5px 5px 0 0; clip-path: polygon(10% 0, 100% 0, 100% 100%, 0 100%, 0 10%); }
+  .ts-lean { width: 170px; height: 220px; border-radius: 10px 10px 0 0; transform: rotate(5deg); }
+  .ts-round { width: 150px; height: 250px; border-radius: 100px 100px 0 0; }
+  .ts-humble { width: 120px; height: 150px; border-radius: 10px 10px 0 0; }
+  .ts-future { width: 140px; height: 280px; clip-path: polygon(50% 0%, 100% 20%, 100% 100%, 0 100%, 0 20%); }
+  .ts-blank { width: 160px; height: 200px; border-radius: 5px 5px 0 0; }
+
+  /* Engravings */
+  .ts-name { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #111; text-shadow: 1px 1px 1px #555; margin-top: 30px; letter-spacing: 2px;}
+  .ts-date { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: #111; margin-top: 10px; }
+  .ts-epitaph { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #111; margin-top: auto; padding-bottom: 20px;}
+
+  /* Info Card (Ghostly overlay) */
+  .info-card {
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(20px);
+    width: 300px; background: rgba(10,13,8,0.9); border: 1px solid #333;
+    padding: 20px; border-radius: 5px; opacity: 0; pointer-events: none;
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+  }
+  .tombstone-group.active .info-card { opacity: 1; transform: translateX(-50%) translateY(-20px); }
+
+  .label { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-top: 10px; text-transform: uppercase;}
+  .value { font-family: 'DM Sans', sans-serif; font-size: 1rem; margin-bottom: 5px;}
+  .last-words { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.2rem; color: #fff; margin-top: 15px; border-left: 2px solid #555; padding-left: 10px;}
+  
+  .flower { position: absolute; bottom: 0; right: -15px; width: 10px; height: 30px; border-left: 2px solid #2d5a27; }
+  .flower::after { content:''; position:absolute; top:-5px; left:-4px; width:8px; height:8px; background:#ff6699; border-radius:50%; }
+
+  /* Bench section */
+  .bench { width: 200px; height: 80px; border-top: 10px solid #333; border-bottom: 10px solid #333; position: relative; }
+  .bench::before, .bench::after { content:''; position:absolute; width:10px; height:40px; background:#222; bottom:-40px; }
+  .bench::before { left: 20px; } .bench::after { right: 20px; }
+
+  .guestbook {
+    margin-left: 50px; background: #111; padding: 2rem; border: 1px solid #333; width: 300px;
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .gb-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid #444; color: #ddd; font-family: 'Cormorant Garamond'; font-size: 1.2rem; outline: none; margin-top: 1rem; }
+
+  @media (max-width: 768px) {
+    .wrapper { padding-top: 20vh; align-items: center; }
+    .tombstone-group { flex-direction: column; align-items: center; gap: 20px;}
+    .info-card { position: relative; bottom: auto; left: auto; transform: none !important; margin-top: 20px; opacity: 0.5; width: 80vw;}
+    .tombstone-group.active .info-card { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">⚰️</button>
+
+<div id="environment">
+  <div class="sky">
+    <div class="moon"></div>
+    <div class="tree"><div class="owl"></div></div>
+  </div>
+  <div class="mist"></div>
+  <div class="ground"></div>
+</div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1. YOLO -->
+    <div class="tombstone-group">
+      <div class="tombstone ts-classic">
+        <div class="ts-name">YOLO DELIVERY</div>
+        <div class="ts-date">2019 — 2021</div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">Delivery in under 10 minutes. Everything. From anywhere.</div>
+        <div class="label">Raised</div><div class="value">$47 million (Series B)</div>
+        <div class="label">Cause of Death</div><div class="value">Unit economics. Specifically: paying delivery drivers ₹80 to deliver a ₹60 sandwich.</div>
+        <div class="last-words">"We were too early."</div>
+        <div style="font-family:'Space Mono'; font-size:0.7rem; color:#888; margin-top:5px;">ACTUAL REASON: Math.</div>
+      </div>
+    </div>
+
+    <!-- 2. DISRUPT -->
+    <div class="tombstone-group">
+      <div class="tombstone ts-modern">
+        <div class="ts-name">DISRUPT.AI</div>
+        <div class="ts-date">2020 — 2022</div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">AI that disrupts the disruption of traditional disruptors.</div>
+        <div class="label">Raised</div><div class="value">$12 million</div>
+        <div class="label">Cause of Death</div><div class="value">No one, including the founders, could explain what it did.</div>
+        <div class="last-words">"The market wasn't ready for us."</div>
+        <div style="font-family:'Space Mono'; font-size:0.7rem; color:#888; margin-top:5px;">ACTUAL REASON: There was no product.</div>
+      </div>
+    </div>
+
+    <!-- 3. BLOCKCHAIN -->
+    <div class="tombstone-group">
+      <div class="tombstone ts-lean">
+        <div class="ts-name" style="font-size:1.5rem">BLOCKCHAINX</div>
+        <div class="ts-date">2017 — 2018</div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">Uber but on blockchain. For pets. NFT-enabled.</div>
+        <div class="label">Raised</div><div class="value">$4.2 million ICO</div>
+        <div class="label">Cause of Death</div><div class="value">The ICO completed. The product never began.</div>
+        <div class="last-words">"Crypto winter."</div>
+        <div style="font-family:'Space Mono'; font-size:0.7rem; color:#888; margin-top:5px;">ACTUAL REASON: Summer.</div>
+      </div>
+    </div>
+
+    <!-- 4. KETO -->
+    <div class="tombstone-group">
+      <div class="tombstone ts-round">
+        <div class="ts-name">KETO.LIVE</div>
+        <div class="ts-date">2018 — 2019</div>
+        <div class="ts-epitaph">The lifestyle was not chosen.</div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">Personalized AI-driven keto meal plans.</div>
+        <div class="label">Raised</div><div class="value">$8 million</div>
+        <div class="label">Cause of Death</div><div class="value">Users got bored of keto in Q3. The market pivoted to intermittent fasting. We did not.</div>
+        <div class="last-words">"We were a lifestyle company, not a diet company."</div>
+      </div>
+    </div>
+
+    <!-- 5. ZOOM CLONE -->
+    <div class="tombstone-group" id="room-io">
+      <div class="tombstone ts-classic">
+        <div class="ts-name">ROOM.IO</div>
+        <div class="ts-date">2019 — 2020</div>
+        <div class="ts-epitaph">Timing is everything.</div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">Better video calls. Simple interface. Reliable connections.</div>
+        <div class="label">Raised</div><div class="value">$2.3 million seed</div>
+        <div class="label">Cause of Death</div><div class="value">Launched 6 weeks before Zoom became mandatory for all of human civilization. Was objectively better than Zoom. Died anyway.</div>
+        <div class="last-words">"..."</div>
+      </div>
+    </div>
+
+    <!-- 6. TASKME -->
+    <div class="tombstone-group" id="taskme">
+      <div class="tombstone ts-humble">
+        <div class="ts-name" style="font-size:1.5rem">TASKME</div>
+        <div class="ts-date">2021 — 2023</div>
+        <div class="flower"></div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">Todoist but simpler. Notion but less overwhelming. Just tasks.</div>
+        <div class="label">Raised</div><div class="value">₹0 (bootstrapped)</div>
+        <div class="label">Cause of Death</div><div class="value">Ran out of savings. Product worked. Users loved it. Revenue: ₹3,200/month. Cost: ₹45,000/month.</div>
+        <div class="last-words" style="font-family:'DM Sans'; font-style:normal;">"I'm proud of what we built."</div>
+      </div>
+    </div>
+
+    <!-- 7. METAOFFICE -->
+    <div class="tombstone-group">
+      <div class="tombstone ts-future">
+        <div class="ts-name" style="font-size:1.5rem; transform:rotate(-90deg); margin-top:80px;">METAOFFICE</div>
+        <div class="ts-date" style="transform:rotate(-90deg); margin-top:40px;">2021-2022</div>
+      </div>
+      <div class="info-card">
+        <div class="label">The Pitch</div><div class="value">VR offices. Meet your coworkers as avatars.</div>
+        <div class="label">Raised</div><div class="value">$31 million</div>
+        <div class="label">Cause of Death</div><div class="value">Workers found that putting on a VR headset to attend a 9am standup was 'worse than the actual 9am standup.'</div>
+        <div class="last-words">"The metaverse is coming."</div>
+      </div>
+    </div>
+
+    <!-- 8. UNNAMED -->
+    <div class="tombstone-group">
+      <div class="tombstone ts-blank">
+        <div class="ts-epitaph" style="margin:auto;">We never launched.</div>
+      </div>
+      <div style="position:absolute; bottom:-30px; width:300px; font-family:'DM Sans'; font-size:0.8rem; color:#666;">
+        This one belongs to all the ideas that never made it past the Notes app.
+      </div>
+    </div>
+
+    <!-- 9. BENCH & GUESTBOOK -->
+    <div class="tombstone-group" style="align-items:center;">
+      <div class="bench"></div>
+      <div class="guestbook">
+        <div style="font-size:1.5rem; font-style:italic;">The graveyard accepts all ideas. Even the ones that might have worked.</div>
+        <div class="label" style="margin-top:2rem;">LEAVE YOUR ABANDONED IDEA:</div>
+        <input type="text" class="gb-input" id="gb-input" placeholder="e.g., Tinder for dogs">
+        <div id="saved-ideas" style="margin-top:1rem; font-family:'Space Mono'; font-size:0.8rem; color:#888;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentX = 0, targetX = 0;
+  const ease = 0.078;
+  const wrapper = document.getElementById('wrapper');
+  const groups = document.querySelectorAll('.tombstone-group');
+  let maxScroll = 0;
+
+  function updateMaxScroll() {
+    maxScroll = Math.max(0, wrapper.scrollWidth - window.innerWidth + 200);
+  }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  // Horizontal scroll logic
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetX += e.deltaY * 0.8;
+    targetX = Math.max(0, Math.min(targetX, maxScroll));
+  }, { passive: false });
+
+  let touchStartX = 0;
+  window.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetX += (touchStartX - e.touches[0].clientX) * 1.5;
+    touchStartX = e.touches[0].clientX;
+    targetX = Math.max(0, Math.min(targetX, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeGroup = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.color = isMuted ? '#888' : '#fff';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+
+    // Wind ambient
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    const windSource = audioCtx.createBufferSource();
+    windSource.buffer = noiseBuffer;
+    windSource.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 3000;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.025;
+
+    windSource.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    windSource.start();
+
+    // Occasional owl
+    setInterval(() => {
+      if(!isMuted) {
+        const osc = audioCtx.createOscillator();
+        const oGain = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = 300;
+        osc.connect(oGain); oGain.connect(masterGain);
+        oGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        oGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.1);
+        oGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+      }
+    }, 8000 + Math.random()*5000);
+  }
+
+  function playCreak() {
+    if(!audioCtx || isMuted) return;
+    const bufferSize = audioCtx.sampleRate * 0.15;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 300;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    
+    src.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    src.start();
+  }
+
+  function playSpecificMusic(id) {
+    if(!audioCtx || isMuted) return;
+    if(id === 'room-io') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = 329;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + 0.51); // cut abruptly
+      osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+    } else if(id === 'taskme') {
+      [523, 659].forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.value = f;
+        osc.connect(gain); gain.connect(masterGain);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.2);
+        gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + i*0.2 + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i*0.2 + 1);
+        osc.start(audioCtx.currentTime + i*0.2); osc.stop(audioCtx.currentTime + i*0.2 + 1);
+      });
+    }
+  }
+
+  function checkActive() {
+    const vw = window.innerWidth;
+    const centerPoint = currentX + vw/2;
+    
+    let found = -1;
+    groups.forEach((group, index) => {
+      const rect = group.getBoundingClientRect();
+      const groupCenter = rect.left + currentX + rect.width/2;
+      
+      if(Math.abs(groupCenter - centerPoint) < vw * 0.3) {
+        if(!group.classList.contains('active')) {
+          group.classList.add('active');
+          found = index;
+        }
+      } else {
+        group.classList.remove('active');
+      }
+    });
+
+    if(found !== -1 && found !== activeGroup) {
+      activeGroup = found;
+      playCreak();
+      if(groups[activeGroup].id) playSpecificMusic(groups[activeGroup].id);
+      
+      // Fog effect based on scroll
+      document.querySelector('.sky').style.filter = `blur(${(currentX/maxScroll)*2}px)`;
+    }
+  }
+
+  function tick() {
+    currentX += (targetX - currentX) * ease;
+    wrapper.style.transform = `translateX(-${currentX}px)`;
+    checkActive();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Guestbook
+  const gbInput = document.getElementById('gb-input');
+  const savedIdeas = document.getElementById('saved-ideas');
+
+  function renderIdeas() {
+    const ideas = JSON.parse(localStorage.getItem('dead_ideas') || '[]');
+    savedIdeas.innerHTML = ideas.map(i => `<div>- ${i}</div>`).join('');
+  }
+  renderIdeas();
+
+  gbInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && gbInput.value.trim() !== '') {
+      const ideas = JSON.parse(localStorage.getItem('dead_ideas') || '[]');
+      ideas.push(gbInput.value.trim());
+      localStorage.setItem('dead_ideas', JSON.stringify(ideas));
+      gbInput.value = '';
+      renderIdeas();
+    }
+  });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>world_cup_final</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:ital,wght@0,400;0,900;1,400&family=Space+Mono&display=swap');
+
+  :root {
+    --pitch: #2e8b57;
+    --pitch-dark: #1f5f3b;
+    --line: #ffffff;
+    --stadium-dark: #0a0a0a;
+    --accent-red: #e63946;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--stadium-dark); color: white;
+    font-family: 'Roboto', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 2px solid white; color: white;
+    font-weight: bold; cursor: pointer; padding: 10px 20px; border-radius: 20px;
+    font-family: 'Bebas Neue'; font-size: 1.2rem;
+  }
+
+  /* Scoreboard overlay */
+  .scoreboard {
+    position: fixed; top: 20px; left: 20px; background: rgba(0,0,0,0.8);
+    border: 1px solid #333; padding: 10px 20px; font-family: 'Space Mono';
+    display: flex; gap: 20px; font-size: 1.5rem; z-index: 50; border-radius: 5px;
+  }
+  .score-team { font-weight: bold; }
+  .score-time { color: var(--accent-red); animation: blink 1s infinite; }
+  @keyframes blink { 50% {opacity: 0.5;} }
+
+  /* Environment */
+  #pitch-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 1; perspective: 1000px; display: flex; justify-content: center; align-items: flex-end;
+  }
+  .pitch {
+    width: 200vw; height: 150vh; background: repeating-linear-gradient(0deg, var(--pitch), var(--pitch) 50px, var(--pitch-dark) 50px, var(--pitch-dark) 100px);
+    transform: rotateX(70deg) translateY(20%); transform-origin: bottom center;
+    position: relative; box-shadow: inset 0 0 100px 50px rgba(0,0,0,0.8);
+  }
+  
+  /* Field lines inside pitch */
+  .center-circle { position:absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; border: 5px solid var(--line); border-radius: 50%;}
+  .center-line { position:absolute; top: 50%; left: 0; width: 100%; height: 5px; background: var(--line); }
+  .penalty-box { position:absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 400px; height: 200px; border: 5px solid var(--line); border-bottom:none;}
+  .goal-box { position:absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 150px; height: 50px; border: 5px solid var(--line); border-bottom:none;}
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%; transform: translateY(0);
+  }
+
+  section {
+    width: 100vw; height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    position: relative; box-sizing: border-box; padding: 2rem;
+  }
+
+  /* Typography */
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 8rem; margin: 0; text-shadow: 0 5px 20px rgba(0,0,0,0.8); line-height: 1;}
+  .commentary { font-size: 2rem; font-weight: 900; font-style: italic; max-width: 800px; text-shadow: 0 2px 10px rgba(0,0,0,1); background: rgba(0,0,0,0.5); padding: 1rem;}
+  .sub-text { font-family: 'Space Mono'; color: #ccc; margin-top: 1rem; background: rgba(0,0,0,0.8); padding: 5px 10px;}
+
+  /* Action Elements */
+  .ball {
+    width: 30px; height: 30px; background: radial-gradient(circle at 30% 30%, #fff, #aaa);
+    border-radius: 50%; position: absolute; z-index: 20;
+    box-shadow: 5px 10px 15px rgba(0,0,0,0.5);
+    /* Controlled by JS */
+    left: 50%; top: 80%; transform: translate(-50%, -50%);
+  }
+
+  .player-shadow {
+    width: 60px; height: 20px; background: rgba(0,0,0,0.5); border-radius: 50%;
+    position: absolute; filter: blur(5px);
+  }
+
+  /* Camera Flash Effect */
+  .flash {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: white; z-index: 100; opacity: 0; pointer-events: none;
+  }
+  @keyframes cameraFlash { 0% {opacity:0.8;} 100% {opacity:0;} }
+  .flash-active { animation: cameraFlash 0.5s ease-out; }
+
+  @media (max-width: 768px) {
+    h1 { font-size: 5rem; }
+    .commentary { font-size: 1.5rem; }
+    .scoreboard { font-size: 1rem; top: 10px; left: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">SOUND ON</button>
+
+<div class="scoreboard">
+  <div class="score-team">ARG 3</div>
+  <div>-</div>
+  <div class="score-team">FRA 3</div>
+  <div class="score-time">118:42</div>
+</div>
+
+<div id="pitch-container">
+  <div class="pitch" id="pitch">
+    <div class="center-line"></div>
+    <div class="center-circle"></div>
+    <div class="penalty-box"></div>
+    <div class="goal-box"></div>
+  </div>
+</div>
+
+<div class="ball" id="ball"></div>
+<div class="player-shadow" id="shadow" style="left:50%; top:82%; transform:translateX(-50%);"></div>
+
+<div class="flash" id="flash"></div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1. The Build up -->
+    <section>
+      <h1>118TH MINUTE</h1>
+      <div class="commentary">"Legs are gone. Lungs are burning. It's purely mental now."</div>
+      <div class="sub-text">The ball is loose in the midfield.</div>
+    </section>
+
+    <!-- 2. The Pass -->
+    <section>
+      <div class="commentary">"Mac Allister finds space... slips it through!"</div>
+      <div class="sub-text">A through ball breaks the defensive line.</div>
+    </section>
+
+    <!-- 3. The Run -->
+    <section>
+      <h1 style="color:var(--accent-red)">MARTINEZ!</h1>
+      <div class="commentary">"He's onside! He's clear! It's just Lloris to beat!"</div>
+      <div class="sub-text">Time slows down for 1.5 billion people watching.</div>
+    </section>
+
+    <!-- 4. The Strike -->
+    <section>
+      <div class="commentary" style="font-size:3rem;">"HE HITS IT—"</div>
+    </section>
+
+    <!-- 5. The Save (Silence) -->
+    <section id="sec-save">
+      <h1 style="font-size: 10rem;">NO.</h1>
+      <div class="commentary" style="color:#aaa;">"A leg. Just a leg. Kolo Muani... wait, no, Martinez denied by the boot of Lloris."</div>
+      <div class="sub-text">The loudest silence in sporting history.</div>
+    </section>
+
+    <!-- 6. Counter -->
+    <section>
+      <div class="commentary">"And now France counter... Mbappé is away..."</div>
+      <div class="sub-text">The emotional whiplash of football.</div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  const sections = document.querySelectorAll('section');
+  const maxScroll = (sections.length - 1) * window.innerHeight;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeSection = -1;
+  let crowdSource, crowdGain;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? 'SOUND ON' : 'MUTE';
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'white';
+    document.getElementById('mute-btn').style.color = isMuted ? 'white' : 'black';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Stadium Crowd Noise (White noise + filtering)
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    crowdSource = audioCtx.createBufferSource();
+    crowdSource.buffer = noiseBuffer;
+    crowdSource.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 800; // murmur
+    
+    crowdGain = audioCtx.createGain();
+    crowdGain.gain.value = 0.2; // base volume
+
+    crowdSource.connect(filter); filter.connect(crowdGain); crowdGain.connect(masterGain);
+    crowdSource.start();
+  }
+
+  function playKick() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = 150;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+  }
+
+  function playWhistle() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 2800;
+    osc.connect(gain); gain.connect(masterGain);
+    
+    // trill effect
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'square'; lfo.frequency.value = 30;
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 400;
+    lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.6);
+    
+    lfo.start(); osc.start();
+    lfo.stop(audioCtx.currentTime + 0.6); osc.stop(audioCtx.currentTime + 0.6);
+  }
+
+  const ball = document.getElementById('ball');
+  const shadow = document.getElementById('shadow');
+  const pitch = document.getElementById('pitch');
+  const flash = document.getElementById('flash');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const scrollProgress = maxScroll > 0 ? currentY / maxScroll : 0;
+    const index = Math.round(currentY / vh);
+
+    // Audio Crowd swell logic
+    if(!isMuted && crowdGain) {
+      if(index === 0) crowdGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.5); // murmur
+      if(index === 1) crowdGain.gain.setTargetAtTime(0.4, audioCtx.currentTime, 0.5); // rising
+      if(index === 2) crowdGain.gain.setTargetAtTime(0.8, audioCtx.currentTime, 0.5); // roar
+      if(index === 3) crowdGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.1); // peak
+      if(index === 4) crowdGain.gain.setTargetAtTime(0.05, audioCtx.currentTime, 0.1); // sudden silence (gasp)
+      if(index === 5) crowdGain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 1.0); // rising again
+    }
+
+    if(index !== activeSection) {
+      activeSection = index;
+      if(index === 1 || index === 3 || index === 5) playKick();
+      if(index === 4) {
+        // Flash on the save
+        flash.classList.remove('flash-active');
+        void flash.offsetWidth; // trigger reflow
+        flash.classList.add('flash-active');
+      }
+    }
+
+    // Ball Animation Logic (Screen space)
+    // 0: Midfield (bottom)
+    // 1: Pass forward (moves up)
+    // 2: Run (moves up more, gets slightly smaller)
+    // 3: Strike (fast move up)
+    // 4: Save (bounces off something invisible)
+    // 5: Counter (moves back down fast)
+
+    let bX = 50, bY = 80, scale = 1;
+
+    if(scrollProgress < 0.2) {
+      // 0 to 1
+      const p = scrollProgress / 0.2;
+      bY = 80 - (p * 20);
+    } else if(scrollProgress < 0.4) {
+      // 1 to 2
+      const p = (scrollProgress - 0.2) / 0.2;
+      bY = 60 - (p * 20);
+      scale = 1 - (p * 0.2);
+    } else if(scrollProgress < 0.6) {
+      // 2 to 3 (The strike)
+      const p = (scrollProgress - 0.4) / 0.2;
+      bY = 40 - (p * 25);
+      scale = 0.8 - (p * 0.3);
+    } else if(scrollProgress < 0.8) {
+      // 3 to 4 (The Save - deflected right)
+      const p = (scrollProgress - 0.6) / 0.2;
+      bX = 50 + (p * 30);
+      bY = 15 + (p * 10); // deflected out
+      scale = 0.5 + (p * 0.2);
+    } else {
+      // 4 to 5 (Counter)
+      const p = (scrollProgress - 0.8) / 0.2;
+      bX = 80 - (p * 30);
+      bY = 25 + (p * 60); // moving back down field
+      scale = 0.7 + (p * 0.3);
+    }
+
+    ball.style.left = `${bX}%`;
+    ball.style.top = `${bY}%`;
+    ball.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    
+    shadow.style.left = `${bX}%`;
+    shadow.style.top = `${bY + 2}%`;
+    shadow.style.transform = `translateX(-50%) scale(${scale})`;
+
+    // Pitch Parallax (camera following action)
+    pitch.style.transform = `rotateX(70deg) translateY(${20 + (scrollProgress * 30)}%) translateX(${(50-bX)*0.5}%)`;
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

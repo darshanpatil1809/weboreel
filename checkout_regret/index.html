@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>checkout_regret</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #f9f9f9;
+    --text: #111;
+    --accent: #2563eb;
+    --danger: #ef4444;
+    --success: #10b981;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: #fff; border: 1px solid #ccc; color: #333;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Progress Bar */
+  #progress-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 5px;
+    background: #e5e7eb; z-index: 50;
+  }
+  #progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s;}
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%; transform: translateY(0);
+  }
+
+  section {
+    width: 100vw; height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; position: relative;
+    box-sizing: border-box; padding: 2rem;
+  }
+
+  /* UI Elements */
+  .checkout-panel {
+    background: #fff; width: 100%; max-width: 500px; padding: 2rem;
+    border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border: 1px solid #eaeaea; opacity: 0; transform: translateY(20px);
+    transition: all 0.5s ease;
+  }
+  .active .checkout-panel { opacity: 1; transform: translateY(0); }
+
+  h2 { font-weight: 900; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 1rem;}
+  .row { display: flex; justify-content: space-between; margin: 1rem 0; font-family: 'Space Mono';}
+  .input-fake { width: 100%; height: 40px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 1rem; background: #fafafa; display:flex; align-items:center; padding-left:10px; color:#999; box-sizing:border-box;}
+  
+  .btn {
+    width: 100%; padding: 1rem; background: var(--accent); color: white;
+    font-weight: bold; border: none; border-radius: 5px; font-size: 1.1rem;
+    cursor: pointer; text-align: center;
+  }
+
+  /* Psychological Interventions */
+  .dark-pattern { font-size: 0.8rem; color: var(--danger); font-weight: bold; text-align: right; margin-bottom: 1rem; opacity: 0; transition: 0.5s;}
+  .active .dark-pattern { opacity: 1; }
+
+  .conscience-text {
+    position: absolute; font-style: italic; color: #666; font-size: 1.2rem;
+    max-width: 300px; opacity: 0; transition: 1s; pointer-events: none;
+  }
+  .active .conscience-text { opacity: 1; }
+
+  /* Product specific */
+  .product-img { width: 100%; height: 200px; background: #f0f0f0; border-radius: 5px; display:flex; justify-content:center; align-items:center; font-size: 4rem; margin-bottom:1rem;}
+  
+  /* Post-purchase distortion */
+  .regret-filter { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; opacity:0; pointer-events:none; z-index: 40; transition: opacity 2s;}
+  .regret-text { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:'Space Mono'; font-size:2rem; text-align:center; opacity:0; z-index:45;}
+
+  @media (max-width: 768px) {
+    .conscience-text { display: none; } /* Hide on mobile to keep clean */
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🛒</button>
+<div id="progress-container"><div id="progress-bar"></div></div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1. Cart -->
+    <section>
+      <div class="checkout-panel">
+        <h2>Your Cart</h2>
+        <div class="product-img">📸</div>
+        <div class="row"><span>Pro DSLR Camera</span><span>$1,499.00</span></div>
+        <div class="row" style="color:var(--success)"><span>Discount (YOLOSWAG)</span><span>-$50.00</span></div>
+        <div class="row" style="font-weight:bold; border-top:1px solid #ccc; padding-top:10px;"><span>Total</span><span>$1,449.00</span></div>
+        <div class="btn">PROCEED TO CHECKOUT</div>
+      </div>
+      <div class="conscience-text" style="right: 15vw; top: 30vh;">"You've used your current camera twice this year."</div>
+    </section>
+
+    <!-- 2. Upsell -->
+    <section>
+      <div class="checkout-panel">
+        <h2>Wait! Protect your purchase.</h2>
+        <p style="font-size:0.9rem; color:#555;">92% of professionals add protection.</p>
+        
+        <div style="border:2px solid var(--accent); padding:1rem; border-radius:5px; margin-bottom:1rem;">
+          <input type="radio" checked> <strong style="color:var(--accent)">3-Year Damage Protection (Recommended)</strong>
+          <div style="margin-left:20px; font-family:'Space Mono'; font-size:0.9rem;">+ $199.00</div>
+        </div>
+        
+        <div style="border:1px solid #ccc; padding:1rem; border-radius:5px; margin-bottom:1rem; opacity:0.5;">
+          <input type="radio"> No thanks, I'll take the risk.
+        </div>
+        
+        <div class="dark-pattern">ONLY 2 LEFT IN STOCK!</div>
+        <div class="btn">CONTINUE TO SHIPPING</div>
+      </div>
+      <div class="conscience-text" style="left: 15vw; top: 40vh;">"Fear is a very effective pricing strategy."</div>
+    </section>
+
+    <!-- 3. Shipping -->
+    <section>
+      <div class="checkout-panel">
+        <h2>Shipping Method</h2>
+        
+        <div style="border:1px solid #ccc; padding:1rem; border-radius:5px; margin-bottom:1rem;">
+          <input type="radio"> Standard (5-7 Days) - FREE
+        </div>
+        
+        <div style="border:2px solid var(--accent); padding:1rem; border-radius:5px; margin-bottom:1rem; background:#f0f7ff;">
+          <input type="radio" checked> <strong>Overnight Express</strong>
+          <div style="margin-left:20px; font-family:'Space Mono'; font-size:0.9rem; color:var(--accent)">+ $45.00</div>
+        </div>
+        
+        <div class="btn">CONTINUE TO PAYMENT</div>
+      </div>
+      <div class="conscience-text" style="right: 15vw; top: 50vh;">"You need it tomorrow so you can leave it in the box until Saturday."</div>
+    </section>
+
+    <!-- 4. Payment / Friction -->
+    <section>
+      <div class="checkout-panel" style="border-color:var(--danger); box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);">
+        <h2>Payment Details</h2>
+        
+        <div class="input-fake">Card Number: **** **** **** 4242</div>
+        <div style="display:flex; gap:10px;">
+          <div class="input-fake">MM/YY</div>
+          <div class="input-fake">CVC</div>
+        </div>
+        
+        <div style="background:#fff3f3; padding:1rem; border-left:4px solid var(--danger); margin-bottom:1rem; font-size:0.9rem;">
+          <strong>Final total: $1,693.00</strong><br>
+          <span style="color:#666;">(Including tax, protection, and overnight shipping)</span>
+        </div>
+        
+        <div class="btn" style="background:var(--success)">PLACE ORDER ($1,693.00)</div>
+      </div>
+      <div class="conscience-text" style="left: 15vw; top: 40vh; color:var(--danger); font-weight:bold; font-style:normal;">This is 12% of your monthly salary.</div>
+    </section>
+
+    <!-- 5. Confirmation / Dopamine Hit -->
+    <section id="sec-success">
+      <div class="checkout-panel" style="text-align:center;">
+        <div style="font-size:4rem; color:var(--success); margin-bottom:1rem;">✓</div>
+        <h2>Order Confirmed!</h2>
+        <p>Order #88492-B</p>
+        <p style="color:#555; font-size:0.9rem;">A rush of dopamine has been dispatched to your brain.</p>
+        <div class="btn" style="background:#eee; color:#333; margin-top:2rem;">CONTINUE SHOPPING</div>
+      </div>
+    </section>
+
+    <!-- 6. The Drop (Regret) -->
+    <section id="sec-regret">
+      <!-- Empty. Magic happens in JS -->
+    </section>
+
+  </div>
+</div>
+
+<div class="regret-filter" id="regret-filter"></div>
+<div class="regret-text" id="regret-text">The dopamine lasted 14 seconds.<br><br><span style="font-size:1rem; color:#888;">The credit card bill arrives in 30 days.</span></div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  const sections = document.querySelectorAll('section');
+  const maxScroll = (sections.length - 1) * window.innerHeight;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeSection = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? '#fff' : '#e0e7ff';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+    
+    // Background heartbeat (consumer anxiety)
+    setInterval(() => {
+      if(!isMuted && activeSection < 4) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = 60;
+        osc.connect(gain); gain.connect(masterGain);
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+      }
+    }, 1000); // gets faster via JS later
+  }
+
+  function playUIBeep(pitch) {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square'; osc.frequency.value = pitch;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+  }
+
+  function playSuccessChime() {
+    if(!audioCtx || isMuted) return;
+    [523, 659, 784, 1046].forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      osc.connect(gain); gain.connect(masterGain);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.1);
+      gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + i*0.1 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 1);
+      osc.start(audioCtx.currentTime + i*0.1); osc.stop(audioCtx.currentTime + i*0.1 + 1);
+    });
+  }
+
+  function playRegretDrone() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = 55; // Low A
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 200;
+    
+    osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 2);
+    
+    osc.start();
+    // keeps playing
+  }
+
+  const progressBar = document.getElementById('progress-bar');
+  const regretFilter = document.getElementById('regret-filter');
+  const regretText = document.getElementById('regret-text');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const scrollProgress = maxScroll > 0 ? currentY / maxScroll : 0;
+    const index = Math.round(currentY / vh);
+
+    progressBar.style.width = `${scrollProgress * 100}%`;
+
+    sections.forEach((sec, i) => {
+      if(i === index) sec.classList.add('active');
+      else sec.classList.remove('active');
+    });
+
+    if(index !== activeSection) {
+      activeSection = index;
+      
+      if(index < 4) {
+        playUIBeep(400 + (index * 100)); // ascending pitch as we progress
+      } else if(index === 4) {
+        playSuccessChime();
+        document.body.style.background = '#ecfdf5'; // slight green tint
+      } else if(index === 5) {
+        playRegretDrone();
+      }
+      
+      if(index < 4) {
+         document.body.style.background = 'var(--bg)';
+         regretFilter.style.opacity = 0;
+         regretText.style.opacity = 0;
+         regretText.style.transform = 'translate(-50%, -40%)';
+      }
+    }
+
+    // Regret Transition
+    if(currentY > 4.5 * vh) {
+      const p = (currentY - 4.5 * vh) / (0.5 * vh); // 0 to 1
+      regretFilter.style.opacity = p * 0.9;
+      regretText.style.opacity = p;
+      regretText.style.transform = `translate(-50%, -50%) scale(${1 + p*0.1})`;
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

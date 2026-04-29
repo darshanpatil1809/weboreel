@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>wardrobe_story</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300;400&family=Playfair+Display:ital,wght@1,400&display=swap');
+
+  :root {
+    --bg: #ece5dd;
+    --wood: #3a2518;
+    --fabric-light: #f5f5f0;
+    --text-dark: #222;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text-dark);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid var(--wood); color: var(--wood);
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%;
+  }
+
+  /* The Wardrobe Environment */
+  .wardrobe-container {
+    position: fixed; top: 10vh; left: 50%; transform: translateX(-50%);
+    width: 80vw; max-width: 600px; height: 80vh;
+    border: 15px solid var(--wood); border-radius: 10px 10px 0 0;
+    box-shadow: inset 0 20px 50px rgba(0,0,0,0.5), 0 20px 50px rgba(0,0,0,0.3);
+    background: #1a100a; overflow: hidden; z-index: 1;
+  }
+  .rail {
+    position: absolute; top: 10%; left: 0; width: 100%; height: 10px;
+    background: linear-gradient(to bottom, #ccc, #888);
+    box-shadow: 0 5px 10px rgba(0,0,0,0.8); z-index: 2;
+  }
+
+  /* Clothing Items */
+  .hanger-group {
+    position: absolute; top: 10%; left: 50%; width: 200px; height: 60vh;
+    transform: translateX(-50%); transition: transform 0.5s ease-in-out;
+  }
+  .hanger {
+    position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 30px; border: 3px solid #ccc; border-radius: 20px 20px 0 0;
+    border-bottom: none; z-index: 3;
+  }
+  .hanger::before { content:''; position:absolute; top:-10px; left:18px; width:15px; height:20px; border:3px solid #ccc; border-radius:50%; border-bottom:none; border-left:none; transform:rotate(-20deg);}
+
+  .garment {
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+    width: 150px; height: 400px; border-radius: 20px 20px 5px 5px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5); z-index: 4;
+    display: flex; justify-content: center; overflow: hidden;
+  }
+
+  /* Specific Garments */
+  .shirt-school { background: #fff; border: 1px solid #ddd; }
+  .shirt-school::before { content:''; position:absolute; top:0; left:40px; width:70px; height:40px; border-bottom: 1px solid #ddd; border-radius:0 0 50% 50%; }
+  .ink-stain { position:absolute; top:150px; left:30px; width:20px; height:30px; background:blue; border-radius:50%; filter:blur(2px); opacity:0.5;}
+
+  .jacket-leather { background: #111; width: 180px; }
+  .jacket-leather::after { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:4px; height:100%; background:#444; } /* zipper */
+
+  .dress-firstdate { background: #d32f2f; height: 300px; border-radius: 40px 40px 10px 10px; }
+  
+  .suit-interview { background: #2c3e50; width: 170px; height: 350px;}
+  .suit-interview::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:40px; height:150px; background:#fff; clip-path:polygon(0 0, 100% 0, 50% 100%);} /* tie area */
+
+  .sweater-ex { background: #7f8c8d; height: 380px; width: 160px; border-radius: 30px 30px 5px 5px; }
+  .sweater-ex::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background:repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(0,0,0,0.05) 5px, rgba(0,0,0,0.05) 10px);} /* knit texture */
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; width: 100%; transform: translateX(0);
+  }
+
+  section {
+    min-width: 100vw; height: 100vh; display: flex; flex-direction: column;
+    justify-content: flex-end; align-items: center; position: relative;
+    padding-bottom: 5vh; box-sizing: border-box;
+  }
+
+  /* Story Cards */
+  .story-card {
+    background: rgba(255,255,255,0.9); padding: 2rem; max-width: 500px;
+    border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    text-align: center; border: 1px solid #ddd;
+    opacity: 0; transform: translateY(20px); transition: all 0.5s ease;
+  }
+  .active .story-card { opacity: 1; transform: translateY(0); }
+
+  h2 { font-family: 'Playfair Display', serif; font-style: italic; font-size: 2rem; margin: 0 0 1rem 0; color: var(--wood);}
+  .story-text { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; line-height: 1.5; color: #444;}
+  .year-tag { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #888; margin-bottom: 1rem;}
+
+  /* Dust particles */
+  .dust {
+    position: absolute; background: white; border-radius: 50%;
+    pointer-events: none; opacity: 0; animation: floatDust 10s infinite linear;
+  }
+  @keyframes floatDust { 0% {transform:translateY(0); opacity:0;} 50% {opacity:0.3;} 100% {transform:translateY(-100px); opacity:0;} }
+
+  @media (max-width: 768px) {
+    .wardrobe-container { width: 95vw; height: 60vh; top: 5vh; }
+    .story-card { max-width: 90vw; padding: 1.5rem; }
+    h2 { font-size: 1.5rem; }
+    .story-text { font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🧥</button>
+
+<div class="wardrobe-container" id="wardrobe">
+  <div class="rail"></div>
+  <!-- Items generated via JS for positioning -->
+</div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <section>
+      <div class="story-card">
+        <div class="year-tag">1998</div>
+        <h2>The School Uniform</h2>
+        <div class="story-text">I hated this shirt. The collar was too stiff. The ink stain on the pocket is from when Rahul pushed me in 7th grade. I kept it because it's the only thing that proves I was once that small.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="story-card">
+        <div class="year-tag">2005</div>
+        <h2>The Fake Leather Jacket</h2>
+        <div class="story-text">Bought at a flea market for ₹800. I wore it through two winters, pretending I was in a band. It smells faintly of cheap deodorant and teenage invincibility. It flakes if you touch it now.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="story-card">
+        <div class="year-tag">2010</div>
+        <h2>The Red Dress</h2>
+        <div class="story-text">Worn on the first date with someone I thought I'd marry. We didn't. I've never worn it since, but I can't bring myself to throw it away. It holds too much hope.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="story-card">
+        <div class="year-tag">2014</div>
+        <h2>The Interview Suit</h2>
+        <div class="story-text">I sweat entirely through the lining of this suit during my first real job interview. I got the job. I spent the next four years wearing it, hating the job, but respecting the suit.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="story-card">
+        <div class="year-tag">2018</div>
+        <h2>The Ex's Sweater</h2>
+        <div class="story-text">It's three sizes too big. It used to smell like them. Now it just smells like laundry detergent and time. It's the most comfortable thing I own. I wear it when I'm sick.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="story-card" style="background:transparent; border:none; box-shadow:none;">
+        <div class="story-text" style="color:#222; font-size:2rem; text-align:center;">
+          "We are just ghosts haunting our own closets."
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // Setup Wardrobe Items
+  const wardrobe = document.getElementById('wardrobe');
+  const items = [
+    {class: 'shirt-school', extra: '<div class="ink-stain"></div>'},
+    {class: 'jacket-leather', extra: ''},
+    {class: 'dress-firstdate', extra: ''},
+    {class: 'suit-interview', extra: ''},
+    {class: 'sweater-ex', extra: ''}
+  ];
+
+  const hangerGroups = [];
+  items.forEach((item, i) => {
+    const group = document.createElement('div');
+    group.className = 'hanger-group';
+    // Position items off-screen initially, spaced out
+    group.style.transform = `translateX(${100 + (i * 300)}px)`; 
+    group.innerHTML = `
+      <div class="hanger"></div>
+      <div class="garment ${item.class}">${item.extra}</div>
+    `;
+    wardrobe.appendChild(group);
+    hangerGroups.push(group);
+  });
+
+  // Dust
+  for(let i=0; i<30; i++) {
+    const d = document.createElement('div');
+    d.className = 'dust';
+    d.style.left = `${Math.random()*100}%`;
+    d.style.top = `${Math.random()*100}%`;
+    d.style.width = `${Math.random()*3+1}px`;
+    d.style.height = d.style.width;
+    d.style.animationDelay = `${Math.random()*10}s`;
+    wardrobe.appendChild(d);
+  }
+
+  // Horizontal Scroll Engine
+  let currentX = 0, targetX = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  const sections = document.querySelectorAll('section');
+  let maxScroll = 0;
+
+  function updateMaxScroll() {
+    maxScroll = Math.max(0, wrapper.scrollWidth - window.innerWidth);
+  }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetX += e.deltaY * 0.8;
+    targetX = Math.max(0, Math.min(targetX, maxScroll));
+  }, { passive: false });
+
+  let touchStartX = 0;
+  window.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetX += (touchStartX - e.touches[0].clientX) * 1.5;
+    touchStartX = e.touches[0].clientX;
+    targetX = Math.max(0, Math.min(targetX, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeSection = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'var(--wood)';
+    document.getElementById('mute-btn').style.color = isMuted ? 'var(--wood)' : '#fff';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+    
+    // Ambient room tone
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = 80;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.value = 0.05;
+    osc.start();
+  }
+
+  function playHangerSlide() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.value = 1000 + Math.random()*500;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 2000;
+    
+    osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    
+    osc.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.6);
+    
+    osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+  }
+
+  function checkScroll() {
+    const vw = window.innerWidth;
+    const scrollProgress = maxScroll > 0 ? currentX / maxScroll : 0;
+    const index = Math.round(currentX / vw);
+
+    // Parallax the wardrobe items
+    hangerGroups.forEach((group, i) => {
+      // Calculate target position based on scroll
+      // Item i should be at center when index == i
+      // When index == i, diff = 0.
+      const diff = i - (currentX / vw); 
+      // Translate in pixels. If diff is 0, item is at center (translateX(-50%))
+      // So we adjust the translateX value based on diff.
+      // -50% is the base centering. We add pixel offset.
+      const baseOffset = -group.offsetWidth / 2;
+      const pixelOffset = diff * 300; // spacing between items
+      group.style.transform = `translateX(${baseOffset + pixelOffset}px)`;
+      
+      // Focus effect: dim non-centered items
+      const absDiff = Math.abs(diff);
+      const opacity = Math.max(0.2, 1 - absDiff);
+      const scale = Math.max(0.8, 1 - (absDiff * 0.1));
+      group.querySelector('.garment').style.opacity = opacity;
+      group.querySelector('.garment').style.transform = `translateX(-50%) scale(${scale})`;
+    });
+
+    sections.forEach((sec, i) => {
+      if(i === index) sec.classList.add('active');
+      else sec.classList.remove('active');
+    });
+
+    if(index !== activeSection) {
+      if(activeSection !== -1 && index < 5) playHangerSlide(); // don't play on initial load or last text slide
+      activeSection = index;
+    }
+  }
+
+  function tick() {
+    currentX += (targetX - currentX) * ease;
+    wrapper.style.transform = `translateX(-${currentX}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

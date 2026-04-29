@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>atlas_of_longing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=Playfair+Display:ital,wght@1,400;1,700&family=Space+Mono&display=swap');
+
+  :root {
+    --sea: #1a2a3a;
+    --land: #d8c8a8;
+    --ink: #2a1a0a;
+    --highlight: #b22222;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--sea); color: var(--ink);
+    font-family: 'Playfair Display', serif;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: var(--land); border: 1px solid var(--ink); color: var(--ink);
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+
+  /* SVG Map Background */
+  #map-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 1; pointer-events: none; opacity: 0.8;
+  }
+  svg { width: 100%; height: 100%; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));}
+  .coastline { fill: var(--land); stroke: var(--ink); stroke-width: 1; stroke-dasharray: 4 2; }
+  .grid-line { stroke: rgba(255,255,255,0.1); stroke-width: 0.5; }
+  .compass-rose { fill: var(--land); stroke: var(--ink); stroke-width: 1;}
+
+  /* Scroll Engine */
+  #scroll-container {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+  }
+  .wrapper {
+    display: flex; flex-direction: column; width: 100%; transform: translateY(0);
+  }
+
+  section {
+    width: 100vw; height: 100vh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    position: relative; padding: 2rem; box-sizing: border-box;
+  }
+
+  /* Paper / Info Cards */
+  .journal-entry {
+    background: var(--land); padding: 3rem; max-width: 600px;
+    box-shadow: 10px 10px 30px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,0,0,0.1);
+    position: relative; border: 1px solid var(--ink);
+    opacity: 0; transform: scale(0.9); transition: all 1s ease;
+  }
+  .journal-entry::before {
+    content:''; position:absolute; top:-10px; left:-10px; width:100%; height:100%;
+    border: 1px solid rgba(42,26,10,0.3); pointer-events:none;
+  }
+  .active .journal-entry { opacity: 1; transform: scale(1); }
+
+  h1 { font-family: 'Playfair Display', serif; font-size: 3rem; margin: 0 0 1rem 0; color: var(--ink); border-bottom: 2px solid var(--ink); padding-bottom: 10px;}
+  .coords { font-family: 'Space Mono', monospace; font-size: 1rem; color: var(--highlight); margin-bottom: 2rem; letter-spacing: 2px;}
+  .prose { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.5rem; line-height: 1.6; text-align: justify;}
+
+  /* Map Markers and Lines */
+  .pin {
+    position: absolute; width: 10px; height: 10px; background: var(--highlight);
+    border-radius: 50%; border: 2px solid var(--land); box-shadow: 0 0 10px var(--highlight);
+    transform: translate(-50%, -50%) scale(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 5;
+  }
+  .pin.visible { transform: translate(-50%, -50%) scale(1); }
+  .pin::after {
+    content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px;
+    border: 1px solid var(--highlight); border-radius: 50%;
+    transform: translate(-50%, -50%); animation: pulse 2s infinite; opacity: 0;
+  }
+  @keyframes pulse { 0% {transform: translate(-50%,-50%) scale(0.5); opacity:1;} 100% {transform: translate(-50%,-50%) scale(1.5); opacity:0;} }
+
+  #journey-line { stroke: var(--highlight); stroke-width: 2; stroke-dasharray: 1000; stroke-dashoffset: 1000; fill: none; transition: stroke-dashoffset 1s ease; }
+
+  @media (max-width: 768px) {
+    .journal-entry { padding: 1.5rem; width: 90vw; }
+    h1 { font-size: 2rem; }
+    .prose { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">🧭</button>
+
+<div id="map-container">
+  <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+    <!-- Lat/Long Grid -->
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M 100 0 L 0 0 0 100" fill="none" class="grid-line"/>
+    </pattern>
+    <rect width="100%" height="100%" fill="url(#grid)" />
+    
+    <!-- Abstract Landmasses -->
+    <path class="coastline" d="M -100 200 Q 150 100 200 300 T 400 500 T 200 800 Q 50 900 -100 800 Z" />
+    <path class="coastline" d="M 1100 100 Q 800 200 700 400 T 800 700 T 1100 900 Z" />
+    <path class="coastline" d="M 400 -100 Q 500 150 600 50 Q 800 100 900 -100 Z" />
+    
+    <!-- Compass Rose -->
+    <g transform="translate(850, 850) scale(0.5)" class="compass-rose">
+      <circle cx="100" cy="100" r="80" fill="none" />
+      <circle cx="100" cy="100" r="70" fill="none" />
+      <path d="M 100 10 L 115 85 L 190 100 L 115 115 L 100 190 L 85 115 L 10 100 L 85 85 Z" fill="var(--ink)"/>
+      <path d="M 100 10 L 100 100 L 115 85 Z" fill="var(--land)"/>
+      <path d="M 190 100 L 100 100 L 115 115 Z" fill="var(--land)"/>
+      <path d="M 100 190 L 100 100 L 85 115 Z" fill="var(--land)"/>
+      <path d="M 10 100 L 100 100 L 85 85 Z" fill="var(--land)"/>
+      <text x="94" y="-5" fill="var(--land)" font-family="Playfair Display" font-size="24">N</text>
+    </g>
+
+    <!-- Journey Path -->
+    <path id="journey-line" d="M 250 350 L 500 450 L 650 300 L 750 600 L 350 700" />
+  </svg>
+</div>
+
+<!-- Pins -->
+<div class="pin" id="pin-0" style="left: 25vw; top: 35vh;"></div>
+<div class="pin" id="pin-1" style="left: 50vw; top: 45vh;"></div>
+<div class="pin" id="pin-2" style="left: 65vw; top: 30vh;"></div>
+<div class="pin" id="pin-3" style="left: 75vw; top: 60vh;"></div>
+<div class="pin" id="pin-4" style="left: 35vw; top: 70vh;"></div>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- 1 -->
+    <section>
+      <div class="journal-entry">
+        <h1>Departure</h1>
+        <div class="coords">41° 53' N, 12° 28' E</div>
+        <div class="prose">We left before the city woke. The harbor was black glass. I did not look back at the shoreline, terrified that if I saw it shrinking, I might ask the captain to turn around. We sail for the blank spaces on the map.</div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section>
+      <div class="journal-entry">
+        <h1>The Doldrums</h1>
+        <div class="coords">0° 0' N, 23° 45' W</div>
+        <div class="prose">The wind died thirteen days ago. The sea is thick as oil. The men do not speak anymore; they only stare at the horizon, waiting for a line to break the endless blue. Time has stopped moving forward. It only pools around us.</div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section>
+      <div class="journal-entry">
+        <h1>Isle of Ash</h1>
+        <div class="coords">15° 11' S, 45° 12' E</div>
+        <div class="prose">We found land, but it is entirely black sand and smoking vents. Nothing grows here. We walked for hours and found only silence. It is as if the earth itself had burned out. We leave tomorrow. The men are afraid.</div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section>
+      <div class="journal-entry">
+        <h1>The Leviathan</h1>
+        <div class="coords">48° 52' S, 123° 23' W</div>
+        <div class="prose">At midnight, the ship lurched. I ran to the deck. Beneath the hull, a pale shape larger than our vessel was gliding silently. It glowed with a cold, ghostly light. It did not attack. It only observed us, and then descended into the abyss. We are not alone in the deep.</div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section>
+      <div class="journal-entry">
+        <h1>Edge of the World</h1>
+        <div class="coords">???° ???' ?, ???° ???' ?</div>
+        <div class="prose">The compass spins wildly. The stars here belong to a different sky. There is a wall of fog ahead that does not move with the wind. The captain says we must enter it. I am writing this in case we do not emerge on the other side. If you find this: we went as far as we could.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.05; // slow narrative scroll
+  const wrapper = document.getElementById('wrapper');
+  const sections = document.querySelectorAll('section');
+  const maxScroll = (sections.length - 1) * window.innerHeight;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeSection = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'var(--land)' : '#ffeedd';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.7, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.7;
+
+    // Ocean waves ambient
+    const bufferSize = audioCtx.sampleRate * 5;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    const oceanSource = audioCtx.createBufferSource();
+    oceanSource.buffer = noiseBuffer;
+    oceanSource.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine'; lfo.frequency.value = 0.1; // slow wave
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 400; // filter sweep range
+    lfo.connect(lfoGain); lfoGain.connect(filter.frequency);
+    filter.frequency.value = 400;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.05;
+
+    oceanSource.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    oceanSource.start(); lfo.start();
+  }
+
+  function playPinSound() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = 800;
+    osc.connect(gain); gain.connect(masterGain);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+  }
+
+  function playCelloDrone(index) {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; 
+    
+    let freqs = [130.81, 146.83, 110, 82.41, 65.41]; // C3, D3, A2, E2, C2
+    osc.frequency.value = freqs[index] || 110;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 300;
+    
+    osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 2);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 6);
+    
+    osc.start(); osc.stop(audioCtx.currentTime + 6);
+  }
+
+  const journeyLine = document.getElementById('journey-line');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const scrollProgress = maxScroll > 0 ? currentY / maxScroll : 0;
+    const index = Math.round(currentY / vh);
+
+    // Map Pan
+    const map = document.getElementById('map-container');
+    // Pan map opposite to scroll slightly for parallax
+    map.style.transform = `translateY(${currentY * 0.1}px) translateX(${-currentY * 0.05}px)`;
+
+    // Draw Line
+    // Dash offset goes from 1000 to 0
+    journeyLine.style.strokeDashoffset = 1000 - (scrollProgress * 1000);
+
+    // Activate sections and pins
+    sections.forEach((sec, i) => {
+      const pin = document.getElementById(`pin-${i}`);
+      if(i === index) {
+        sec.classList.add('active');
+        if(pin && !pin.classList.contains('visible')) {
+          pin.classList.add('visible');
+          playPinSound();
+        }
+      } else {
+        sec.classList.remove('active');
+      }
+    });
+
+    if(index !== activeSection) {
+      activeSection = index;
+      playCelloDrone(activeSection);
+      
+      // Environmental changes based on section
+      if(index === 1) { // Doldrums
+        document.body.style.backgroundColor = '#112';
+      } else if (index === 2) { // Ash
+        document.body.style.backgroundColor = '#211';
+      } else if (index === 3) { // Leviathan
+        document.body.style.backgroundColor = '#012';
+      } else if (index === 4) { // Edge
+        document.body.style.backgroundColor = '#333';
+        map.style.filter = 'drop-shadow(0 0 10px rgba(0,0,0,0.5)) blur(5px)';
+      } else {
+        document.body.style.backgroundColor = 'var(--sea)';
+        map.style.filter = 'drop-shadow(0 0 10px rgba(0,0,0,0.5))';
+      }
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

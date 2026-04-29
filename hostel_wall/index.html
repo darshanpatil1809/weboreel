@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hostel_wall</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=DM+Sans:wght@400;700&family=Special+Elite&display=swap');
+
+  body, html {
+    margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+    background: #c19a6b; font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Cork texture */
+  body::before {
+    content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(45deg, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px, transparent 4px),
+                repeating-linear-gradient(-45deg, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px, transparent 4px);
+    pointer-events: none; z-index: -1;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: white; border: 1px solid #ccc; font-size: 20px;
+    cursor: pointer; padding: 10px; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  }
+
+  #scroll-container {
+    width: 100vw; height: 100vh; perspective: 1000px;
+  }
+
+  #wall {
+    width: 100%; height: 500vh; position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  .note {
+    position: absolute; padding: 20px; border-radius: 2px;
+    box-shadow: 2px 4px 10px rgba(0,0,0,0.3); pointer-events: auto;
+    font-size: 1.2rem; line-height: 1.4; transition: transform 0.3s ease;
+    cursor: pointer;
+  }
+  .note:hover { transform: scale(1.05) !important; z-index: 100 !important; }
+
+  .note.yellow { background: #ffee88; color: #333; font-family: 'Caveat', cursive; }
+  .note.white { background: #fff; color: #111; font-family: 'Special Elite', monospace; }
+  .note.blue { background: #add8e6; color: #222; font-family: 'Caveat', cursive; }
+  .note.pink { background: #ffc0cb; color: #444; font-family: 'Caveat', cursive; }
+  .note.torn { background: #fdf5e6; color: #333; font-family: 'Caveat', cursive; border-bottom: 2px dashed #ccc; }
+  .note.napkin { background: #fff; color: #000080; font-family: 'Caveat', cursive; border-radius: 10px; border: 1px solid #eee; }
+
+  .thumbtack {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    background: #e74c3c; box-shadow: 1px 2px 3px rgba(0,0,0,0.4), inset -2px -2px 4px rgba(0,0,0,0.2);
+    top: 10px; left: 50%; transform: translateX(-50%);
+  }
+
+  /* Layers specific */
+  #layer-surface { transform: translateZ(50px); }
+  #layer-middle { transform: translateZ(20px); filter: sepia(0.2); opacity: 0.9; }
+  #layer-deep { transform: translateZ(-20px); filter: sepia(0.5); opacity: 0.7; }
+  #layer-excavation { transform: translateZ(-60px); filter: sepia(0.8); opacity: 0.5; }
+  #layer-guestbook { transform: translateZ(0); }
+
+  /* Map CSS art */
+  .hand-map {
+    width: 200px; height: 150px; border: 2px solid #555; position: relative; margin-top: 10px;
+  }
+  .map-path { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; border-top: 2px dashed #cc0000; }
+  .map-x { position: absolute; right: 10%; top: 40%; font-weight: bold; color: #cc0000; font-family: 'Caveat';}
+
+  /* Guestbook */
+  .guestbook {
+    position: absolute; top: 400vh; left: 50%; transform: translateX(-50%) rotate(-2deg);
+    width: 80vw; max-width: 600px; background: #fff; box-shadow: inset 0 0 50px rgba(0,0,0,0.1), 10px 10px 30px rgba(0,0,0,0.5);
+    padding: 40px; border-radius: 5px; pointer-events: auto;
+    font-family: 'Caveat', cursive; font-size: 1.5rem;
+  }
+  .guestbook::before { content:''; position:absolute; left: 40px; top: 0; bottom: 0; width: 2px; background: rgba(255,0,0,0.3); }
+  .gb-line { border-bottom: 1px solid #ccc; padding: 10px 0; padding-left: 50px; min-height: 30px; position: relative;}
+  .gb-input { border: none; background: transparent; font-family: 'Caveat', cursive; font-size: 1.5rem; width: 100%; outline: none; }
+  
+  /* User generated notes */
+  .user-note { pointer-events: auto; z-index: 50; }
+
+  @media (max-width: 768px) {
+    .note { font-size: 1rem; padding: 10px; }
+    .guestbook { width: 90vw; padding: 20px; font-size: 1.2rem; }
+    .guestbook::before { left: 20px; }
+    .gb-line { padding-left: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">📌</button>
+<div id="scroll-container">
+  <div id="wall">
+    
+    <div class="layer" id="layer-excavation">
+      <div class="note white" style="top:320vh; left:40vw; width:300px; transform:rotate(-5deg)">
+        <div class="thumbtack" style="background:#555"></div>
+        <h3 style="margin:0">HOSTEL RULES — 1998</h3>
+        1. No outside guests<br>2. Curfew 11 PM<br>3. Be kind
+      </div>
+      <div class="note yellow" style="top:350vh; left:20vw; width:250px; transform:rotate(8deg)">
+        <div class="thumbtack"></div>
+        RIP: Café Amaltas. Best chai. 1992-2019. The owner retired. We mourn.
+      </div>
+    </div>
+
+    <div class="layer" id="layer-deep">
+      <div class="note pink" style="top:220vh; left:15vw; width:280px; transform:rotate(4deg)">
+        <div class="thumbtack"></div>
+        I came here heartbroken. I leave here healed. The mountains did it. Also the dal.
+      </div>
+      <div class="note white" style="top:260vh; left:55vw; width:300px; transform:rotate(-2deg)">
+        <div class="thumbtack" style="background:blue"></div>
+        The fishing village 3km north — no tourists, fish so fresh it's still moving, sit with the fishermen at 5am.
+      </div>
+    </div>
+
+    <div class="layer" id="layer-middle">
+      <div class="note blue" style="top:120vh; left:25vw; width:220px; transform:rotate(-7deg)">
+        <div class="thumbtack"></div>
+        The SIM card at the airport is a scam. Buy at the Airtel store near the bus station.
+      </div>
+      <div class="note blue" style="top:125vh; left:27vw; width:220px; transform:rotate(2deg)">
+        <div class="thumbtack" style="background:yellow"></div>
+        Agreed on the SIM card. Don't do it.
+      </div>
+      <div class="note torn" style="top:160vh; left:60vw; width:280px; transform:rotate(5deg)">
+        <div class="thumbtack" style="left:10px"></div>
+        LOST: Brown bag, Jansport, bunk 7. Has my external drive with 6 months of photos. Please help.<br><br>
+        <span style="color:blue">Found it. Restored my faith in people.</span>
+      </div>
+    </div>
+
+    <div class="layer" id="layer-surface">
+      <!-- Section 1 notes -->
+      <div class="note yellow" style="top:10vh; left:10vw; width:250px; transform:rotate(-3deg)">
+        <div class="thumbtack"></div>
+        Goa is overrated in November. Go in March. — Priya, Pune
+      </div>
+      <div class="note white" style="top:15vh; left:60vw; width:200px; transform:rotate(5deg)">
+        <div class="thumbtack" style="background:#3498db"></div>
+        The night bus to Manali leaves at 8:30, NOT 9. We missed it. Don't be us. — Tom & Sara
+      </div>
+      <div class="note blue" style="top:40vh; left:30vw; width:280px; transform:rotate(-2deg)">
+        <div class="thumbtack" style="background:#f1c40f"></div>
+        The dal at the place near the waterfall is life-changing. Ask anyone for 'Ramesh bhai ki dukan.' Worth the walk.
+      </div>
+      <div class="note pink" style="top:50vh; left:70vw; width:250px; transform:rotate(6deg)">
+        <div class="thumbtack"></div>
+        <div style="font-weight:bold">Secret beach access</div>
+        <div class="hand-map">
+          <div class="map-path"></div>
+          <div class="map-x">X here</div>
+        </div>
+      </div>
+      <div class="note torn" style="top:80vh; left:15vw; width:300px; transform:rotate(-4deg)">
+        <div class="thumbtack" style="background:#9b59b6"></div>
+        You don't need a plan. I arrived here with ₹800 and zero plans. I stayed 3 weeks. The hostel owner became my family.
+      </div>
+      <div class="note napkin" style="top:85vh; left:55vw; width:200px; transform:rotate(3deg)">
+        <div class="thumbtack" style="left:auto; right:10px; background:green"></div>
+        Sanjay — trusted guide — not tourist price<br>
+        <span style="text-decoration:line-through">9876543210</span><br>
+        New num: 9123456789
+      </div>
+    </div>
+
+    <div class="layer" id="layer-guestbook">
+      <div class="guestbook">
+        <h2 style="text-align:center; font-family:'DM Sans'; margin-top:0">The Guestbook</h2>
+        <div class="gb-line">This place is magic. - Sarah, 2024</div>
+        <div class="gb-line">Met my wife in bunk 3. Came back for anniversary. - Dave</div>
+        <div class="gb-line">The snoring IS international. - Anon</div>
+        <div class="gb-line" style="display:flex">
+          <input type="text" class="gb-input" id="user-input" placeholder="Add your note to the wall... (Press Enter)">
+        </div>
+      </div>
+      <!-- User notes container -->
+      <div id="user-notes-container"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Scroll engine
+  let currentY = 0, targetY = 0;
+  const ease = 0.078;
+  const wall = document.getElementById('wall');
+  const maxScroll = window.innerHeight * 4.2;
+
+  // Parallax layers
+  const layers = {
+    surface: { el: document.getElementById('layer-surface'), speed: 0.9 },
+    middle: { el: document.getElementById('layer-middle'), speed: 0.6 },
+    deep: { el: document.getElementById('layer-deep'), speed: 0.3 },
+    excavation: { el: document.getElementById('layer-excavation'), speed: 0.15 },
+    guestbook: { el: document.getElementById('layer-guestbook'), speed: 1.0 }
+  };
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.8;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 2;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    
+    // Apply parallax
+    for(let key in layers) {
+      const layer = layers[key];
+      const offset = currentY * layer.speed;
+      // Also apply some subtle 3D tilt based on scroll
+      const tilt = (currentY / maxScroll) * 5;
+      layer.el.style.transform = `translateY(-${offset}px) rotateX(${tilt}deg) ${key==='guestbook'?'':'translateZ('+layer.el.style.transform.split('translateZ(')[1]}`;
+    }
+    
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Audio System
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeOscillators = [];
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '📌' : '🔊';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.6, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.6;
+
+    // Room ambient
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    const ambientSource = audioCtx.createBufferSource();
+    ambientSource.buffer = noiseBuffer;
+    ambientSource.loop = true;
+    
+    const lowpass = audioCtx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 400;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.02;
+
+    ambientSource.connect(lowpass);
+    lowpass.connect(gain);
+    gain.connect(masterGain);
+    ambientSource.start();
+
+    // Guitar loop
+    playGuitarLoop();
+  }
+
+  function playGuitarLoop() {
+    if(!audioCtx) return;
+    const freqs = [261,329,392,523];
+    let i = 0;
+    setInterval(() => {
+      if(isMuted) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      
+      // Speed/pitch based on depth (scroll position)
+      const depthFactor = Math.max(0.5, 1 - (currentY / maxScroll) * 0.5);
+      osc.frequency.value = freqs[i % freqs.length] * depthFactor;
+      
+      osc.connect(gain); gain.connect(masterGain);
+      
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+      
+      osc.start(); osc.stop(audioCtx.currentTime + 1.5);
+      
+      i++;
+    }, 600); // Base tempo
+  }
+
+  function playPinSound() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    
+    osc.type = 'square';
+    filter.type = 'highpass';
+    filter.frequency.value = 4000;
+    
+    osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    
+    osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.03);
+    
+    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.03);
+    
+    osc.start(); osc.stop(audioCtx.currentTime + 0.03);
+  }
+
+  function playWriteSound() {
+    if(!audioCtx || isMuted) return;
+    const bufferSize = audioCtx.sampleRate * 0.1;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2000;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+    
+    src.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    src.start();
+  }
+
+  // User input handling
+  const input = document.getElementById('user-input');
+  const userContainer = document.getElementById('user-notes-container');
+
+  input.addEventListener('keydown', e => {
+    playWriteSound();
+    if(e.key === 'Enter' && input.value.trim() !== '') {
+      addNoteToWall(input.value);
+      saveNote(input.value);
+      input.value = '';
+      playPinSound();
+    }
+  });
+
+  const colors = ['yellow', 'white', 'blue', 'pink'];
+  
+  function addNoteToWall(text, savePos) {
+    const note = document.createElement('div');
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const rot = (Math.random() * 20 - 10).toFixed(1);
+    const top = 380 + Math.random() * 40; // near guestbook
+    const left = 10 + Math.random() * 60;
+    
+    note.className = `note ${color} user-note`;
+    note.style.top = `${top}vh`;
+    note.style.left = `${left}vw`;
+    note.style.transform = `rotate(${rot}deg)`;
+    note.style.width = '200px';
+    
+    note.innerHTML = `<div class="thumbtack"></div>${text}`;
+    
+    // Add to surface layer visually, but coordinate with gb layer
+    document.getElementById('layer-guestbook').appendChild(note);
+    
+    // Slight random animation for drop
+    note.animate([
+      { transform: `scale(1.5) rotate(${rot}deg)`, opacity: 0 },
+      { transform: `scale(1) rotate(${rot}deg)`, opacity: 1 }
+    ], { duration: 300, easing: 'ease-out' });
+  }
+
+  function saveNote(text) {
+    let notes = JSON.parse(localStorage.getItem('hostel_notes') || '[]');
+    notes.push(text);
+    localStorage.setItem('hostel_notes', JSON.stringify(notes));
+  }
+
+  function loadNotes() {
+    let notes = JSON.parse(localStorage.getItem('hostel_notes') || '[]');
+    notes.forEach(t => addNoteToWall(t));
+  }
+  
+  loadNotes();
+
+</script>
+</body>
+</html>

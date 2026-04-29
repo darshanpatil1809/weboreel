@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>passport_stamps</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Mono&family=Special+Elite&display=swap');
+
+  :root {
+    --bg-leather: #1a1008;
+    --page-cream: #f5f0e0;
+  }
+  
+  body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-leather);
+    font-family: 'DM Sans', sans-serif;
+    color: #333;
+  }
+
+  #mute-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+
+  #scroll-container {
+    width: 100vw;
+    height: 100vh;
+    perspective: 1500px;
+  }
+
+  /* Binding */
+  .binding {
+    position: fixed;
+    left: 4.5vw;
+    top: 0;
+    width: 1vw;
+    height: 100vh;
+    background: repeating-linear-gradient(to bottom, #0a0604, #0a0604 10px, #1a1008 10px, #1a1008 20px);
+    z-index: 10;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.8);
+  }
+
+  .page {
+    position: absolute;
+    top: 5vh;
+    left: 5vw;
+    width: 90vw;
+    height: 90vh;
+    background: var(--page-cream) url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.04"/></svg>');
+    transform-origin: left center;
+    backface-visibility: hidden;
+    transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: inset 20px 0 30px -20px rgba(0,0,0,0.5), 10px 10px 30px rgba(0,0,0,0.3);
+    border-radius: 4px 10px 10px 4px;
+    padding: 2rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .page::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 5%);
+    pointer-events: none;
+  }
+
+  .page.past { transform: rotateY(-90deg); }
+  .page.current { transform: rotateY(0deg); z-index: 5;}
+  .page.future { transform: rotateY(0deg); z-index: 1;}
+  
+  /* Sidebar tabs */
+  #sidebar {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 50;
+  }
+  .tab {
+    background: #fff;
+    padding: 5px 10px;
+    border-radius: 0 5px 5px 0;
+    cursor: pointer;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+  }
+  .tab.active { transform: translateX(5px); background: #f0e0c0; }
+
+  /* Hero */
+  #hero { background: #0a0d1a; color: #f5f0e0; border-radius: 10px; }
+  .gold-circle {
+    width: 200px; height: 200px; border: 2px solid rgba(212,168,67,0.8);
+    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    margin-bottom: 2rem; position: relative;
+  }
+  .eagle { width: 100px; height: 100px; background: rgba(212,168,67,0.8); clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); }
+  h1 { font-family: 'Special Elite', monospace; font-size: 2.5rem; color: rgba(212,168,67,0.8); letter-spacing: 0.4em; }
+  h2 { font-family: 'Playfair Display', serif; font-size: 4rem; margin: 0; }
+  .pass-num { font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-top: auto; }
+  
+  /* Content styling */
+  .country-name { font-family: 'Playfair Display', serif; font-size: 3rem; margin-top: 1rem; }
+  .wisdom { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.5rem; max-width: 600px; margin: 2rem 0; line-height: 1.6; }
+  .facts { font-family: 'Special Elite', monospace; font-size: 1rem; opacity: 0.8; }
+  
+  /* Stamp animation */
+  .stamp {
+    position: absolute; top: 30px; right: 50px; width: 150px; height: 150px;
+    border-radius: 50%; border: 4px solid; display: flex; justify-content: center; align-items: center;
+    font-family: 'Special Elite', monospace; font-weight: bold; font-size: 14px; text-align: center;
+    opacity: 0; transform: translateY(-100px) scale(1.3) rotate(-15deg);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); mix-blend-mode: multiply; z-index: 10;
+  }
+  .page.current .stamp { opacity: 0.9; transform: translateY(0) scale(1) rotate(-5deg); transition-delay: 0.3s; }
+
+  .stamp-inner { border: 2px dashed; border-radius: 50%; width: 130px; height: 130px; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+
+  /* Scenes */
+  .scene { width: 300px; height: 200px; position: relative; margin-top: 2rem; display: flex; justify-content: center; align-items: flex-end;}
+  
+  /* Japan */
+  .page[data-country="Japan"] { background-color: #ffb7c522; }
+  .stamp-japan { color: #cc0000; border-color: #cc0000; }
+  .torii { width: 100px; height: 100px; border-left: 10px solid #cc0000; border-right: 10px solid #cc0000; border-top: 15px solid #cc0000; position: relative; }
+  .torii::before { content:''; position:absolute; top: 15px; width: 120px; height: 10px; background: #cc0000; left: -20px; }
+  .sakura { position: absolute; width: 10px; height: 10px; background: #ffb7c5; border-radius: 50%; }
+  
+  /* Morocco */
+  .page[data-country="Morocco"] { background-color: #c07a4011; }
+  .stamp-morocco { color: #004080; border-color: #004080; clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%); border-radius: 0;}
+  .medina-arch { width: 120px; height: 150px; background: #c07a40; border-radius: 60px 60px 0 0; position: relative; overflow: hidden; }
+  .medina-arch::after { content:''; position:absolute; top: 20px; left: 20px; width: 80px; height: 130px; background: var(--page-cream); border-radius: 40px 40px 0 0; }
+  
+  /* Peru */
+  .page[data-country="Peru"] { background-color: #8b3a1a11; }
+  .stamp-peru { color: #1a5c1a; border-color: #1a5c1a; border-radius: 10px; width: 180px; height: 100px; }
+  .terraces { width: 200px; height: 150px; display: flex; flex-direction: column; gap: 5px; justify-content: flex-end;}
+  .terrace { height: 30px; background: #1a5c1a; clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%); }
+  
+  /* India */
+  .page[data-country="India"] { background-color: #00808011; }
+  .stamp-india { color: #ff8c00; border-color: #ff8c00; }
+  .taj { width: 100px; height: 80px; background: #ff8c00; border-radius: 50% 50% 0 0; position: relative; }
+  .taj::before, .taj::after { content:''; position:absolute; bottom:0; width: 20px; height: 60px; background: #ff8c00; border-radius: 10px 10px 0 0;}
+  .taj::before { left: -40px; } .taj::after { right: -40px; }
+  
+  /* Iceland */
+  .page[data-country="Iceland"] { background-color: #00cc6611; }
+  .stamp-iceland { color: #001a4d; border-color: #001a4d; }
+  .lava { width: 300px; height: 40px; background: #111; position: absolute; bottom: 0; }
+  .geyser { width: 30px; height: 0; background: rgba(255,255,255,0.8); position: absolute; bottom: 40px; clip-path: polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%); animation: erupt 3s infinite ease-out; }
+  @keyframes erupt { 0% {height:0; opacity:1;} 50% {height:150px; opacity:0;} 100% {height:0; opacity:0;} }
+  
+  /* Colombia */
+  .page[data-country="Colombia"] { background-color: #ffcc0011; }
+  .stamp-colombia { color: #6b3a1a; border-color: #6b3a1a; }
+  .house-container { display: flex; gap: 10px; align-items: flex-end; }
+  .house { width: 50px; height: 70px; background: #ffcc00; position: relative;}
+  .house:nth-child(2) { background: #e03a3a; height: 90px; }
+  .house:nth-child(3) { background: #3a80e0; height: 60px; }
+  
+  /* Georgia */
+  .page[data-country="Georgia"] { background-color: #d4a84311; }
+  .stamp-georgia { color: #4a0020; border-color: #4a0020; }
+  .tower { width: 50px; height: 140px; background: #d4a843; clip-path: polygon(20% 0, 80% 0, 100% 100%, 0 100%); }
+  
+  /* Everywhere */
+  .stamps-all { position: absolute; width: 100%; height: 100%; top:0; left:0; pointer-events:none;}
+  .stamps-all .stamp { opacity: 0; position: absolute; transform: scale(1)!important; }
+  .page.current .stamps-all .stamp { opacity: 0.4; }
+
+  @media (max-width: 768px) {
+    .stamp { transform: translateY(-100px) scale(0.8) rotate(-15deg) !important; width: 100px; height: 100px; right: 20px; font-size: 10px;}
+    .page.current .stamp { transform: translateY(0) scale(1) rotate(-5deg) !important;}
+    .stamp-inner { width: 85px; height: 85px; }
+    h2 { font-size: 2.5rem; }
+    .wisdom { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mute-btn">✈️</button>
+<div class="binding"></div>
+<div id="sidebar"></div>
+<div id="scroll-container">
+
+  <div class="page current" id="hero">
+    <div class="gold-circle"><div class="eagle"></div></div>
+    <h1>WORLD TRAVELER</h1>
+    <h2>PASSPORT</h2>
+    <p style="font-style:italic; font-size:0.8rem; margin-top:2rem;">Scroll to begin your journey</p>
+    <div class="pass-num">WLD-2026-∞</div>
+  </div>
+
+  <div class="page future" data-country="Japan" data-emoji="🇯🇵">
+    <div class="stamp stamp-japan"><div class="stamp-inner">JAPAN<br>NIHON</div></div>
+    <div class="country-name">JAPAN 🇯🇵</div>
+    <div class="facts">Arrived: Narita International · Duration: 90 days</div>
+    <div class="scene">
+      <div class="sakura" style="top:20px;left:80px"></div>
+      <div class="sakura" style="top:50px;left:100px"></div>
+      <div class="sakura" style="top:30px;right:90px"></div>
+      <div class="torii"></div>
+    </div>
+    <div class="wisdom">"In Japan, being on time means arriving 5 minutes early. Trains apologize for being 30 seconds late. The apology is sincere."<br><br>Ramen at 2am. Always ramen at 2am.</div>
+  </div>
+
+  <div class="page future" data-country="Morocco" data-emoji="🇲🇦">
+    <div class="stamp stamp-morocco"><div class="stamp-inner" style="border-radius:0;">MAROC<br>MOROCCO</div></div>
+    <div class="country-name">MOROCCO 🇲🇦</div>
+    <div class="scene"><div class="medina-arch"></div></div>
+    <div class="wisdom">"The souk will overwhelm you the first day. By day three you'll navigate it blind. By day five you'll miss it when you leave."</div>
+  </div>
+
+  <div class="page future" data-country="Peru" data-emoji="🇵🇪">
+    <div class="stamp stamp-peru" style="border-radius:0"><div class="stamp-inner" style="border-radius:0; width:160px; height:80px">PERÚ<br>MACHU PICCHU</div></div>
+    <div class="country-name">PERU 🇵🇪</div>
+    <div class="scene">
+      <div class="terraces">
+        <div class="terrace" style="width:100%"></div>
+        <div class="terrace" style="width:80%; margin:0 auto;"></div>
+        <div class="terrace" style="width:60%; margin:0 auto;"></div>
+      </div>
+    </div>
+    <div class="wisdom">"Altitude sickness is the great equalizer. A CEO and a backpacker both crawl the same. Coca tea for both."</div>
+  </div>
+
+  <div class="page future" data-country="India" data-emoji="🇮🇳">
+    <div class="stamp stamp-india"><div class="stamp-inner">BHARAT<br>INDIA</div></div>
+    <div class="country-name">INDIA 🇮🇳</div>
+    <div class="scene"><div class="taj"></div></div>
+    <div class="wisdom">"India is not one place. It is forty countries packed into one. Every 200km: different food, different language, different universe."</div>
+  </div>
+
+  <div class="page future" data-country="Iceland" data-emoji="🇮🇸">
+    <div class="stamp stamp-iceland"><div class="stamp-inner">ÍSLAND<br>ICELAND</div></div>
+    <div class="country-name">ICELAND 🇮🇸</div>
+    <div class="scene"><div class="lava"></div><div class="geyser"></div></div>
+    <div class="wisdom">"In Iceland everyone is on a first-name basis. The phone book is organized by first name. The president is listed there too."</div>
+  </div>
+
+  <div class="page future" data-country="Colombia" data-emoji="🇨🇴">
+    <div class="stamp stamp-colombia"><div class="stamp-inner">COLOMBIA<br>CAFÉ</div></div>
+    <div class="country-name">COLOMBIA 🇨🇴</div>
+    <div class="scene">
+      <div class="house-container">
+        <div class="house"></div><div class="house"></div><div class="house"></div>
+      </div>
+    </div>
+    <div class="wisdom">"Colombians will invite you to their home within 24 hours of meeting you. They mean it. Go."</div>
+  </div>
+
+  <div class="page future" data-country="Georgia" data-emoji="🇬🇪">
+    <div class="stamp stamp-georgia"><div class="stamp-inner">SAKARTVELO<br>GEORGIA</div></div>
+    <div class="country-name">GEORGIA 🇬🇪</div>
+    <div class="scene"><div class="tower"></div></div>
+    <div class="wisdom">"Georgia invented wine 8,000 years ago. They haven't stopped celebrating. A Georgian toast can last 45 minutes. This is not considered excessive."</div>
+  </div>
+
+  <div class="page future" data-country="Everywhere" data-emoji="🌍">
+    <div class="stamps-all">
+       <div class="stamp stamp-japan" style="top:15%; left:15%; transform:rotate(12deg)">JAPAN</div>
+       <div class="stamp stamp-morocco" style="top:55%; left:25%; transform:rotate(-15deg)">MAROC</div>
+       <div class="stamp stamp-peru" style="top:25%; right:20%; transform:rotate(8deg)">PERÚ</div>
+       <div class="stamp stamp-india" style="bottom:15%; right:15%; transform:rotate(-5deg)">BHARAT</div>
+    </div>
+    <h2 style="font-family:'Playfair Display', serif; font-style:italic; font-size:2.5rem; max-width:800px; z-index:2">"The destination was never the point."</h2>
+    <h2 style="font-family:'Playfair Display', serif; font-style:italic; font-size:2.5rem; max-width:800px; margin-top:1rem; z-index:2">"The point was who you were when you got there."</h2>
+    <h2 style="font-family:'Playfair Display', serif; font-style:italic; font-size:2.5rem; max-width:800px; margin-top:1rem; z-index:2">"And who you weren't when you left."</h2>
+    <div class="pass-num" style="margin-top:4rem; z-index:2">(Fill this page yourself)</div>
+  </div>
+
+</div>
+
+<script>
+  const pages = document.querySelectorAll('.page');
+  const sidebar = document.getElementById('sidebar');
+  pages.forEach((p, i) => {
+    const emoji = p.dataset.emoji || '🛂';
+    const tab = document.createElement('div');
+    tab.className = 'tab' + (i===0?' active':'');
+    tab.innerText = emoji;
+    tab.onclick = () => scrollToPage(i);
+    sidebar.appendChild(tab);
+  });
+
+  let current = 0, target = 0;
+  const ease = 0.075;
+  const maxScroll = (pages.length - 1) * 100;
+
+  function getMaxScroll() { return maxScroll; }
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    target += e.deltaY * 0.15;
+    target = Math.max(0, Math.min(target, getMaxScroll()));
+  }, { passive: false });
+
+  let touchStart = 0;
+  window.addEventListener('touchstart', e => touchStart = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    target += (touchStart - e.touches[0].clientY) * 0.5;
+    touchStart = e.touches[0].clientY;
+  }, { passive: false });
+
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let activeOscillators = [];
+  
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? '✈️' : '🔊';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.3, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.3;
+    
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+    
+    const lowpass = audioCtx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 400;
+    
+    noiseSource.connect(lowpass);
+    lowpass.connect(masterGain);
+    noiseSource.start();
+    
+    updateAudioForPage(currentPage);
+  }
+
+  function playFrequencies(freqs, type='sine', LFO=false) {
+    activeOscillators.forEach(o => {
+      o.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+      setTimeout(()=>o.osc.stop(), 500);
+    });
+    activeOscillators = [];
+    
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = f;
+      gain.gain.value = 0;
+      
+      if(LFO) {
+        const lfo = audioCtx.createOscillator();
+        lfo.frequency.value = 5;
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.value = 10;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start();
+      }
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      
+      gain.gain.setTargetAtTime(0.05, audioCtx.currentTime, 0.5);
+      activeOscillators.push({osc, gain});
+    });
+  }
+
+  function playSoundEffect(type) {
+    if(!audioCtx || isMuted) return;
+    if(type === 'swish') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      osc.type = 'sawtooth';
+      filter.type = 'bandpass';
+      filter.frequency.value = 1500;
+      osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if(type === 'thunk') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.connect(gain); gain.connect(masterGain);
+      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+  }
+
+  const pageFreqs = [
+    [], 
+    [294,330,392,440,494], // Japan
+    [220,247,294,330], // Morocco
+    [196,220,262,294], // Peru 
+    [220,233,262,294], // India
+    [880,1047,1319], // Iceland
+    [261,329,392], // Colombia
+    [220,261,294,349], // Georgia
+    [261,329,392,440,523] // Everywhere
+  ];
+
+  function updateAudioForPage(index) {
+    if(!audioCtx || isMuted) return;
+    let type = 'sine';
+    let lfo = false;
+    if(index === 3) type = 'triangle';
+    if(index === 2) lfo = true;
+    playFrequencies(pageFreqs[index] || [], type, lfo);
+  }
+
+  let currentPage = 0;
+  function scrollToPage(i) { target = i * 100; }
+
+  function applyParallax(curr) {
+    const pageIndex = Math.max(0, Math.min(pages.length - 1, Math.round(curr / 100)));
+    
+    if(pageIndex !== currentPage) {
+      // Transition logic
+      pages.forEach((p, i) => {
+        if(i < pageIndex) {
+          p.className = 'page past';
+        } else if(i > pageIndex) {
+          p.className = 'page future';
+        }
+      });
+      
+      playSoundEffect('swish');
+      setTimeout(()=>playSoundEffect('thunk'), 300);
+      
+      currentPage = pageIndex;
+      pages[currentPage].className = 'page current';
+      
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.className = i === currentPage ? 'tab active' : 'tab';
+      });
+      
+      updateAudioForPage(currentPage);
+    }
+  }
+
+  function tick() {
+    current += (target - current) * ease;
+    applyParallax(current);
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>
