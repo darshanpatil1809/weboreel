@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>water_walk</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300;500&family=Playfair+Display:ital@1&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-earth: #060806;
+    --glass: rgba(100,180,220,0.05);
+    --glass-border: rgba(100,180,220,0.1);
+    --accent-blue: #1a8ccc;
+    --accent-amber: #d4a843;
+    --accent-brown: #6b3a1a;
+    --accent-red: #cc3333;
+    --accent-green: #33cc66;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg-earth);
+    color: #e0e0d0;
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Typography */
+  h1, h2, .stat-num { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; }
+  .mono { font-family: 'Space Mono', monospace; }
+  .story { font-family: 'Playfair Display', serif; font-style: italic; font-size: 2rem; color: #fff; }
+  .devastating { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: var(--accent-amber); }
+
+  /* Background Landscape */
+  #landscape {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; pointer-events: none;
+    background: linear-gradient(to bottom, #111 0%, #1a1510 50%, #060806 100%);
+    transition: background 2s;
+  }
+  #landscape.water-arrived {
+    background: linear-gradient(to bottom, #0a1520 0%, #102a3a 50%, #060806 100%);
+  }
+  #sun {
+    position: fixed; top: 10vh; right: 10vw; width: 150px; height: 150px; border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-amber) 0%, transparent 70%);
+    filter: blur(10px); z-index: -3; transition: all 2s;
+  }
+  #path {
+    position: fixed; bottom: -20vh; left: 50%; transform: translateX(-50%);
+    width: 200vw; height: 50vh; background: radial-gradient(ellipse at top, var(--accent-brown) 0%, transparent 50%);
+    opacity: 0.1; z-index: -3;
+  }
+  .vegetation {
+    position: fixed; bottom: 0; width: 100vw; height: 20vh; z-index: -2; opacity: 0.2;
+    background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 20" xmlns="http://www.w3.org/2000/svg"><path d="M10,20 L12,10 L14,20 M30,20 L31,5 L32,20 M50,20 L55,15 L60,20 M80,20 L82,8 L84,20" stroke="%236b3a1a" fill="none" stroke-width="0.5"/></svg>') repeat-x bottom;
+    background-size: 300px;
+  }
+
+  /* Fixed Walk Meter */
+  #walk-meter {
+    position: fixed; top: 50%; left: 2vw; transform: translateY(-50%); z-index: 100;
+    display: flex; flex-direction: column; gap: 1rem;
+    padding: 1.5rem; background: var(--glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border); border-radius: 12px;
+  }
+  .meter-bar { width: 4px; height: 200px; background: rgba(255,255,255,0.1); border-radius: 2px; margin: 0 auto; position: relative; overflow: hidden; }
+  .meter-fill { position: absolute; top: 0; left: 0; width: 100%; height: 0%; background: var(--accent-amber); transition: height 0.3s; }
+
+  /* Glassmorphism */
+  .glass {
+    background: var(--glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border); border-radius: 16px; padding: 2rem;
+  }
+
+  /* Scroll Engine */
+  #scroll-container { width: 100%; position: relative; will-change: transform; }
+  .section {
+    min-height: 120vh; width: 100vw; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; position: relative; padding: 2rem;
+    padding-left: max(2rem, 150px); /* Leave room for meter */
+  }
+
+  #mute-btn {
+    position: fixed; top: 2vw; right: 2vw; z-index: 100;
+    font-size: 1.5rem; cursor: pointer; background: none; border: none; filter: grayscale(100%); transition: filter 0.3s;
+  }
+
+  /* CSS Figures & Elements */
+  .css-woman {
+    width: 60px; height: 120px; position: relative; margin: 2rem auto;
+  }
+  .head { width: 24px; height: 24px; background: #ddd; border-radius: 50%; position: absolute; top: 10px; left: 18px; }
+  .body { width: 30px; height: 50px; background: #bbb; border-radius: 10px; position: absolute; top: 36px; left: 15px; }
+  .pot { width: 40px; height: 30px; background: var(--accent-brown); border-radius: 10px 10px 20px 20px; position: absolute; top: -15px; left: 10px; }
+  .pot::before { content:''; position:absolute; top:-5px; left:5px; width:30px; height:5px; background:var(--accent-amber); border-radius:5px 5px 0 0; }
+  
+  .css-woman.returning .pot { top: -20px; transform: scale(1.2); }
+  .css-woman.returning .body { transform: translateY(5px); }
+
+  .queue-container { display: flex; gap: 10px; margin: 2rem 0; opacity: 0.6; }
+  .stick-fig { width: 20px; height: 50px; border: 2px solid #aaa; border-bottom: none; position: relative; }
+  .stick-fig::before { content:''; position:absolute; top:-15px; left:2px; width:12px; height:12px; border-radius:50%; background:#aaa; }
+
+  /* Section specifics */
+  .reveal { opacity: 0; transform: translateY(30px); transition: all 1s var(--ease); }
+  .reveal.active { opacity: 1; transform: translateY(0); }
+
+  .solution-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; width: 100%; max-width: 1000px; margin-top: 2rem; }
+  
+  @media(max-width: 768px) {
+    #walk-meter { top: 0; left: 0; width: 100vw; transform: none; flex-direction: row; justify-content: space-around; border-radius: 0; padding: 1rem; align-items: center; border: none; border-bottom: 1px solid var(--glass-border); }
+    .meter-bar { display: none; }
+    .section { padding-left: 2rem; padding-top: 100px; }
+    .story { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="landscape"></div>
+<div id="sun"></div>
+<div id="path"></div>
+<div class="vegetation"></div>
+
+<button id="mute-btn">💧</button>
+
+<div id="walk-meter">
+  <div class="mono" style="font-size:0.8rem; color:var(--accent-amber);">DISTANCE</div>
+  <div class="stat-num" style="font-size:2rem;" id="m-dist">0.0km</div>
+  <div class="meter-bar"><div class="meter-fill" id="m-fill"></div></div>
+  <div class="mono" style="font-size:0.8rem; color:var(--accent-blue);">TIME</div>
+  <div class="stat-num" style="font-size:2rem;" id="m-time">00:00</div>
+</div>
+
+<div id="scroll-container">
+  
+  <!-- SEC 1: START -->
+  <div class="section" id="sec-1">
+    <div class="css-woman reveal">
+      <div class="pot"></div>
+      <div class="head"></div>
+      <div class="body"></div>
+    </div>
+    
+    <div style="text-align:center; max-width:800px; margin-top:2rem;">
+      <p class="story reveal">She wakes at 5am before the family.</p>
+      <p class="reveal" style="margin-top:1rem; opacity:0.7;">Today, as every day for the last 14 years.</p>
+      
+      <div class="glass reveal" style="margin-top:4rem;">
+        <h1 class="stat-num" style="font-size:4rem;">163 MILLION</h1>
+        <p class="mono">Indians lack access to clean water at home.</p>
+      </div>
+      
+      <p class="story reveal" style="color:var(--accent-amber); margin-top:3rem;">Most are women and girls.</p>
+    </div>
+  </div>
+
+  <!-- SEC 2: PATH -->
+  <div class="section" id="sec-2">
+    <div style="text-align:center; max-width:800px;">
+      <p class="mono reveal" style="font-size:1.2rem;">1 kilometer. The water is not yet visible.</p>
+      <p class="devastating reveal" style="margin-top:2rem;">In this time: her daughter could be studying.</p>
+      
+      <div class="reveal" style="margin:2rem 0; display:flex; justify-content:center; gap:20px; align-items:flex-end;">
+        <div class="css-woman"><div class="pot"></div><div class="head"></div><div class="body"></div></div>
+        <div class="css-woman" style="transform:scale(0.7);"><div class="pot"></div><div class="head"></div><div class="body"></div></div>
+      </div>
+      
+      <p class="story reveal" style="color:#fff;">Her daughter is carrying a smaller pot.</p>
+      
+      <div class="glass reveal" style="margin-top:4rem; border-color:var(--accent-red); background:rgba(204,51,51,0.05);">
+        <p class="stat-num" style="font-size:3rem; color:var(--accent-red);">40%</p>
+        <p class="mono">Girls who fetch water miss 40% of school days.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEC 3: WELL -->
+  <div class="section" id="sec-3">
+    <div style="text-align:center; max-width:800px;">
+      <div class="queue-container reveal">
+        <div class="stick-fig"></div><div class="stick-fig"></div><div class="stick-fig"></div>
+        <div class="stick-fig"></div><div class="stick-fig"></div><div class="stick-fig"></div>
+      </div>
+      
+      <div class="glass reveal" style="margin-bottom:3rem;">
+        <p class="mono">The well serves 340 families.</p>
+        <p class="mono">Queue time: 45 minutes.</p>
+      </div>
+      
+      <p class="devastating reveal">Today the water is cloudy.</p>
+      <p class="story reveal" style="margin-top:1rem;">She fills it anyway.</p>
+      <p class="reveal" style="margin-top:1rem; opacity:0.7;">The alternative is the children going without.</p>
+      
+      <div class="glass reveal" style="margin-top:4rem; border-left:4px solid var(--accent-red);">
+        <p class="mono" style="color:var(--accent-red);">CONTAMINATION RISK: HIGH</p>
+        <p style="margin-top:0.5rem;">Fecal coliform detected in 27% of rural wells</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEC 4: RETURN -->
+  <div class="section" id="sec-4">
+    <div class="css-woman returning reveal">
+      <div class="pot"></div>
+      <div class="head"></div>
+      <div class="body"></div>
+    </div>
+    
+    <div style="text-align:center; max-width:800px; margin-top:2rem;">
+      <p class="mono reveal">A full pot: 20 liters. 20 kilograms.</p>
+      <p class="mono reveal">On her head. 2 kilometers back.</p>
+      
+      <p class="story reveal" style="color:var(--accent-amber); margin-top:3rem;">She has done this <span id="trip-counter">1</span> times since she was 16.</p>
+      
+      <div class="glass reveal" style="margin-top:4rem;">
+        <h2 class="stat-num" style="font-size:2.5rem; margin-bottom:1rem;">TODAY'S TOTAL: 4km · 2.5 hours · 20kg</h2>
+        <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem; margin-top:1rem;">
+          <p class="mono" style="color:var(--accent-red);">ANNUAL TIME LOST: 912 hours · 38 full days</p>
+          <p class="mono" style="margin-top:0.5rem;">ECONOMIC VALUE OF THIS LABOR: ₹0 (unpaid)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEC 5: NATIONAL COST -->
+  <div class="section" id="sec-5">
+    <div style="text-align:center; max-width:900px;">
+      <div class="glass reveal">
+        <h2 class="stat-num" style="font-size:4rem;">40 BILLION HOURS/YEAR</h2>
+        <p class="mono">Time lost to water collection in India</p>
+        
+        <div style="background:rgba(255,255,255,0.05); padding:1.5rem; border-radius:8px; margin-top:2rem;">
+          <p class="mono" style="font-size:1.2rem;">GDP equivalent: ₹1.42 lakh crore</p>
+          <p style="margin-top:0.5rem; opacity:0.8;">If this time were paid: it would exceed the defense budget.</p>
+        </div>
+      </div>
+      
+      <div style="display:flex; gap:1.5rem; margin-top:2rem; flex-wrap:wrap; justify-content:center;">
+        <div class="glass reveal" style="border-color:var(--accent-red); flex:1; min-width:250px;">
+          <h3 class="mono" style="color:var(--accent-red); margin-bottom:1rem;">EDUCATION LOSS</h3>
+          <p>Girls who fetch water are 3x less likely to complete secondary school.</p>
+        </div>
+        <div class="glass reveal" style="border-color:var(--accent-red); flex:1; min-width:250px;">
+          <h3 class="mono" style="color:var(--accent-red); margin-bottom:1rem;">HEALTH COST</h3>
+          <p>Waterborne diseases cost India ₹73,000 crore annually.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEC 6: SOLUTIONS -->
+  <div class="section" id="sec-6">
+    <div style="text-align:center; max-width:1000px;">
+      <h2 class="stat-num reveal" style="font-size:3.5rem;">THE ENGINEERING IS SOLVED.</h2>
+      <h2 class="stat-num reveal" style="font-size:2.5rem; color:var(--accent-blue);">THE POLITICAL WILL IS THE VARIABLE.</h2>
+      
+      <div class="solution-grid reveal">
+        <div class="glass" style="border-top:4px solid var(--accent-amber);">
+          <h3 class="mono" style="color:var(--accent-amber); margin-bottom:1rem;">JAL JEEVAN MISSION</h3>
+          <p>Goal: piped water to 190M homes</p>
+          <p class="mono" style="margin-top:1rem;">Progress: ~70%</p>
+        </div>
+        <div class="glass" style="border-top:4px solid var(--accent-green);">
+          <h3 class="mono" style="color:var(--accent-green); margin-bottom:1rem;">COMMUNITY HARVESTING</h3>
+          <p>₹40,000/village</p>
+          <p class="mono" style="margin-top:1rem;">Sustains 500 families</p>
+        </div>
+        <div class="glass" style="border-top:4px solid var(--accent-green);">
+          <h3 class="mono" style="color:var(--accent-green); margin-bottom:1rem;">HAND PUMPS + FILTERS</h3>
+          <p>Lowest cost intervention</p>
+          <p class="mono" style="margin-top:1rem;">1 pump per 250 people</p>
+        </div>
+      </div>
+      
+      <div style="margin-top:5rem;" class="reveal">
+        <p class="story">The walk ends when the infrastructure arrives.</p>
+        <p class="devastating" style="margin-top:1rem;">It is arriving. Too slowly.</p>
+        <p class="story" style="color:var(--accent-amber); margin-top:3rem; font-size:2.5rem;">The woman at the well doesn't have the luxury of slowly.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Smooth Scroll & Meter Logic
+  let current = 0, target = 0;
+  const ease = 0.072;
+  const container = document.getElementById('scroll-container');
+  const distEl = document.getElementById('m-dist');
+  const timeEl = document.getElementById('m-time');
+  const fillEl = document.getElementById('m-fill');
+  
+  function getMax() { return container.getBoundingClientRect().height - window.innerHeight; }
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    target += e.deltaY;
+    target = Math.max(0, Math.min(target, getMax()));
+  }, { passive: false });
+
+  let touchY = 0;
+  window.addEventListener('touchstart', e => touchY = e.touches[0].clientY, {passive:true});
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    target += (touchY - e.touches[0].clientY) * 1.5;
+    target = Math.max(0, Math.min(target, getMax()));
+    touchY = e.touches[0].clientY;
+  }, { passive: false });
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('active'); });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  let cDone = false;
+  function animateCounter(id, start, end, duration) {
+    let obj = document.getElementById(id);
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      obj.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
+      if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  }
+
+  function tick() {
+    current += (target - current) * ease;
+    container.style.transform = `translateY(${-current}px)`;
+    
+    let p = Math.max(0, Math.min(current / getMax(), 1));
+    
+    // Meter updates
+    let km = (p * 4).toFixed(1);
+    let totalMins = p * 150; // 2.5 hours = 150 mins
+    let hrs = Math.floor(totalMins / 60);
+    let mins = Math.floor(totalMins % 60).toString().padStart(2, '0');
+    
+    distEl.innerHTML = `${km}km`;
+    timeEl.innerHTML = `${hrs}:${mins}`;
+    fillEl.style.height = `${p * 100}%`;
+
+    // Counter
+    const s4Top = document.getElementById('sec-4').offsetTop;
+    if(current > s4Top - window.innerHeight*0.5 && !cDone) {
+      cDone = true;
+      animateCounter('trip-counter', 1, 5110, 2000);
+    }
+
+    // Solutions visual shift
+    const s6Top = document.getElementById('sec-6').offsetTop;
+    if(current > s6Top - window.innerHeight && audioCtx && !isMuted) {
+      document.getElementById('landscape').classList.add('water-arrived');
+      if(!hopePlayed) { hopePlayed = true; playHopeChord(); }
+    } else {
+      document.getElementById('landscape').classList.remove('water-arrived');
+      hopePlayed = false;
+    }
+
+    // Determine Audio State
+    if(audioCtx && !isMuted) {
+      const s3Top = document.getElementById('sec-3').offsetTop;
+      const s4T = document.getElementById('sec-4').offsetTop;
+      
+      let newState = 'walk';
+      if(current < window.innerHeight/2) newState = 'start';
+      else if(current > s3Top - window.innerHeight/2 && current < s4T - window.innerHeight/2) newState = 'well';
+      else if(current >= s4T - window.innerHeight/2 && current < s6Top - window.innerHeight/2) newState = 'return';
+      else if(current >= s6Top - window.innerHeight/2) newState = 'solution';
+
+      if(newState !== audioState) {
+        audioState = newState;
+        updateAudioLoops();
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // Web Audio
+  let audioCtx, masterGain, windNode;
+  let isMuted = true;
+  let audioInit = false;
+  let audioState = 'start';
+  let hopePlayed = false;
+  let walkInterval, dripInterval;
+
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    muteBtn.style.filter = isMuted ? 'grayscale(100%)' : 'grayscale(0%)';
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.05, audioCtx.currentTime, 0.5);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+    
+    // Wind noise
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    windNode = audioCtx.createBufferSource();
+    windNode.buffer = buffer;
+    windNode.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 1000;
+    
+    const windGain = audioCtx.createGain();
+    windGain.gain.value = 0.05;
+
+    windNode.connect(filter);
+    filter.connect(windGain);
+    windGain.connect(masterGain);
+    windNode.start();
+
+    // Earth drone
+    const drone = audioCtx.createOscillator();
+    drone.type = 'triangle';
+    drone.frequency.value = 80;
+    const dGain = audioCtx.createGain();
+    dGain.gain.value = 0.1;
+    drone.connect(dGain);
+    dGain.connect(masterGain);
+    drone.start();
+    
+    audioInit = true;
+    updateAudioLoops();
+  }
+
+  function playFootstep(heavy = false) {
+    if(!audioInit || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    
+    filter.type = 'lowpass';
+    filter.frequency.value = heavy ? 100 : 200;
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(heavy ? 0.3 : 0.15, audioCtx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (heavy ? 0.2 : 0.1));
+    
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  }
+
+  function playDrip() {
+    if(!audioInit || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400 + Math.random()*200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(masterGain);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+  }
+
+  function playHopeChord() {
+    if(!audioInit || isMuted) return;
+    [261.63, 329.63, 392.00].forEach((f,i) => {
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.2);
+      gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + i*0.2 + 1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 6);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(audioCtx.currentTime + i*0.2);
+      osc.stop(audioCtx.currentTime + 7);
+    });
+  }
+
+  function updateAudioLoops() {
+    clearInterval(walkInterval);
+    clearInterval(dripInterval);
+    
+    if(audioState === 'walk') {
+      walkInterval = setInterval(() => playFootstep(false), 600);
+    } else if(audioState === 'return') {
+      walkInterval = setInterval(() => playFootstep(true), 800);
+    } else if(audioState === 'well') {
+      dripInterval = setInterval(playDrip, 1500 + Math.random()*1000);
+    }
+  }
+
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>

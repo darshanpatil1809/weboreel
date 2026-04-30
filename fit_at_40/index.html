@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fit at 40</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&family=Playfair+Display:ital,wght@1,400;1,700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg: #060508;
+            --glass: rgba(255, 255, 255, 0.06);
+            --teal: #00aa88;
+            --gold: #d4a843;
+            --amber: #d48843;
+            --red: #cc4444;
+            --green: #44cc44;
+            --text: #e0e6ed;
+            --muted: #808a96;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+
+        /* Typography */
+        h1, h2, h3, .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-weight: normal; }
+        .mono { font-family: 'Space Mono', monospace; font-size: 0.95rem; }
+        .serif-italic { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.5rem; color: var(--muted); }
+        
+        .gold { color: var(--gold); }
+        .teal { color: var(--teal); }
+        .amber { color: var(--amber); }
+        .red { color: var(--red); }
+        .green { color: var(--green); }
+        
+        .title { font-size: 6rem; text-align: center; margin-bottom: 1rem; color: var(--teal); }
+
+        /* Smooth Scroll */
+        #scroll-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            overflow: hidden; pointer-events: none;
+        }
+        #scroll-content {
+            width: 100%; padding-bottom: 20vh; pointer-events: auto;
+        }
+
+        /* Layout */
+        .content-wrapper { max-width: 1000px; margin: 0 auto; padding: 0 5vw; }
+        section { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 15vh 0; }
+
+        .sec-title { font-size: 3.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; display: inline-block; }
+
+        /* Glassmorphism */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* CSS Body Anatomy */
+        .body-comparison {
+            display: flex; justify-content: space-around; align-items: center; margin-bottom: 4rem;
+        }
+        .silhouette {
+            width: 150px; height: 350px; position: relative; opacity: 0.8;
+            background: linear-gradient(to bottom, var(--text) 20%, transparent 20.5%, transparent 25%, var(--text) 25%);
+            clip-path: polygon(30% 0, 70% 0, 80% 20%, 100% 40%, 80% 45%, 70% 30%, 70% 50%, 60% 100%, 40% 100%, 30% 50%, 30% 30%, 20% 45%, 0 40%, 20% 20%);
+        }
+        .silhouette-25 { background: var(--teal); filter: drop-shadow(0 0 20px rgba(0,170,136,0.3)); }
+        .silhouette-40 { background: var(--gold); filter: drop-shadow(0 0 20px rgba(212,168,67,0.3)); }
+
+        @media (max-width: 768px) {
+            .body-comparison { flex-direction: column; gap: 4rem; }
+            .silhouette { width: 120px; height: 280px; }
+            .side-by-side { flex-direction: column; }
+        }
+
+        .side-by-side { display: flex; gap: 2rem; margin-bottom: 2rem; }
+        .side-by-side .glass { flex: 1; }
+
+        /* Stick Figures */
+        .stick-figure {
+            width: 60px; height: 100px; position: relative; margin-right: 1.5rem; border: 2px solid var(--teal); border-radius: 10px; padding: 10px;
+        }
+        .stick-figure::before { content:''; position:absolute; top: 10px; left: 50%; transform:translateX(-50%); width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--teal); }
+        .stick-figure::after { content:''; position:absolute; top: 30px; left: 50%; transform:translateX(-50%); width: 2px; height: 40px; background: var(--teal); }
+
+        .exercise-item { display: flex; align-items: center; margin-bottom: 2rem; }
+
+        /* Recovery Diagram */
+        .recovery-diagram { width: 300px; height: 300px; border-radius: 50%; border: 2px dashed var(--gold); margin: 0 auto 3rem; position: relative; display: flex; justify-content: center; align-items: center; }
+        .recovery-diagram::after { content:'SLEEP'; font-family: 'Bebas Neue'; font-size: 2rem; color: var(--gold); }
+
+        /* Hormones */
+        .molecular {
+            width: 100px; height: 100px; margin: 0 auto 2rem; position: relative;
+            background: 
+                radial-gradient(circle at 30% 30%, var(--teal) 10px, transparent 11px),
+                radial-gradient(circle at 70% 30%, var(--gold) 10px, transparent 11px),
+                radial-gradient(circle at 50% 70%, var(--text) 10px, transparent 11px);
+        }
+        .molecular::before {
+            content:''; position:absolute; top:35%; left:35%; width:40%; height:2px; background: rgba(255,255,255,0.2); transform: rotate(45deg);
+        }
+
+        /* 12 Week Plan */
+        .plan-row { display: flex; padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .plan-day { width: 120px; font-family: 'Bebas Neue'; font-size: 1.5rem; color: var(--teal); }
+        .plan-desc { flex: 1; font-family: 'DM Sans'; }
+
+        /* Toggle */
+        #musicToggle {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--glass); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1); color: white;
+            padding: 15px; border-radius: 50%; cursor: pointer; z-index: 100; font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="musicToggle">🏋️</button>
+
+    <div id="scroll-container">
+        <div id="scroll-content" class="content-wrapper">
+
+            <section style="justify-content: center; min-height: 90vh; text-align: center;">
+                <h1 class="bebas title">FIT_AT_40</h1>
+                <p class="serif-italic">Real fitness science for a life stage nobody talks about honestly.</p>
+            </section>
+
+            <!-- SECTION 1 -->
+            <section id="sec-change">
+                <h2 class="bebas sec-title teal">1. THE CHANGE</h2>
+                
+                <div class="body-comparison">
+                    <div style="text-align: center;">
+                        <h3 class="bebas" style="font-size: 2rem; margin-bottom: 1rem;">AGE 25</h3>
+                        <div class="silhouette silhouette-25"></div>
+                    </div>
+                    <div style="text-align: center;">
+                        <h3 class="bebas gold" style="font-size: 2rem; margin-bottom: 1rem;">AGE 40+</h3>
+                        <div class="silhouette silhouette-40"></div>
+                    </div>
+                </div>
+
+                <div class="glass">
+                    <p class="mono amber" style="margin-bottom: 1rem;">SARCOPENIA: -3-8% muscle mass per decade after 30</p>
+                    <p class="mono amber" style="margin-bottom: 1rem;">TESTOSTERONE: Declines 1-2% per year after 30</p>
+                    <p class="mono amber" style="margin-bottom: 1rem;">VO₂ MAX: Declines ~10% per decade</p>
+                    <p class="serif-italic" style="margin-top: 2rem;">RECOVERY: Slower. This is not weakness. It's biology.</p>
+                </div>
+                
+                <p class="bebas green" style="font-size: 2.5rem; text-align: center; margin-top: 2rem;">The good news: the changes are slowable.</p>
+                <p class="serif-italic gold" style="text-align: center; margin-top: 1rem;">More good news: many things improve.</p>
+            </section>
+
+            <!-- SECTION 2 -->
+            <section id="sec-improves">
+                <h2 class="bebas sec-title gold">2. WHAT IMPROVES</h2>
+                
+                <div class="glass" style="border-left: 4px solid var(--gold);">
+                    <p class="bebas gold" style="font-size: 1.5rem;">TENDON STRENGTH</p>
+                    <p>Peaks in 40s with proper training</p>
+                </div>
+                <div class="glass" style="border-left: 4px solid var(--gold);">
+                    <p class="bebas gold" style="font-size: 1.5rem;">MENTAL FORTITUDE</p>
+                    <p>Older athletes have superior mental game</p>
+                </div>
+                <div class="glass" style="border-left: 4px solid var(--gold);">
+                    <p class="bebas gold" style="font-size: 1.5rem;">ENDURANCE BASELINE</p>
+                    <p>Improves with consistent training into 50s</p>
+                </div>
+                <div class="glass" style="border-left: 4px solid var(--gold);">
+                    <p class="bebas gold" style="font-size: 1.5rem;">TECHNICAL MASTERY</p>
+                    <p>Movement quality peaks with experience</p>
+                </div>
+
+                <p class="serif-italic gold" style="text-align: center; margin-top: 3rem;">"The athlete at 42 is not the athlete at 22. They are a different — often better — athlete."</p>
+            </section>
+
+            <!-- SECTION 3 -->
+            <section id="sec-adjustments">
+                <h2 class="bebas sec-title teal">3. TRAINING ADJUSTMENTS</h2>
+                
+                <div class="side-by-side">
+                    <div class="glass">
+                        <h3 class="bebas teal" style="margin-bottom: 1rem; font-size: 2rem;">AT 25</h3>
+                        <p class="mono" style="margin-bottom: 1rem;">5x per week, heavy, minimal rest</p>
+                        <p class="mono" style="margin-bottom: 1rem;">Recovery: 24h</p>
+                        <p class="mono">Injury bounces back in days</p>
+                    </div>
+                    <div class="glass">
+                        <h3 class="bebas gold" style="margin-bottom: 1rem; font-size: 2rem;">AT 40</h3>
+                        <p class="mono" style="margin-bottom: 1rem;">3-4x per week, strategic loading, mandatory rest</p>
+                        <p class="mono" style="margin-bottom: 1rem;">Recovery: 48-72h</p>
+                        <p class="mono gold">Injury prevention IS the training</p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 3rem;">
+                    <p style="font-size: 1.2rem; margin-bottom: 1rem;">The program that worked at 25 will not work at 40.</p>
+                    <p class="serif-italic gold">A new program will work.</p>
+                </div>
+            </section>
+
+            <!-- SECTION 4 -->
+            <section id="sec-exercises">
+                <h2 class="bebas sec-title teal">4. BEST EXERCISES</h2>
+                
+                <div class="exercise-item glass">
+                    <div class="stick-figure"></div>
+                    <div>
+                        <h3 class="bebas teal" style="font-size: 1.8rem;">RESISTANCE TRAINING</h3>
+                        <p class="mono">3x week · Fights sarcopenia</p>
+                    </div>
+                </div>
+                <div class="exercise-item glass">
+                    <div class="stick-figure"></div>
+                    <div>
+                        <h3 class="bebas teal" style="font-size: 1.8rem;">ZONE 2 CARDIO</h3>
+                        <p class="mono">150 min/week · Heart, fat metabolism, longevity</p>
+                    </div>
+                </div>
+                <div class="exercise-item glass">
+                    <div class="stick-figure"></div>
+                    <div>
+                        <h3 class="bebas teal" style="font-size: 1.8rem;">MOBILITY WORK</h3>
+                        <p class="mono">Daily · Injury prevention, movement quality</p>
+                    </div>
+                </div>
+                <div class="exercise-item glass">
+                    <div class="stick-figure"></div>
+                    <div>
+                        <h3 class="bebas teal" style="font-size: 1.8rem;">HIGH-INTENSITY INTERVAL</h3>
+                        <p class="mono">1x week · VO₂ max maintenance</p>
+                    </div>
+                </div>
+                <div class="exercise-item glass">
+                    <div class="stick-figure"></div>
+                    <div>
+                        <h3 class="bebas teal" style="font-size: 1.8rem;">STRENGTH STANDARDS</h3>
+                        <p class="mono">Functional benchmarks · Deadlift = bodyweight</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5 -->
+            <section id="sec-recovery">
+                <h1 class="bebas gold" style="font-size: 4rem; text-align: center; margin-bottom: 3rem;">RECOVERY IS TRAINING</h1>
+                
+                <div class="recovery-diagram"></div>
+
+                <div class="glass">
+                    <p class="mono" style="margin-bottom: 1.5rem;"><span class="gold">SLEEP:</span> Growth hormone peak: 11pm-2am in deep sleep · Adults 40+ need 7-9 hours</p>
+                    <p class="mono" style="margin-bottom: 1.5rem;"><span class="gold">NUTRITION:</span> Protein synthesis window: 2hrs post-workout · 30-40g protein</p>
+                    <p class="mono"><span class="gold">ACTIVE RECOVERY:</span> Walking, yoga, light movement · Speeds recovery by 40%</p>
+                </div>
+            </section>
+
+            <!-- SECTION 6 -->
+            <section id="sec-hormones">
+                <div class="molecular"></div>
+                <h2 class="bebas sec-title teal" style="display:block; text-align:center;">6. TESTOSTERONE & TRAINING</h2>
+                
+                <div class="glass" style="border-left: 4px solid var(--green);">
+                    <h3 class="bebas green" style="font-size: 1.5rem; margin-bottom: 0.5rem;">WHAT RAISES IT</h3>
+                    <p class="mono">Compound lifts · Sleep · Low stress · Zinc/Vitamin D</p>
+                </div>
+                <div class="glass" style="border-left: 4px solid var(--red);">
+                    <h3 class="bebas red" style="font-size: 1.5rem; margin-bottom: 0.5rem;">WHAT LOWERS IT</h3>
+                    <p class="mono">Chronic overtraining · Alcohol · Poor sleep · Chronic stress</p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 3rem;">
+                    <p style="font-size: 1.2rem; margin-bottom: 1rem;">You can optimize your hormones without pharmaceutical intervention.</p>
+                    <p class="serif-italic gold">Most people haven't tried the natural optimization seriously.</p>
+                </div>
+            </section>
+
+            <!-- SECTION 7 -->
+            <section id="sec-plan">
+                <h2 class="bebas sec-title teal">7. WEEKLY SCHEDULE</h2>
+                
+                <div class="glass" style="padding: 0;">
+                    <div class="plan-row">
+                        <div class="plan-day">MONDAY</div>
+                        <div class="plan-desc">Full body resistance · 45 minutes</div>
+                    </div>
+                    <div class="plan-row">
+                        <div class="plan-day">TUESDAY</div>
+                        <div class="plan-desc">Zone 2 walk/bike · 45 minutes</div>
+                    </div>
+                    <div class="plan-row">
+                        <div class="plan-day">WEDNESDAY</div>
+                        <div class="plan-desc">Mobility + yoga · 30 minutes</div>
+                    </div>
+                    <div class="plan-row">
+                        <div class="plan-day">THURSDAY</div>
+                        <div class="plan-desc">Full body resistance · 45 minutes</div>
+                    </div>
+                    <div class="plan-row">
+                        <div class="plan-day">FRIDAY</div>
+                        <div class="plan-desc">HIIT · 20 min OR Zone 2 · 30 min</div>
+                    </div>
+                    <div class="plan-row">
+                        <div class="plan-day">SATURDAY</div>
+                        <div class="plan-desc">Active recovery · Walk</div>
+                    </div>
+                    <div class="plan-row" style="border-bottom: none;">
+                        <div class="plan-day amber">SUNDAY</div>
+                        <div class="plan-desc amber" style="font-weight: bold;">Complete rest · REST IS MANDATORY</div>
+                    </div>
+                </div>
+
+                <p class="serif-italic gold" style="text-align: center; margin-top: 4rem; font-size: 1.8rem;">
+                    "Start here. Adjust from here. The plan that fits your life is the one that works."
+                </p>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // Smooth Scroll
+        let currentY = 0;
+        let targetY = 0;
+        const ease = 0.077;
+        const scrollContent = document.getElementById('scroll-content');
+        let windowHeight = window.innerHeight;
+
+        function resize() {
+            windowHeight = window.innerHeight;
+            document.body.style.height = `${scrollContent.getBoundingClientRect().height}px`;
+        }
+
+        function updateScroll() {
+            currentY += (targetY - currentY) * ease;
+            scrollContent.style.transform = `translateY(${-currentY}px)`;
+            updateAudioContext();
+            requestAnimationFrame(updateScroll);
+        }
+
+        window.addEventListener('scroll', () => { targetY = window.scrollY; });
+        window.addEventListener('resize', resize);
+        window.onload = resize;
+        requestAnimationFrame(updateScroll);
+
+        // Audio System
+        let audioCtx;
+        let isPlaying = false;
+        let masterGain, padGain;
+        let padOscillators = [];
+        let lfo;
+        
+        const musicToggle = document.getElementById('musicToggle');
+        
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            masterGain = audioCtx.createGain();
+            masterGain.connect(audioCtx.destination);
+            
+            // Warm pads
+            padGain = audioCtx.createGain();
+            padGain.gain.value = 0.05;
+            padGain.connect(masterGain);
+
+            [261.63, 329.63, 392.00].forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(padGain);
+                osc.start();
+                padOscillators.push(osc);
+            });
+
+            // Moderate Beat (120 BPM -> 2 beats per sec)
+            const beatGain = audioCtx.createGain();
+            beatGain.connect(masterGain);
+            
+            setInterval(() => {
+                if(!isPlaying || isRecoveryZone) return;
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                
+                const env = audioCtx.createGain();
+                env.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                env.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                
+                osc.connect(env);
+                env.connect(beatGain);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.5);
+            }, 500);
+
+            isPlaying = true;
+            musicToggle.style.background = "var(--teal)";
+        }
+
+        let isRecoveryZone = false;
+
+        function updateAudioContext() {
+            if(!isPlaying || !audioCtx) return;
+            
+            const scrollCenter = currentY + windowHeight / 2;
+            
+            const secImproves = document.getElementById('sec-improves');
+            const secRecovery = document.getElementById('sec-recovery');
+            
+            // What improves: warms, brightens
+            if (Math.abs(scrollCenter - (secImproves.offsetTop + secImproves.offsetHeight/2)) < windowHeight/2) {
+                // Brighten pads (slightly raise pitch context implicitly, or just volume)
+                padGain.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.5);
+            } else {
+                padGain.gain.setTargetAtTime(0.05, audioCtx.currentTime, 0.5);
+            }
+            
+            // Recovery: slows, calm [110, 165]Hz
+            if (Math.abs(scrollCenter - (secRecovery.offsetTop + secRecovery.offsetHeight/2)) < windowHeight/2) {
+                isRecoveryZone = true;
+                padOscillators.forEach((osc, idx) => {
+                    const freqs = [110.00, 164.81, 220.00];
+                    osc.frequency.setTargetAtTime(freqs[idx], audioCtx.currentTime, 2);
+                });
+            } else {
+                isRecoveryZone = false;
+                padOscillators.forEach((osc, idx) => {
+                    const freqs = [261.63, 329.63, 392.00];
+                    osc.frequency.setTargetAtTime(freqs[idx], audioCtx.currentTime, 2);
+                });
+            }
+        }
+
+        musicToggle.addEventListener('click', () => {
+            if (!audioCtx) {
+                initAudio();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                isPlaying = true;
+                musicToggle.style.background = "var(--teal)";
+            } else {
+                audioCtx.suspend();
+                isPlaying = false;
+                musicToggle.style.background = "var(--glass)";
+            }
+        });
+    </script>
+</body>
+</html>

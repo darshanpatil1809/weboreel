@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Political Compass</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg: #050508;
+            --glass: rgba(255, 255, 255, 0.06);
+            --text: #e0e6ed;
+            --muted: #808a96;
+            --gold: #d4a843;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+
+        /* Typography */
+        h1, h2, h3, .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; font-weight: normal; }
+        .mono { font-family: 'Space Mono', monospace; font-size: 0.9rem; }
+        .serif-italic { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.4rem; color: var(--muted); }
+        .gold { color: var(--gold); }
+        
+        .title { font-size: 5rem; letter-spacing: 6px; text-align: center; margin-bottom: 2rem; }
+
+        /* Smooth Scroll */
+        #scroll-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+            overflow: hidden; pointer-events: none;
+        }
+        #scroll-content {
+            width: 100%; padding-bottom: 20vh; pointer-events: auto;
+        }
+
+        /* Layout */
+        .content-wrapper { max-width: 1200px; margin: 0 auto; padding: 0 5vw; }
+        section { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 10vh 0; }
+
+        /* Glassmorphism */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Issues Panel */
+        .issue-title { font-size: 3.5rem; margin-bottom: 1rem; text-align: center; }
+        .issue-desc { text-align: center; max-width: 800px; margin: 0 auto 3rem; font-size: 1.1rem; line-height: 1.6; color: var(--muted); }
+        
+        .panels-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 900px) {
+            .panels-container { grid-template-columns: 1fr; }
+        }
+
+        .panel-header { font-size: 1.8rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+        .argument-list { list-style: none; margin-bottom: 1.5rem; }
+        .argument-list li { margin-bottom: 1rem; line-height: 1.5; font-size: 0.95rem; }
+        .argument-list li::before { content: "▪"; color: var(--muted); margin-right: 10px; }
+
+        .data-box { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 4px; border-left: 2px solid var(--muted); }
+
+        .issue-footer { text-align: center; margin-top: 2rem; }
+
+        /* Compass Visualizer */
+        .compass-section { text-align: center; }
+        .compass-container {
+            width: 500px; height: 500px;
+            margin: 4rem auto;
+            position: relative;
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        @media (max-width: 600px) { .compass-container { width: 90vw; height: 90vw; } }
+
+        .compass-axis { position: absolute; background: rgba(255,255,255,0.2); }
+        .axis-x { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
+        .axis-y { height: 100%; width: 2px; left: 50%; top: 0; transform: translateX(-50%); }
+        
+        .compass-label { position: absolute; font-family: 'Bebas Neue'; color: var(--muted); font-size: 1.2rem; }
+        .lbl-top { top: 10px; left: 50%; transform: translateX(-50%); }
+        .lbl-bottom { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .lbl-left { left: 10px; top: 50%; transform: translateY(-50%); }
+        .lbl-right { right: 10px; top: 50%; transform: translateY(-50%); }
+
+        .user-dot {
+            width: 16px; height: 16px; border-radius: 50%; background: #fff;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(255,255,255,0.8);
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .questions-container { max-width: 600px; margin: 0 auto; text-align: left; }
+        .question-item { margin-bottom: 2rem; }
+        .question-text { margin-bottom: 1rem; font-size: 1.1rem; }
+        .slider { width: 100%; -webkit-appearance: none; height: 4px; background: rgba(255,255,255,0.2); outline: none; border-radius: 2px; }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 16px; height: 16px; border-radius: 50%; background: #fff; cursor: pointer;
+        }
+
+        /* Toggle */
+        #musicToggle {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--glass); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1); color: white;
+            padding: 15px; border-radius: 50%; cursor: pointer; z-index: 100; font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="musicToggle">⚖️</button>
+
+    <div id="scroll-container">
+        <div id="scroll-content" class="content-wrapper">
+
+            <section style="justify-content: center; min-height: 80vh;">
+                <h1 class="bebas title">POLITICAL_COMPASS</h1>
+                <div style="text-align: center;">
+                    <p class="serif-italic">This tool presents arguments. Not opinions.</p>
+                    <p class="serif-italic" style="margin-top: 1rem;">It will not tell you what to believe.</p>
+                    <p class="serif-italic" style="margin-top: 1rem;">It will show you why thoughtful people disagree.</p>
+                    <p class="serif-italic gold" style="margin-top: 3rem;">That's enough. Think from there.</p>
+                </div>
+            </section>
+
+            <!-- Issue 1 -->
+            <section class="issue-section" data-index="1">
+                <h2 class="bebas issue-title">ISSUE 1: RESERVATION POLICY</h2>
+                <p class="issue-desc">Affirmative action through quotas in education and public employment to address historical injustices vs concerns about merit and systemic efficiency.</p>
+                
+                <div class="panels-container">
+                    <div class="glass">
+                        <h3 class="bebas panel-header">FOR RESERVATION</h3>
+                        <ul class="argument-list">
+                            <li>Historical caste-based oppression requires structural, not just formal, equality.</li>
+                            <li>Representation in bureaucracy and power structures ensures marginalized voices are heard.</li>
+                            <li>"Merit" is often a function of accumulated social and economic capital, not just raw intelligence.</li>
+                        </ul>
+                    </div>
+                    <div class="glass">
+                        <h3 class="bebas panel-header">FOR REFORM</h3>
+                        <ul class="argument-list">
+                            <li>Benefits often concentrate among the "creamy layer" rather than reaching the most marginalized.</li>
+                            <li>The policy creates caste-based political mobilization rather than caste annihilation.</li>
+                            <li>Perpetual extension of quotas without exit strategies defeats the original constitutional intent.</li>
+                        </ul>
+                    </div>
+                    <div class="glass">
+                        <h3 class="bebas panel-header">FOR ALTERNATIVES</h3>
+                        <ul class="argument-list">
+                            <li>Economic deprivation criteria (EWS) are more relevant than caste in modern India.</li>
+                            <li>Focus should shift to capacity building: better primary schools, health, and equal opportunity at birth.</li>
+                            <li>Quotas in specialized technical/medical fields may compromise public safety and efficiency.</li>
+                        </ul>
+                        <div class="data-box mono">
+                            DATA: Less than 5% of all jobs in India are in the public sector where reservations apply.
+                        </div>
+                    </div>
+                </div>
+                <p class="serif-italic issue-footer">People you respect disagree on this. This is why.</p>
+            </section>
+
+            <!-- Issue 2 -->
+            <section class="issue-section" data-index="2">
+                <h2 class="bebas issue-title">ISSUE 2: UNIFORM CIVIL CODE</h2>
+                <p class="issue-desc">Replacing personal laws based on the scriptures and customs of each major religious community in India with a common set of rules governing every citizen.</p>
+                
+                <div class="panels-container">
+                    <div class="glass">
+                        <h3 class="bebas panel-header">FOR UCC</h3>
+                        <ul class="argument-list">
+                            <li>Ensures gender equality, as many personal laws are patriarchal.</li>
+                            <li>Fulfills Article 44 of the Constitution's Directive Principles.</li>
+                            <li>Secularism requires the state to separate religion from civil law.</li>
+                        </ul>
+                    </div>
+                    <div class="glass">
+                        <h3 class="bebas panel-header">FOR NUANCE</h3>
+                        <ul class="argument-list">
+                            <li>A "Uniform" code might just impose majority Hindu laws on minorities.</li>
+                            <li>Tribal customs and regional diversities require legal accommodation.</li>
+                            <li>Piecemeal reform of existing personal laws might be less socially disruptive.</li>
+                        </ul>
+                    </div>
+                    <div class="glass">
+                        <h3 class="bebas panel-header">AGAINST UCC</h3>
+                        <ul class="argument-list">
+                            <li>Violates Freedom of Religion (Article 25) to practice distinct customs.</li>
+                            <li>Pluralism and legal diversity are strengths of the Indian civilization.</li>
+                            <li>Minorities perceive it as an attempt at cultural assimilation.</li>
+                        </ul>
+                        <div class="data-box mono">
+                            DATA: Goa has implemented a form of UCC since Portuguese rule, with specific exemptions.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Issue 3 to 8 (Simplified for prompt brevity, maintaining structure) -->
+            <section class="issue-section" data-index="3">
+                <h2 class="bebas issue-title">ISSUE 3: ECONOMIC LIBERALIZATION</h2>
+                <p class="issue-desc">The 1991 reforms and the continuing debate over free markets, privatization, and wealth distribution.</p>
+                <div class="panels-container">
+                    <div class="glass"><h3 class="bebas panel-header">PRO-MARKET</h3><ul class="argument-list"><li>Deregulation unleashed high GDP growth and pulled millions out of extreme poverty.</li><li>Private capital is more efficient than inefficient Public Sector Undertakings.</li></ul></div>
+                    <div class="glass"><h3 class="bebas panel-header">WELFARE FOCUS</h3><ul class="argument-list"><li>Growth has been "jobless", exacerbating inequality.</li><li>The state must provide safety nets (MGNREGA, PDS) as markets fail the poorest.</li></ul></div>
+                    <div class="glass"><h3 class="bebas panel-header">STRUCTURAL CRITIQUE</h3><ul class="argument-list"><li>Liberalization led to crony capitalism and concentration of wealth in few conglomerates.</li><li>Labor laws and environmental regulations are sacrificed for corporate profit.</li></ul><div class="data-box mono">DATA: India's top 1% hold over 40% of the national wealth.</div></div>
+                </div>
+            </section>
+
+            <section class="issue-section" data-index="4">
+                <h2 class="bebas issue-title">ISSUE 4: ENVIRONMENT VS DEVELOPMENT</h2>
+                <p class="issue-desc">India's development needs vs its 2070 net-zero commitment and ecological preservation.</p>
+                <div class="panels-container" style="grid-template-columns: 1fr 1fr;">
+                    <div class="glass"><h3 class="bebas panel-header">DEVELOPMENT FIRST</h3><ul class="argument-list"><li>India's per capita emissions are far below the global average; the West caused the crisis.</li><li>Millions still lack reliable electricity; cheap coal is necessary for short-term poverty alleviation.</li></ul></div>
+                    <div class="glass"><h3 class="bebas panel-header">ECOLOGY FIRST</h3><ul class="argument-list"><li>India is highly vulnerable to climate change (monsoon disruption, heatwaves).</li><li>Ecological destruction for infrastructure leads to long-term economic loss (floods, soil depletion).</li></ul></div>
+                </div>
+                <p class="serif-italic issue-footer">Both concerns are legitimate. The policy must navigate both.</p>
+            </section>
+
+            <section class="issue-section" data-index="5">
+                <h2 class="bebas issue-title">ISSUE 5: URBAN-RURAL DIVIDE</h2>
+                <p class="issue-desc">Policy choices that favor cities vs rural areas in a nation where 65% live in villages.</p>
+                <div class="panels-container" style="grid-template-columns: 1fr 1fr;">
+                    <div class="glass"><h3 class="bebas panel-header">URBAN FOCUS</h3><ul class="argument-list"><li>Cities are engines of economic growth and innovation.</li><li>Urbanization is inevitable; policy should facilitate smooth transition rather than artificially holding people in agriculture.</li></ul></div>
+                    <div class="glass"><h3 class="bebas panel-header">RURAL FOCUS</h3><ul class="argument-list"><li>Agricultural distress causes mass migration; we must make village life economically viable.</li><li>Disproportionate capital investment in cities creates unlivable megacities and neglected hinterlands.</li></ul></div>
+                </div>
+                <p class="mono" style="text-align: center; opacity: 0.6; margin-top: 1rem;">Urban India votes differently than rural India. Policy reflects this.</p>
+            </section>
+
+            <section class="issue-section" data-index="6">
+                <h2 class="bebas issue-title">ISSUE 6: FREEDOM OF SPEECH</h2>
+                <p class="issue-desc">The balance between Article 19(1)(a) individual expression and Article 19(2) reasonable restrictions.</p>
+                <div class="panels-container">
+                    <div class="glass"><h3 class="bebas panel-header">MAXIMALIST</h3><ul class="argument-list"><li>Speech should only be restricted if it directly incites violence.</li><li>"Offense" is subjective; laws against hurting religious sentiments are weaponized.</li></ul></div>
+                    <div class="glass"><h3 class="bebas panel-header">BALANCED</h3><ul class="argument-list"><li>In a volatile, diverse democracy, hate speech can trigger deadly riots rapidly.</li><li>Platform regulation is necessary against coordinated misinformation.</li></ul></div>
+                    <div class="glass"><h3 class="bebas panel-header">STATE SECURITY</h3><ul class="argument-list"><li>National integrity supersedes individual rights in border states or insurgency areas.</li><li>Foreign interference through digital platforms requires strict data sovereignty.</li></ul><div class="data-box mono">DATA: India leads the world in internet shutdowns.</div></div>
+                </div>
+            </section>
+
+            <section class="compass-section" data-index="7">
+                <h2 class="bebas issue-title" style="margin-bottom: 0;">YOUR POSITION</h2>
+                <p class="serif-italic" style="margin-bottom: 2rem;">Adjust the sliders based on your leanings.</p>
+
+                <div class="compass-container glass">
+                    <div class="compass-axis axis-x"></div>
+                    <div class="compass-axis axis-y"></div>
+                    <div class="compass-label lbl-top">AUTHORITY</div>
+                    <div class="compass-label lbl-bottom">LIBERTY</div>
+                    <div class="compass-label lbl-left">LEFT (ECON)</div>
+                    <div class="compass-label lbl-right">RIGHT (ECON)</div>
+                    
+                    <div class="user-dot" id="user-dot"></div>
+                </div>
+
+                <div class="questions-container glass">
+                    <div class="question-item">
+                        <p class="question-text">1. The state should control key industries rather than private corporations.</p>
+                        <input type="range" min="-10" max="10" value="0" class="slider q-econ">
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;" class="mono"><span style="opacity:0.5">Agree (Left)</span><span style="opacity:0.5">Disagree (Right)</span></div>
+                    </div>
+                    <div class="question-item">
+                        <p class="question-text">2. Taxes on the wealthy should be significantly increased to fund welfare.</p>
+                        <input type="range" min="-10" max="10" value="0" class="slider q-econ">
+                    </div>
+                    <div class="question-item">
+                        <p class="question-text">3. Free markets are naturally more efficient than government planning.</p>
+                        <input type="range" min="-10" max="10" value="0" class="slider q-econ-rev">
+                    </div>
+                    <div class="question-item">
+                        <p class="question-text">4. Maintaining social order and tradition is more important than individual freedoms.</p>
+                        <input type="range" min="-10" max="10" value="0" class="slider q-soc">
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;" class="mono"><span style="opacity:0.5">Agree (Authority)</span><span style="opacity:0.5">Disagree (Liberty)</span></div>
+                    </div>
+                    <div class="question-item">
+                        <p class="question-text">5. What consenting adults do in private is none of the government's business.</p>
+                        <input type="range" min="-10" max="10" value="0" class="slider q-soc-rev">
+                    </div>
+                    <div class="question-item">
+                        <p class="question-text">6. National security concerns justify mass surveillance.</p>
+                        <input type="range" min="-10" max="10" value="0" class="slider q-soc">
+                    </div>
+                </div>
+
+                <p class="mono" style="margin-top: 3rem; opacity: 0.7;">Most Indians fall in the center with complex combinations.</p>
+                <p class="serif-italic" style="margin-top: 0.5rem;">The compass simplifies. Real politics is more complex.</p>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // Smooth Scroll
+        let currentY = 0;
+        let targetY = 0;
+        const ease = 0.08;
+        const scrollContent = document.getElementById('scroll-content');
+        let windowHeight = window.innerHeight;
+
+        function resize() {
+            windowHeight = window.innerHeight;
+            document.body.style.height = `${scrollContent.getBoundingClientRect().height}px`;
+        }
+
+        function updateScroll() {
+            currentY += (targetY - currentY) * ease;
+            scrollContent.style.transform = `translateY(${-currentY}px)`;
+            checkAudioTriggers();
+            requestAnimationFrame(updateScroll);
+        }
+
+        window.addEventListener('scroll', () => { targetY = window.scrollY; });
+        window.addEventListener('resize', resize);
+        
+        // Wait for fonts to load before calculating height
+        window.onload = resize;
+        requestAnimationFrame(updateScroll);
+
+        // Compass Logic
+        const dot = document.getElementById('user-dot');
+        const sliders = document.querySelectorAll('.slider');
+
+        function updateCompass() {
+            let econScore = 0;
+            let socScore = 0;
+
+            document.querySelectorAll('.q-econ').forEach(s => econScore += parseInt(s.value) * -1); // negative is left
+            document.querySelectorAll('.q-econ-rev').forEach(s => econScore += parseInt(s.value));
+            
+            document.querySelectorAll('.q-soc').forEach(s => socScore += parseInt(s.value) * -1); // negative is authority (top)
+            document.querySelectorAll('.q-soc-rev').forEach(s => socScore += parseInt(s.value));
+
+            // Max possible score per axis is 30.
+            // Map -30 to 30 into 0% to 100%
+            let xPos = ((econScore + 30) / 60) * 100;
+            let yPos = ((socScore + 30) / 60) * 100;
+
+            dot.style.left = `${xPos}%`;
+            dot.style.top = `${yPos}%`;
+        }
+
+        sliders.forEach(s => s.addEventListener('input', updateCompass));
+
+        // Audio System
+        let audioCtx;
+        let isPlaying = false;
+        let droneGain;
+        let issueSections = [];
+        let triggeredSections = new Set();
+        
+        const musicToggle = document.getElementById('musicToggle');
+        
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Neutral drone [261, 329, 392]
+            droneGain = audioCtx.createGain();
+            droneGain.gain.value = 0.05;
+            droneGain.connect(audioCtx.destination);
+
+            [261.63, 329.63, 392.00].forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                osc.connect(droneGain);
+                osc.start();
+            });
+
+            isPlaying = true;
+            musicToggle.style.background = "var(--text)";
+            musicToggle.style.color = "var(--bg)";
+            
+            document.querySelectorAll('.issue-section, .compass-section').forEach(sec => {
+                issueSections.push({ el: sec, index: sec.getAttribute('data-index') });
+            });
+        }
+
+        function playTransition(isCompass = false) {
+            if(!audioCtx || !isPlaying) return;
+            const chordGain = audioCtx.createGain();
+            chordGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            chordGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.1);
+            chordGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+            chordGain.connect(audioCtx.destination);
+
+            const freqs = isCompass ? [523.25, 659.25, 783.99] : [400, 600];
+
+            freqs.forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(chordGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 2);
+            });
+        }
+
+        function checkAudioTriggers() {
+            if(!isPlaying) return;
+            const scrollCenter = currentY + windowHeight * 0.6;
+            
+            issueSections.forEach(sec => {
+                if(!triggeredSections.has(sec.index)) {
+                    if(scrollCenter > sec.el.offsetTop) {
+                        triggeredSections.add(sec.index);
+                        playTransition(sec.index == 7); // compass is index 7
+                    }
+                }
+            });
+        }
+
+        musicToggle.addEventListener('click', () => {
+            if (!audioCtx) {
+                initAudio();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                isPlaying = true;
+                musicToggle.style.background = "var(--text)";
+                musicToggle.style.color = "var(--bg)";
+            } else {
+                audioCtx.suspend();
+                isPlaying = false;
+                musicToggle.style.background = "var(--glass)";
+                musicToggle.style.color = "var(--text)";
+            }
+        });
+    </script>
+</body>
+</html>

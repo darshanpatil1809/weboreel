@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Calendar</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg: #04060a;
+            --glass: rgba(100, 180, 60, 0.05);
+            --kharif: #d4a843;
+            --rabi: #4488cc;
+            --zaid: #44aa44;
+            --text: #e0e6ed;
+            --red: #cc4444;
+            --gold: #d4a843;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+
+        /* Typography */
+        h1, h2, h3, .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; }
+        .mono { font-family: 'Space Mono', monospace; font-size: 0.9rem; }
+        .serif-italic { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.2rem; color: #a0aab5; }
+        .gold { color: var(--gold); }
+        .red { color: var(--red); }
+
+        /* Smooth Scroll */
+        #scroll-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #scroll-content {
+            width: 100%;
+            padding-bottom: 20vh;
+            pointer-events: auto;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        /* Map Background */
+        .india-map-bg {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            opacity: 0.05;
+            background-image: radial-gradient(circle at center, var(--kharif) 0%, transparent 10%),
+                              radial-gradient(circle at 30% 40%, var(--rabi) 0%, transparent 15%);
+            background-size: 50px 50px;
+        }
+
+        /* Section layout */
+        section {
+            min-height: 100vh;
+            padding: 10vh 5vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .header-content { text-align: center; margin-bottom: 5vh; }
+        
+        /* Calendar */
+        .calendar-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10vh 0;
+        }
+        .calendar-circle {
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: conic-gradient(
+                var(--zaid) 0deg 60deg,    /* Apr, May */
+                var(--kharif) 60deg 240deg, /* Jun-Nov */
+                var(--rabi) 240deg 360deg   /* Dec-Mar */
+            );
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 0 40px var(--bg);
+            opacity: 0.8;
+            transition: opacity 0.5s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .calendar-circle { width: 90vw; height: 90vw; }
+        }
+        .calendar-inner {
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        .month-indicator {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            pointer-events: none;
+        }
+        
+        /* Crop Grid */
+        .crop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+        .crop-card {
+            transition: transform 0.3s ease;
+        }
+        .crop-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.05);
+        }
+        .crop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Specific Season Colors */
+        .kharif-text { color: var(--kharif); }
+        .rabi-text { color: var(--rabi); }
+        .zaid-text { color: var(--zaid); }
+
+        /* Farmer Timeline */
+        .timeline {
+            display: flex;
+            height: 20px;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 3rem 0 1rem;
+        }
+        .tl-rabi { background: var(--rabi); width: 33.3%; } /* Jan-Apr */
+        .tl-zaid { background: var(--zaid); width: 16.6%; } /* May-Jun */
+        .tl-kharif { background: var(--kharif); width: 50%; } /* Jul-Dec */
+
+        /* Audio Toggle */
+        #musicToggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+        #musicToggle:hover { transform: scale(1.1); }
+
+        /* CSS Art particles for backgrounds */
+        .bg-particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .drop {
+            position: absolute;
+            background: rgba(255,255,255,0.2);
+            width: 2px; height: 20px;
+            animation: rain linear infinite;
+        }
+        @keyframes rain { 0% { transform: translateY(-100px); } 100% { transform: translateY(100vh); } }
+
+        /* Current Month Section */
+        #current-month-panel {
+            text-align: center;
+        }
+        .month-name { font-size: 4rem; margin: 1rem 0; }
+        
+        .disclaimer { text-align: center; opacity: 0.5; margin-top: 5vh; }
+    </style>
+</head>
+<body>
+    <div class="india-map-bg"></div>
+
+    <button id="musicToggle">🌱</button>
+
+    <div id="scroll-container">
+        <div id="scroll-content">
+            
+            <section id="hero">
+                <div class="header-content">
+                    <h1 class="bebas" style="font-size: 5rem; letter-spacing: 5px;">CROP_CALENDAR</h1>
+                    <p class="serif-italic">The annual cycle of farming that feeds 1.4 billion people.</p>
+                </div>
+                
+                <div class="calendar-container">
+                    <div class="calendar-circle" id="calendar">
+                        <div class="month-indicator" id="current-month-pulse"></div>
+                        <div class="calendar-inner glass">
+                            <h2 class="bebas" id="center-month" style="font-size: 2.5rem; margin-bottom: 0.5rem;">MONTH</h2>
+                            <p class="mono" id="center-season">SEASON</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="kharif">
+                <div class="bg-particles" id="rain-container"></div>
+                <h2 class="bebas kharif-text" style="font-size: 3rem;">☔ KHARIF SEASON · MONSOON CROPS</h2>
+                <p class="mono">Sown: June-July · Harvested: October-November</p>
+                <p class="serif-italic" style="margin-top:1rem;">Depends entirely on monsoon rainfall.</p>
+                
+                <div class="crop-grid">
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🌾</div>
+                        <h3 class="bebas">RICE</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">68% of production<br>Andhra, West Bengal, Punjab</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🌽</div>
+                        <h3 class="bebas">MAIZE</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">MP, Karnataka, Rajasthan</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🫘</div>
+                        <h3 class="bebas">SOYBEAN</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">MP, Maharashtra</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🌿</div>
+                        <h3 class="bebas">COTTON</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">Gujarat, Maharashtra, Telangana</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🍬</div>
+                        <h3 class="bebas">SUGARCANE</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">UP, Maharashtra</p>
+                    </div>
+                </div>
+
+                <div class="glass" style="margin-top: 3rem; border-left: 4px solid var(--red);">
+                    <p class="serif-italic red">If monsoon fails: 40% of Kharif crop at risk</p>
+                </div>
+            </section>
+
+            <section id="rabi">
+                <h2 class="bebas rabi-text" style="font-size: 3rem;">❄️ RABI SEASON · WINTER CROPS</h2>
+                <p class="mono">Sown: October-November · Harvested: March-April</p>
+                <p class="serif-italic" style="margin-top:1rem;">Uses residual soil moisture + irrigation.</p>
+
+                <div class="crop-grid">
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🌾</div>
+                        <h3 class="bebas gold">WHEAT</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">Most important Rabi crop<br>Punjab, Haryana, UP</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🟡</div>
+                        <h3 class="bebas" style="color:yellow;">MUSTARD</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">Rajasthan, MP, UP</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🫘</div>
+                        <h3 class="bebas">CHICKPEA (CHANA)</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">MP, Rajasthan, Maharashtra</p>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🧅</div>
+                        <h3 class="bebas">ONION</h3>
+                        <p class="mono" style="margin-top:1rem; opacity:0.8;">Maharashtra, Karnataka, MP</p>
+                    </div>
+                </div>
+
+                <div class="glass" style="margin-top: 3rem;">
+                    <p class="mono">Green Revolution: Wheat production 1960: 11MT · Today: 107MT</p>
+                    <p class="serif-italic" style="margin-top:0.5rem;">Rabi crops drove this transformation.</p>
+                </div>
+            </section>
+
+            <section id="zaid">
+                <h2 class="bebas zaid-text" style="font-size: 3rem;">☀️ ZAID SEASON · SUMMER CROPS</h2>
+                <p class="mono">Between Rabi and Kharif. Short season.</p>
+                <p class="serif-italic" style="margin-top:1rem;">Requires irrigation. Hot conditions.</p>
+
+                <div class="crop-grid">
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🍉</div>
+                        <h3 class="bebas">WATERMELON</h3>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🥒</div>
+                        <h3 class="bebas">CUCUMBER</h3>
+                    </div>
+                    <div class="glass crop-card">
+                        <div class="crop-icon">🎃</div>
+                        <h3 class="bebas">PUMPKIN</h3>
+                    </div>
+                </div>
+
+                <div class="glass" style="margin-top: 3rem;">
+                    <p class="serif-italic gold" style="font-size: 1.5rem;">"The summer fruits on your table: someone planted them in 40°C heat."</p>
+                </div>
+            </section>
+
+            <section id="current-month">
+                <div class="glass" id="current-month-panel">
+                    <h2 class="bebas" style="color:var(--text);">THIS MONTH IN INDIA</h2>
+                    <h1 class="bebas month-name gold" id="display-month">JANUARY</h1>
+                    
+                    <div style="text-align: left; margin-top: 2rem; max-width: 600px; margin-inline: auto;">
+                        <p class="mono"><span style="opacity:0.6">IN SEASON NOW:</span> <span id="in-season">Wheat, Mustard</span></p>
+                        <p class="mono" style="margin-top:1rem;"><span style="opacity:0.6">AT PEAK FRESHNESS:</span> <span id="peak-fresh">Winter Vegetables</span></p>
+                        <p class="mono" style="margin-top:1rem;"><span style="opacity:0.6">PRICE EXPECTATION:</span> <span id="price-exp">Generally stable</span></p>
+                        
+                        <p class="serif-italic gold" style="margin-top:3rem; text-align: center; font-size:1.4rem;">
+                            Eat local, eat seasonal. It's fresher, cheaper, and more nutritious.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="timeline-sec">
+                <h2 class="bebas" style="font-size: 2.5rem;">FARMER'S YEAR TIMELINE</h2>
+                <div class="timeline">
+                    <div class="tl-rabi" title="Jan-Apr: Rabi Harvest"></div>
+                    <div class="tl-zaid" title="May-Jun: Zaid Season"></div>
+                    <div class="tl-kharif" title="Jul-Dec: Kharif Season"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; opacity:0.5; margin-bottom:2rem;" class="mono">
+                    <span>JAN</span>
+                    <span>APR</span>
+                    <span>JUL</span>
+                    <span>DEC</span>
+                </div>
+
+                <p class="serif-italic" style="font-size: 1.8rem;">"A farmer's year has no off season."</p>
+                <p class="serif-italic" style="font-size: 1.2rem; margin-top: 0.5rem; opacity: 0.7;">While one crop is growing, the next is being planned.</p>
+                
+                <p class="disclaimer mono">INDIA'S AGRICULTURAL DIVERSITY: 15 agro-climatic zones</p>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // Smooth Scroll
+        let currentY = 0;
+        let targetY = 0;
+        const ease = 0.075;
+        const scrollContent = document.getElementById('scroll-content');
+        let windowHeight = window.innerHeight;
+        let contentHeight = scrollContent.getBoundingClientRect().height;
+
+        document.body.style.height = `${contentHeight}px`;
+
+        function updateScroll() {
+            currentY += (targetY - currentY) * ease;
+            scrollContent.style.transform = `translateY(${-currentY}px)`;
+            
+            // Audio context update based on scroll
+            updateAudioContext();
+            
+            requestAnimationFrame(updateScroll);
+        }
+
+        window.addEventListener('scroll', () => {
+            targetY = window.scrollY;
+        });
+
+        window.addEventListener('resize', () => {
+            windowHeight = window.innerHeight;
+            contentHeight = scrollContent.getBoundingClientRect().height;
+            document.body.style.height = `${contentHeight}px`;
+        });
+
+        requestAnimationFrame(updateScroll);
+
+        // Rain particles
+        const rainContainer = document.getElementById('rain-container');
+        for(let i=0; i<50; i++) {
+            let drop = document.createElement('div');
+            drop.className = 'drop';
+            drop.style.left = `${Math.random() * 100}%`;
+            drop.style.animationDuration = `${Math.random() * 0.5 + 0.5}s`;
+            drop.style.animationDelay = `${Math.random() * 2}s`;
+            rainContainer.appendChild(drop);
+        }
+
+        // Calendar Logic
+        const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+        const d = new Date();
+        const currentMonthIdx = d.getMonth();
+        
+        document.getElementById('center-month').innerText = months[currentMonthIdx];
+        document.getElementById('display-month').innerText = months[currentMonthIdx];
+
+        // Highlight current month angle
+        const monthAngle = (currentMonthIdx / 12) * 360;
+        const pulse = document.getElementById('current-month-pulse');
+        pulse.style.background = `conic-gradient(from ${monthAngle - 15}deg, transparent 0deg, rgba(255,255,255,0.2) 15deg, transparent 30deg)`;
+
+        let seasonName = "RABI";
+        let inSeason = "Wheat, Mustard, Chickpeas";
+        let peakFresh = "Winter Vegetables, Carrots, Radish";
+        if (currentMonthIdx >= 3 && currentMonthIdx <= 5) {
+            seasonName = "ZAID";
+            inSeason = "Watermelon, Cucumber, Pumpkin";
+            peakFresh = "Summer fruits, Gourds";
+        } else if (currentMonthIdx >= 5 && currentMonthIdx <= 10) {
+            seasonName = "KHARIF";
+            inSeason = "Rice, Maize, Soybean, Cotton";
+            peakFresh = "Monsoon greens, Okra";
+        }
+
+        document.getElementById('center-season').innerText = seasonName + " SEASON";
+        document.getElementById('in-season').innerText = inSeason;
+        document.getElementById('peak-fresh').innerText = peakFresh;
+
+        // Audio System
+        let audioCtx;
+        let isPlaying = false;
+        const musicToggle = document.getElementById('musicToggle');
+        
+        let kharifGain, rabiGain, zaidGain;
+        
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Kharif: Noise (Rain) + Low thunder
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+            
+            const bandpass = audioCtx.createBiquadFilter();
+            bandpass.type = 'bandpass';
+            bandpass.frequency.value = 1500;
+            
+            kharifGain = audioCtx.createGain();
+            kharifGain.gain.value = 0;
+            
+            noise.connect(bandpass);
+            bandpass.connect(kharifGain);
+            kharifGain.connect(audioCtx.destination);
+            noise.start();
+
+            // Rabi: clear chords
+            rabiGain = audioCtx.createGain();
+            rabiGain.gain.value = 0;
+            rabiGain.connect(audioCtx.destination);
+            
+            [261.63, 329.63, 392.00].forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(rabiGain);
+                osc.start();
+            });
+
+            // Zaid: warm bright
+            zaidGain = audioCtx.createGain();
+            zaidGain.gain.value = 0;
+            zaidGain.connect(audioCtx.destination);
+            
+            [392.00, 493.88].forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 800;
+                
+                osc.connect(filter);
+                filter.connect(zaidGain);
+                osc.start();
+            });
+
+            isPlaying = true;
+            musicToggle.innerText = "🔊";
+            musicToggle.style.background = "var(--gold)";
+            updateAudioContext();
+        }
+
+        function updateAudioContext() {
+            if (!isPlaying || !audioCtx) return;
+            
+            const kharifSec = document.getElementById('kharif').offsetTop;
+            const rabiSec = document.getElementById('rabi').offsetTop;
+            const zaidSec = document.getElementById('zaid').offsetTop;
+            
+            const scrollCenter = currentY + windowHeight / 2;
+            
+            const distK = Math.abs(scrollCenter - kharifSec);
+            const distR = Math.abs(scrollCenter - rabiSec);
+            const distZ = Math.abs(scrollCenter - zaidSec);
+            
+            const fade = 800; // px distance to fade
+            
+            const kVol = Math.max(0, 1 - distK/fade) * 0.05;
+            const rVol = Math.max(0, 1 - distR/fade) * 0.05;
+            const zVol = Math.max(0, 1 - distZ/fade) * 0.05;
+
+            kharifGain.gain.setTargetAtTime(kVol, audioCtx.currentTime, 0.1);
+            rabiGain.gain.setTargetAtTime(rVol, audioCtx.currentTime, 0.1);
+            zaidGain.gain.setTargetAtTime(zVol, audioCtx.currentTime, 0.1);
+        }
+
+        musicToggle.addEventListener('click', () => {
+            if (!audioCtx) {
+                initAudio();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                isPlaying = true;
+                musicToggle.innerText = "🔊";
+                musicToggle.style.background = "var(--gold)";
+            } else {
+                audioCtx.suspend();
+                isPlaying = false;
+                musicToggle.innerText = "🌱";
+                musicToggle.style.background = "var(--glass)";
+            }
+        });
+    </script>
+</body>
+</html>

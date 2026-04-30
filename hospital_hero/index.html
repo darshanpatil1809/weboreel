@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Hero</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg: #040608;
+            --glass: rgba(100, 200, 220, 0.05);
+            --blue: #0088cc;
+            --green: #00cc66;
+            --red: #cc3300;
+            --teal: #00aaaa;
+            --gold: #d4a843;
+            --text: #e0e6ed;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            overscroll-behavior: none;
+        }
+
+        /* Typography */
+        h1, h2, h3, .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; }
+        .mono { font-family: 'Space Mono', monospace; }
+        .serif-italic { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #a0aab5; }
+        
+        .teal { color: var(--teal); }
+        .red { color: var(--red); }
+        .green { color: var(--green); }
+        .blue { color: var(--blue); }
+        .gold { color: var(--gold); }
+
+        /* Smooth Scroll */
+        #scroll-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            overflow: hidden; pointer-events: none;
+        }
+        #scroll-content {
+            width: 100%; padding-bottom: 20vh; pointer-events: auto;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .glass::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--teal);
+        }
+        .glass.danger::before { background: var(--red); }
+        .glass.success::before { background: var(--green); }
+        .glass.final::before { background: var(--gold); }
+
+        /* Hospital Background */
+        .corridor-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1; pointer-events: none;
+            background: 
+                radial-gradient(circle at 50% 20%, rgba(100, 200, 220, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 50% 60%, rgba(100, 200, 220, 0.03) 0%, transparent 40%),
+                linear-gradient(to bottom, #040608 0%, #0a0d14 100%);
+            display: flex;
+            justify-content: center;
+        }
+        .perspective-lines {
+            width: 100%; height: 100%; position: absolute;
+            background: 
+                linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,0.02) 49.8%, rgba(255,255,255,0.02) 50.2%, transparent 50.2%);
+            transform: perspective(500px) rotateX(60deg);
+            transform-origin: bottom;
+            opacity: 0.3;
+        }
+
+        /* Layout */
+        .content-wrapper {
+            max-width: 800px; margin: 0 auto; padding: 0 5vw;
+        }
+        section { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+
+        .hero-title { font-size: 5rem; text-align: center; margin-bottom: 2rem; }
+        
+        .css-art {
+            width: 100%; height: 150px; margin-bottom: 2rem;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0.6;
+        }
+
+        /* Specific Arts */
+        .art-microscope {
+            width: 60px; height: 80px; border-radius: 20px 20px 0 0;
+            border: 4px solid var(--teal); border-bottom: 10px solid var(--teal); position: relative;
+        }
+        .art-microscope::after {
+            content: ''; position: absolute; top: 20px; left: -20px; width: 40px; height: 10px; background: var(--teal); transform: rotate(30deg);
+        }
+
+        .art-bottles { display: flex; gap: 10px; align-items: flex-end;}
+        .bottle { width: 30px; height: 60px; background: rgba(0, 136, 204, 0.2); border: 2px solid var(--blue); border-radius: 5px; position:relative;}
+        .bottle::before { content:''; position:absolute; top:-10px; left:5px; width:16px; height:10px; background: var(--blue);}
+
+        .art-ambulance { width: 120px; height: 60px; border: 2px solid var(--red); border-radius: 10px 30px 10px 10px; position: relative; }
+        .art-ambulance::before { content:'+'; position:absolute; color:var(--red); font-size: 2rem; font-weight: bold; left: 40px; top: 10px; }
+        .art-ambulance::after { content:''; position:absolute; top:-10px; right: 20px; width: 10px; height: 10px; background: var(--red); border-radius: 50%; box-shadow: 0 0 10px var(--red); }
+
+        .pie-chart {
+            width: 200px; height: 200px; border-radius: 50%; margin: 2rem auto;
+            background: conic-gradient(var(--blue) 0deg 36deg, rgba(255,255,255,0.1) 36deg 360deg);
+            display: flex; justify-content: center; align-items: center; position: relative;
+        }
+        .pie-chart::after {
+            content: ''; width: 120px; height: 120px; border-radius: 50%; background: var(--bg);
+        }
+
+        /* Toggle */
+        #musicToggle {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--glass); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1); color: white;
+            padding: 15px; border-radius: 50%; cursor: pointer; z-index: 100; font-size: 1.2rem;
+        }
+        
+        .role-badge { font-size: 2rem; margin-bottom: 0.5rem; }
+        .salary { font-size: 1.1rem; opacity: 0.7; margin-bottom: 1.5rem; }
+        
+        .task-list { margin: 1.5rem 0; padding-left: 1.5rem; font-size: 0.95rem; line-height: 1.6; opacity: 0.8; }
+        .task-list li { margin-bottom: 0.5rem; }
+
+        .narrative { font-size: 1.5rem; margin-top: 1.5rem; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="corridor-bg">
+        <div class="perspective-lines"></div>
+    </div>
+
+    <button id="musicToggle">🏥</button>
+
+    <div id="scroll-container">
+        <div id="scroll-content" class="content-wrapper">
+            
+            <section style="text-align: center;">
+                <h1 class="bebas hero-title">HOSPITAL_HERO</h1>
+                <p class="serif-italic narrative">A tribute to the invisible workforce.</p>
+                <p class="mono" style="margin-top: 2rem; opacity: 0.5;">SCROLL TO WALK THE CORRIDORS</p>
+            </section>
+
+            <section class="hero-section" data-index="0">
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">WARD BOY · PATIENT CARE ASSISTANT</h2>
+                    <p class="mono salary">₹8,000-15,000/month</p>
+                    
+                    <ul class="mono task-list">
+                        <li>4am: First round. Bedpan service. Vital sign support.</li>
+                        <li>6am: Patient breakfast service. Feeding assistance.</li>
+                        <li>Throughout: Patient transport. Bed changes. Equipment cleaning.</li>
+                    </ul>
+
+                    <p class="serif-italic narrative">He touches more patients than most doctors on a typical day.</p>
+                </div>
+                <div class="glass danger">
+                    <p class="bebas red" style="font-size: 1.5rem;">WITHOUT WARD BOY: Doctor-to-patient ratio drops 70% effective.</p>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="1">
+                <div class="css-art">
+                    <div class="art-microscope"></div>
+                </div>
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">LABORATORY TECHNICIAN</h2>
+                    <p class="mono salary">₹15,000-30,000/month</p>
+                    
+                    <p class="narrative" style="font-family: 'DM Sans';">Every diagnosis begins here.<br><br>The doctor's prescription depends on this person's accuracy.</p>
+                    
+                    <p class="bebas teal" style="font-size: 2.5rem; margin: 2rem 0;">847 tests processed daily in a mid-size hospital lab</p>
+                </div>
+                <div class="glass danger">
+                    <p class="bebas red" style="font-size: 1.5rem;">1 wrong blood type in transfusion: potentially fatal</p>
+                </div>
+                <div class="glass success" style="padding: 1.5rem;">
+                    <p class="mono green">Error rate: <0.1% is the standard. Most achieve it.</p>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="2">
+                <div class="css-art">
+                    <div class="art-bottles">
+                        <div class="bottle"></div><div class="bottle" style="height: 50px;"></div><div class="bottle" style="height: 70px;"></div>
+                    </div>
+                </div>
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">CLINICAL PHARMACIST</h2>
+                    <p style="margin: 1.5rem 0;">Drug interaction checker. Dosage calculator. Last safety net.</p>
+                    <p>The pharmacist catches: drug allergies, dangerous combinations, incorrect dosages.</p>
+                    
+                    <p class="bebas" style="color: #d4a843; font-size: 2rem; margin: 2rem 0;">1 in 14 prescriptions has a potential error · Pharmacists catch most</p>
+                    
+                    <p class="serif-italic narrative">You don't hear about the errors they prevent. Only the ones they miss.</p>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="3">
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">RADIOLOGY TECHNICIAN</h2>
+                    <p style="margin: 1.5rem 0;">Positions patients precisely. Controls radiation dose. Produces the image.</p>
+                    <p>The doctor reads the image. The technician makes it readable.</p>
+                    
+                    <div style="margin-top: 2rem; padding-left: 1rem; border-left: 2px solid var(--text);">
+                        <p class="mono">Position error of 2cm: diagnostic miss. They get it right.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="4">
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">HOSPITAL HOUSEKEEPING · INFECTION CONTROL</h2>
+                    <p class="mono salary">₹7,000-12,000/month</p>
+                    
+                    <p class="bebas red" style="font-size: 2rem; margin: 1.5rem 0;">HOSPITAL-ACQUIRED INFECTIONS: Kill 100,000 patients annually in India</p>
+                    <p style="margin-bottom: 2rem;">Prevention: handwashing + surface cleaning. This person's job.</p>
+                    
+                    <p class="serif-italic narrative">If this role fails, surgeons' work is undone by bacteria.</p>
+                </div>
+                <div class="glass final" style="padding: 1.5rem;">
+                    <p class="serif-italic gold">The operating theater is as sterile as the cleaner makes it.</p>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="5">
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">MEDICAL RECORDS TECHNICIAN</h2>
+                    <p style="margin: 1.5rem 0;">Every past visit. Every allergy. Every medication. Organized.</p>
+                    <p>Without accurate records: every consultation starts from zero.</p>
+                </div>
+                <div class="glass danger">
+                    <p class="mono red">Misplaced record: wrong treatment. Duplicate test. Dangerous gap.</p>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="6">
+                <div class="css-art">
+                    <div class="art-ambulance"></div>
+                </div>
+                <div class="glass">
+                    <h2 class="bebas role-badge teal">AMBULANCE DRIVER · FIRST RESPONSE</h2>
+                    <p class="bebas red" style="font-size: 3rem; margin: 1rem 0; line-height:1;">8 minutes:<br><span style="font-size: 1.5rem; opacity:0.8;">maximum window for cardiac arrest survival</span></p>
+                    
+                    <p style="margin: 1.5rem 0;">The driver decides which route in real-time traffic.</p>
+                    <p>Every minute matters. This person knows which roads to take.</p>
+                    
+                    <p class="serif-italic narrative gold" style="margin-top: 3rem;">The surgeon gets the credit. The driver made it possible.</p>
+                </div>
+            </section>
+
+            <section class="hero-section" data-index="7">
+                <div class="glass final" style="text-align: center;">
+                    <h2 class="bebas" style="font-size: 3rem;">A hospital is 10% doctors. 90% everyone else.</h2>
+                    
+                    <div class="pie-chart">
+                        <div style="position:absolute; bottom:-40px; width: 100%; text-align:center;" class="mono">
+                            <span class="blue">10% DOCS</span> · <span>90% OTHERS</span>
+                        </div>
+                    </div>
+                    
+                    <p style="margin-top: 4rem;">Most healthcare reform focuses on the 10%.</p>
+                    <p class="serif-italic narrative gold" style="font-size: 2rem; margin-top: 2rem;">The 90% runs the hospital.</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        // Smooth Scroll
+        let currentY = 0;
+        let targetY = 0;
+        const ease = 0.075;
+        const scrollContent = document.getElementById('scroll-content');
+        let windowHeight = window.innerHeight;
+        let contentHeight = scrollContent.getBoundingClientRect().height;
+
+        document.body.style.height = `${contentHeight}px`;
+
+        function updateScroll() {
+            currentY += (targetY - currentY) * ease;
+            scrollContent.style.transform = `translateY(${-currentY}px)`;
+            checkAudioTriggers();
+            requestAnimationFrame(updateScroll);
+        }
+
+        window.addEventListener('scroll', () => { targetY = window.scrollY; });
+        window.addEventListener('resize', () => {
+            windowHeight = window.innerHeight;
+            contentHeight = scrollContent.getBoundingClientRect().height;
+            document.body.style.height = `${contentHeight}px`;
+        });
+
+        requestAnimationFrame(updateScroll);
+
+        // Audio System
+        let audioCtx;
+        let isPlaying = false;
+        let ambientGain, beepOsc, beepGain;
+        let heroSections = [];
+        let triggeredSections = new Set();
+        
+        const musicToggle = document.getElementById('musicToggle');
+        
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 180Hz Hum
+            const humOsc = audioCtx.createOscillator();
+            humOsc.type = 'sine';
+            humOsc.frequency.value = 180;
+            ambientGain = audioCtx.createGain();
+            ambientGain.gain.value = 0.015;
+            humOsc.connect(ambientGain);
+            ambientGain.connect(audioCtx.destination);
+            humOsc.start();
+
+            // Beep 800Hz every 4s
+            beepOsc = audioCtx.createOscillator();
+            beepOsc.type = 'sine';
+            beepOsc.frequency.value = 800;
+            beepGain = audioCtx.createGain();
+            beepGain.gain.value = 0;
+            beepOsc.connect(beepGain);
+            beepGain.connect(audioCtx.destination);
+            beepOsc.start();
+            
+            setInterval(() => {
+                if(isPlaying) {
+                    beepGain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    beepGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                }
+            }, 4000);
+
+            isPlaying = true;
+            musicToggle.style.background = "var(--blue)";
+            
+            document.querySelectorAll('.hero-section').forEach(sec => {
+                heroSections.push({ el: sec, index: sec.getAttribute('data-index') });
+            });
+        }
+
+        function playChord(frequencies, type = 'sine', duration = 2) {
+            if(!audioCtx || !isPlaying) return;
+            const chordGain = audioCtx.createGain();
+            chordGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            chordGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.5);
+            chordGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            chordGain.connect(audioCtx.destination);
+
+            frequencies.forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                osc.type = type;
+                osc.frequency.value = freq;
+                osc.connect(chordGain);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            });
+        }
+
+        function checkAudioTriggers() {
+            if(!isPlaying) return;
+            const scrollCenter = currentY + windowHeight * 0.7;
+            
+            heroSections.forEach(sec => {
+                if(!triggeredSections.has(sec.index)) {
+                    if(scrollCenter > sec.el.offsetTop) {
+                        triggeredSections.add(sec.index);
+                        if (sec.index == 7) {
+                            // Final chord
+                            playChord([261.63, 329.63, 392.00, 523.25], 'triangle', 4);
+                        } else {
+                            // Gentle hero reveal
+                            playChord([400, 600], 'sine', 2);
+                        }
+                    }
+                }
+            });
+        }
+
+        musicToggle.addEventListener('click', () => {
+            if (!audioCtx) {
+                initAudio();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                isPlaying = true;
+                musicToggle.style.background = "var(--blue)";
+            } else {
+                audioCtx.suspend();
+                isPlaying = false;
+                musicToggle.style.background = "var(--glass)";
+            }
+        });
+    </script>
+</body>
+</html>

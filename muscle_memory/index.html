@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>muscle_memory</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;700&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #040608;
+    --glass: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.1);
+    --blur: blur(24px) saturate(180%);
+    --accent: #ff4422;
+    --gold: #d4a843;
+    --green: #00cc66;
+    --text: #f0f0f0;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .ambient-glow {
+    position: fixed; top: 50%; left: 50%; width: 100vw; height: 100vh;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(ellipse at center, rgba(255,60,20,0.06) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .grid-bg {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: 
+      linear-gradient(rgba(255,60,20,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,60,20,0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none; z-index: 0;
+  }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid var(--border); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Scroll Engine */
+  #scroll-container { width: 100vw; height: 100vh; position: relative; z-index: 10; }
+  .wrapper { display: flex; flex-direction: column; width: 100%; align-items: center; padding-top: 10vh; padding-bottom: 30vh; }
+
+  /* Glass Panels */
+  .glass-panel {
+    background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+    border-radius: 24px; padding: 30px; margin: 20px 0; width: 85vw; max-width: 800px;
+    opacity: 0.3; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-panel.active { opacity: 1; transform: translateY(0); border-color: rgba(255,255,255,0.2); }
+
+  /* Typography */
+  h1, h2, h3 { font-family: 'Bebas Neue', cursive; margin: 0 0 15px 0; letter-spacing: 1px; color: white;}
+  h2 { font-size: 3rem; color: var(--accent); }
+  .data-text { font-family: 'Space Mono', monospace; font-size: 0.9rem; color: #aaa; margin: 5px 0;}
+  .human-narrative { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; line-height: 1.4; color: var(--gold); font-style: italic; margin-top: 20px;}
+  .science-expl { font-size: 1rem; line-height: 1.6; color: #ccc; margin-top: 15px;}
+  .alone-text { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: white; margin: 40px 0; text-align: center;}
+
+  /* Flex Layouts */
+  .flex-row { display: flex; gap: 30px; align-items: center; justify-content: space-between;}
+  .flex-col { display: flex; flex-direction: column; gap: 15px; }
+  @media (max-width: 768px) { .flex-row { flex-direction: column; } }
+
+  /* CSS Anatomy / Art */
+  .anatomy-container { position: relative; width: 200px; height: 300px; }
+  .figure-body { position: absolute; top:0; left:50%; transform:translateX(-50%); width:60px; height:280px; background:rgba(255,255,255,0.1); border-radius:30px; }
+  .figure-arm { position: absolute; top: 40px; right: 20px; width: 25px; height: 120px; background: rgba(255,255,255,0.2); border-radius: 12px; transform-origin: top center; transition: transform 0.5s;}
+  .active .figure-arm { transform: rotate(-100deg); }
+  .muscle-highlight { position: absolute; background: var(--accent); opacity: 0; transition: opacity 0.5s; box-shadow: 0 0 20px var(--accent);}
+  .active .muscle-highlight { opacity: 0.8; }
+  .bicep { top: 30px; left: 5px; width: 15px; height: 40px; border-radius: 50%; }
+
+  .myofibril-container { display: flex; flex-direction: column; gap: 5px; width: 100%; padding: 20px 0;}
+  .myo-line { height: 4px; background: #666; width: 100%; position: relative;}
+  .active .myo-line::after { content:''; position:absolute; top:-2px; left:40%; width:20%; height:8px; background:var(--bg); border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+
+  .hormone-card { background: rgba(0,0,0,0.4); padding: 15px; border-left: 4px solid var(--accent); margin-bottom: 10px; opacity:0; transform:translateX(-20px); transition: all 0.5s;}
+  .active .hormone-card:nth-child(1) { opacity:1; transform:translateX(0); transition-delay: 0.1s; border-color: var(--accent);}
+  .active .hormone-card:nth-child(2) { opacity:1; transform:translateX(0); transition-delay: 0.3s; border-color: #0088ff;}
+  .active .hormone-card:nth-child(3) { opacity:1; transform:translateX(0); transition-delay: 0.5s; border-color: var(--gold);}
+
+  .myth-card { perspective: 1000px; height: 100px; margin-bottom: 15px; cursor: pointer;}
+  .myth-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+  .myth-card.flipped .myth-inner { transform: rotateX(180deg); }
+  .myth-front, .myth-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; padding: 0 20px; box-sizing: border-box; border-radius: 8px;}
+  .myth-front { background: rgba(255,50,50,0.1); border: 1px solid rgba(255,50,50,0.3); color: #ff8888; }
+  .myth-back { background: rgba(50,255,50,0.1); border: 1px solid rgba(50,255,50,0.3); color: #88ff88; transform: rotateX(180deg); }
+
+  .progression-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin: 30px 0;}
+  .prog-bar { width: 30px; background: var(--glass); border: 1px solid var(--border); transition: height 1s; height: 10px;}
+  .active .prog-bar:nth-child(1) { height: 30px; }
+  .active .prog-bar:nth-child(2) { height: 50px; }
+  .active .prog-bar:nth-child(3) { height: 60px; }
+  .active .prog-bar:nth-child(4) { height: 90px; }
+  .active .prog-bar:nth-child(5) { height: 95px; } /* Plateau */
+  .active .prog-bar:nth-child(6) { height: 130px; background: var(--accent); } /* Overload */
+
+  /* Sleep Section Darkening */
+  #sleep-sec { transition: background 1s; }
+  #sleep-sec.active { background: rgba(0,0,0,0.8); }
+
+</style>
+</head>
+<body>
+
+<div class="ambient-glow"></div>
+<div class="grid-bg"></div>
+<button id="mute-btn">💪</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- SEC 1: THE LIFT -->
+    <div class="glass-panel flex-row">
+      <div class="anatomy-container">
+        <div class="figure-body"></div>
+        <div class="figure-arm">
+          <div class="muscle-highlight bicep"></div>
+        </div>
+      </div>
+      <div class="flex-col" style="flex:1;">
+        <h2>THE LIFT</h2>
+        <div class="data-text">MUSCLE FIBER TYPE: FAST TWITCH</div>
+        <div class="data-text" id="motor-units">MOTOR UNITS RECRUITED: 0</div>
+        <div class="data-text">FORCE GENERATED: 400N</div>
+        <div class="human-narrative">In the first second of a heavy lift, your nervous system recruits muscle fibers faster than any other process in your body.</div>
+        <div class="science-expl">This recruitment is learned. It's why beginners get stronger before they get bigger.</div>
+      </div>
+    </div>
+
+    <!-- SEC 2: THE TEAR -->
+    <div class="glass-panel">
+      <h2>THE TEAR</h2>
+      <div class="myofibril-container">
+        <div class="myo-line"></div>
+        <div class="myo-line"></div>
+        <div class="myo-line"></div>
+      </div>
+      <div class="data-text" style="color:var(--accent);">MICRO-TEARS: OCCURRING 🔴</div>
+      <div class="alone-text" style="margin: 20px 0;">This is the point.</div>
+      <div class="alone-text" style="margin: 20px 0; font-size:1.5rem;">The damage is the signal.</div>
+      <div class="science-expl">Mechanical tension on muscle fibers triggers mTOR pathway — the master regulator of muscle protein synthesis.</div>
+      <div class="data-text" style="margin-top:20px; color:var(--gold);">DELAYED ONSET MUSCLE SORENESS · Peaks: 24-72 hours post-training</div>
+    </div>
+
+    <!-- SEC 3: HORMONES -->
+    <div class="glass-panel">
+      <h2>THE HORMONES</h2>
+      <div class="flex-col">
+        <div class="hormone-card">TESTOSTERONE: ELEVATED · Duration: 15-30 min post-lift</div>
+        <div class="hormone-card">GROWTH HORMONE: PEAK · During deep sleep</div>
+        <div class="hormone-card">CORTISOL: WATCH THIS · High chronic cortisol destroys gains</div>
+      </div>
+      <div class="human-narrative" style="color:var(--gold);">Training triggers the signal. Sleep delivers the results.</div>
+      <div class="science-expl">Skipping sleep is skipping gains. The science is unambiguous.</div>
+    </div>
+
+    <!-- SEC 4: PROTEIN -->
+    <div class="glass-panel">
+      <h2>PROTEIN SYNTHESIS WINDOW</h2>
+      <div class="data-text" style="font-size:1.2rem; color:var(--green); margin-bottom:10px;">Required: 1.6-2.2g protein per kg bodyweight</div>
+      <div class="flex-row" style="background:rgba(0,0,0,0.3); padding:15px; border-radius:8px;">
+        <div>Weight (kg): <input type="number" id="bw-input" value="70" style="width:60px; background:transparent; border:none; border-bottom:1px solid white; color:white; font-family:'Space Mono'; text-align:center;"></div>
+        <div class="data-text">Target: <span id="protein-target" style="font-size:1.5rem; color:white;">154g</span>/day</div>
+      </div>
+      <div class="science-expl" style="margin-top:20px;">The supplement industry will tell you more. The research says: 2.2g is the ceiling.</div>
+    </div>
+
+    <!-- SEC 5: SLEEP -->
+    <div class="glass-panel" id="sleep-sec">
+      <h2 style="color:var(--gold);">YOUR GAINS ARE BUILT IN THIS ROOM.</h2>
+      <div class="alone-text" style="margin:10px 0;">Not the gym. This room.</div>
+      <div class="data-text">GROWTH HORMONE: RELEASED 🔵</div>
+      <div class="science-expl">Deep sleep = primary growth phase.</div>
+      <div class="data-text" style="color:var(--accent); margin-top:15px;">6 hours vs 8 hours: 60% difference in muscle protein synthesis</div>
+    </div>
+
+    <!-- SEC 6: PROGRESSIVE OVERLOAD -->
+    <div class="glass-panel">
+      <h2>PROGRESSIVE OVERLOAD</h2>
+      <div class="progression-chart">
+        <div class="prog-bar"></div><div class="prog-bar"></div><div class="prog-bar"></div>
+        <div class="prog-bar"></div><div class="prog-bar"></div><div class="prog-bar"></div>
+      </div>
+      <div class="science-expl">Your muscle adapts to stress. Then the stress must increase.</div>
+      <div class="alone-text" style="font-size:1.2rem; margin:15px 0;">More weight. More reps. More sets. More range. Always: more than last time.</div>
+      <div class="human-narrative">Every plateau is a sign you forgot this.</div>
+    </div>
+
+    <!-- SEC 7: MYTHS -->
+    <div class="glass-panel">
+      <h2>THE MYTHS</h2>
+      <div class="flex-col">
+        <div class="myth-card" onclick="this.classList.toggle('flipped')">
+          <div class="myth-inner">
+            <div class="myth-front">MYTH: Muscle turns to fat when you stop. (Tap)</div>
+            <div class="myth-back">FACT: Different tissues. Impossible.</div>
+          </div>
+        </div>
+        <div class="myth-card" onclick="this.classList.toggle('flipped')">
+          <div class="myth-inner">
+            <div class="myth-front">MYTH: Women get bulky from lifting. (Tap)</div>
+            <div class="myth-back">FACT: Requires 10x testosterone. Lifting makes women stronger.</div>
+          </div>
+        </div>
+        <div class="myth-card" onclick="this.classList.toggle('flipped')">
+          <div class="myth-inner">
+            <div class="myth-front">MYTH: You need supplements to build muscle. (Tap)</div>
+            <div class="myth-back">FACT: Food works. Industry disagrees.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEC 8: COMPOUND -->
+    <div class="glass-panel" style="margin-bottom:20vh;">
+      <h2>THE COMPOUND</h2>
+      <div class="alone-text" style="font-size:1.5rem; margin:10px 0;">SQUAT. DEADLIFT. BENCH. OVERHEAD PRESS.</div>
+      <div class="science-expl">These 4 movements build more muscle than any other combination. Everything else is accessory.</div>
+      <div class="human-narrative" style="color:var(--gold); margin-top:40px; font-size:2rem; text-align:center;">The simplest program works.<br>The one you do consistently works.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.078;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.85;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Protein calculator
+  const bwInput = document.getElementById('bw-input');
+  const protTarget = document.getElementById('protein-target');
+  bwInput.addEventListener('input', () => {
+    let val = parseFloat(bwInput.value) || 0;
+    protTarget.innerText = Math.round(val * 2.2) + 'g';
+  });
+
+  // Audio System
+  let audioCtx, masterGain, gymBeat, sleepDrone, highSynth;
+  let isMuted = true;
+  let inSleepSection = false;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(255,255,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Gym Beat (130 BPM)
+    gymBeat = audioCtx.createGain();
+    gymBeat.connect(masterGain);
+    setInterval(() => {
+      if(isMuted || inSleepSection) return;
+      const now = audioCtx.currentTime;
+      const kick = audioCtx.createOscillator(); const kgain = audioCtx.createGain();
+      kick.frequency.setValueAtTime(150, now); kick.frequency.exponentialRampToValueAtTime(0.001, now+0.5);
+      kick.connect(kgain); kgain.connect(gymBeat);
+      kgain.gain.setValueAtTime(1, now); kgain.gain.exponentialRampToValueAtTime(0.001, now+0.5);
+      kick.start(now); kick.stop(now+0.5);
+      
+      const bass = audioCtx.createOscillator(); const bgain = audioCtx.createGain();
+      bass.type='sawtooth'; bass.frequency.value=55;
+      bass.connect(bgain); bgain.connect(gymBeat);
+      bgain.gain.setValueAtTime(0.3, now); bgain.gain.exponentialRampToValueAtTime(0.001, now+0.3);
+      bass.start(now); bass.stop(now+0.3);
+    }, (60/130)*1000);
+
+    // High synth cycle
+    highSynth = audioCtx.createOscillator();
+    const hGain = audioCtx.createGain();
+    highSynth.type = 'sine';
+    highSynth.connect(hGain); hGain.connect(gymBeat);
+    hGain.gain.value = 0.05;
+    highSynth.start();
+    let freqs = [392, 494, 587]; let fIdx = 0;
+    setInterval(() => {
+      if(!isMuted && !inSleepSection) highSynth.frequency.setTargetAtTime(freqs[fIdx], audioCtx.currentTime, 0.1);
+      fIdx = (fIdx+1)%freqs.length;
+    }, 1000);
+
+    // Sleep drone
+    sleepDrone = audioCtx.createOscillator();
+    const sGain = audioCtx.createGain();
+    sleepDrone.type = 'sine'; sleepDrone.frequency.value = 110;
+    sleepDrone.connect(sGain); sGain.connect(masterGain);
+    sGain.gain.value = 0; // default hidden
+    sleepDrone.start();
+    sleepDrone.gainNode = sGain;
+  }
+
+  function playMythBreak() {
+    if(!audioCtx || isMuted) return;
+    const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    osc.type = 'square'; osc.frequency.value = 3000;
+    osc.connect(g); g.connect(masterGain);
+    g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.1);
+    osc.start(); osc.stop(audioCtx.currentTime+0.1);
+  }
+
+  document.querySelectorAll('.myth-card').forEach(c => {
+    c.addEventListener('click', () => { if(!c.classList.contains('flipped')) playMythBreak(); });
+  });
+
+  const panels = document.querySelectorAll('.glass-panel');
+  const sleepSec = document.getElementById('sleep-sec');
+  const motorUnits = document.getElementById('motor-units');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+
+    panels.forEach(p => {
+      const rect = p.getBoundingClientRect();
+      const pCenter = rect.top + currentY + rect.height/2;
+      if(centerLine >= pCenter - vh/2.5 && centerLine <= pCenter + vh/2.5) {
+        p.classList.add('active');
+        
+        // Specific animations
+        if(p === panels[0]) {
+          motorUnits.innerText = `MOTOR UNITS RECRUITED: ${Math.min(847, Math.floor(Math.random()*800 + 47))}`;
+        }
+      } else {
+        // Option to remove 'active' when out of view
+        if(Math.abs(centerLine - pCenter) > vh) p.classList.remove('active');
+      }
+    });
+
+    // Sleep section music logic
+    const sleepRect = sleepSec.getBoundingClientRect();
+    const sleepCenter = sleepRect.top + currentY + sleepRect.height/2;
+    if(Math.abs(centerLine - sleepCenter) < vh/2) {
+      if(!inSleepSection) {
+        inSleepSection = true;
+        if(audioCtx) {
+          gymBeat.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+          sleepDrone.gainNode.gain.setTargetAtTime(0.2, audioCtx.currentTime, 1);
+        }
+      }
+    } else {
+      if(inSleepSection) {
+        inSleepSection = false;
+        if(audioCtx) {
+          gymBeat.gain.setTargetAtTime(1, audioCtx.currentTime, 0.5);
+          sleepDrone.gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+        }
+      }
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

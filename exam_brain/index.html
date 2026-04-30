@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>exam_brain</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=DM+Sans:wght@400;700&family=Space+Mono&display=swap');
+
+  :root {
+    --bg: #050508;
+    --glass: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.12);
+    --blur: blur(24px) saturate(160%);
+    --accent: #0088ff; /* Neuron blue */
+    --warning: #ffaa00;
+    --positive: #00cc66;
+    --text: #f0f0f0;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Background Brain & Network */
+  .bg-brain {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 60vh; height: 50vh; opacity: 0.04; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(ellipse at center, rgba(0,136,255,0.8) 0%, transparent 70%);
+    border-radius: 40% 60% 60% 40% / 50% 50% 50% 50%; /* abstract brain shape */
+  }
+  #network-canvas { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index: 1; pointer-events: none; opacity: 0.3; }
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid var(--border); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Scroll Engine */
+  #scroll-container { width: 100vw; height: 100vh; position: relative; z-index: 10; }
+  .wrapper { display: flex; flex-direction: column; width: 100%; align-items: center; padding-top: 15vh; padding-bottom: 30vh; }
+
+  /* Glass Panels */
+  .glass-panel {
+    background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border-radius: 20px; padding: 40px; margin: 30px 0; width: 85vw; max-width: 700px;
+    opacity: 0.3; transform: scale(0.95); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-panel.active { opacity: 1; transform: scale(1); border-color: rgba(0,136,255,0.3); box-shadow: 0 0 40px rgba(0,136,255,0.05); }
+
+  /* Typography */
+  h2 { font-family: 'Bebas Neue', cursive; font-size: 3.5rem; margin: 0 0 20px 0; color: white; letter-spacing: 1px;}
+  .stat-data { font-family: 'Space Mono', monospace; font-size: 1rem; margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid var(--accent);}
+  .stat-data.red { border-color: #ff4444; color: #ff8888;}
+  .stat-data.green { border-color: var(--positive); color: #88ff88;}
+  .narrative { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; color: #ddd; font-style: italic; margin-top: 25px; line-height: 1.4;}
+  .explanation { font-size: 1.1rem; line-height: 1.6; color: #aaa; margin: 15px 0;}
+  .alone-text { font-family: 'DM Sans'; font-size: 1.3rem; color: var(--warning); margin: 20px 0; font-weight: bold;}
+
+  /* Specific Visuals */
+  .neuron-art { height: 60px; width: 100%; display: flex; align-items: center; margin-bottom: 20px; position: relative;}
+  .cell-body { width: 40px; height: 40px; background: var(--accent); border-radius: 50%; position: relative; box-shadow: 0 0 20px var(--accent);}
+  .axon { height: 4px; flex-grow: 1; background: #333; margin-left: 10px; position: relative; overflow: hidden;}
+  .active .axon::after { content:''; position:absolute; top:0; left:-50px; width:50px; height:100%; background:white; box-shadow: 0 0 10px white; animation: signalPulse 1.5s infinite;}
+  @keyframes signalPulse { 0%{left:-50px;} 100%{left:100%;} }
+
+  .curve-container { width: 100%; height: 150px; border-bottom: 1px solid #555; border-left: 1px solid #555; position: relative; margin: 20px 0;}
+  .curve-line { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-bottom: 3px solid #ff4444; border-bottom-left-radius: 100%; transform-origin: bottom left; opacity: 0; transition: opacity 1s;}
+  .active .curve-line.base { opacity: 1; }
+  .curve-line.rep1 { border-color: var(--warning); width: 80%; left: 20%; height: 90%; opacity: 0;}
+  .active .curve-line.rep1 { opacity: 1; transition-delay: 0.5s; }
+  .curve-line.rep2 { border-color: var(--positive); width: 60%; left: 40%; height: 95%; opacity: 0;}
+  .active .curve-line.rep2 { opacity: 1; transition-delay: 1s; }
+
+  .split-panel { display: flex; gap: 20px; margin: 20px 0;}
+  .half { flex: 1; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;}
+  .highlight-book { width: 60px; height: 40px; background: #222; margin: 0 auto 10px auto; position: relative;}
+  .highlight-book::after { content:''; position:absolute; top:10px; left:10px; width:40px; height:8px; background: rgba(255,255,0,0.5);}
+  .flashcard { width: 60px; height: 40px; background: #eee; margin: 0 auto 10px auto; color: black; font-family:'Space Mono'; font-size:10px; display:flex; justify-content:center; align-items:center; border:1px solid #ccc;}
+
+  .timer-css { font-family: 'Space Mono'; font-size: 3rem; color: white; text-align: center; border: 2px solid var(--accent); padding: 10px; border-radius: 10px; width: max-content; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(0,136,255,0.2);}
+
+  .toolkit-card { border-left: 4px solid var(--positive); padding: 15px; margin-bottom: 15px; background: rgba(0,204,102,0.05);}
+
+  @media (max-width: 768px) {
+    .glass-panel { padding: 20px; }
+    h2 { font-size: 2.5rem; }
+    .split-panel { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-brain"></div>
+<canvas id="network-canvas"></canvas>
+<button id="mute-btn">📚</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- SEC 1: CRAMMING -->
+    <div class="glass-panel">
+      <h2>ALL-NIGHT CRAMMING: THE SCIENCE</h2>
+      <div class="stat-data red">Memory retention after 1 night cramming: 35%</div>
+      <div class="stat-data green">Memory retention after spaced repetition: 87%</div>
+      <div class="stat-data red">Sleep deprivation effect on memory recall: -40%</div>
+      <div class="narrative">The student who sleeps remembers more than the student who stays up.</div>
+      <div class="explanation">This is not motivational advice. It's neurobiology.</div>
+    </div>
+
+    <!-- SEC 2: MEMORY -->
+    <div class="glass-panel">
+      <h2>HOW MEMORY FORMS</h2>
+      <div class="neuron-art">
+        <div class="cell-body"></div><div class="axon"></div>
+      </div>
+      <div class="explanation">Every fact you learn: a physical change in your brain. Myelin sheath thickens with repetition. Literally: practice makes the pathway.</div>
+      <div style="display:flex; justify-content:space-between; margin:20px 0; font-family:'Bebas Neue'; color:var(--accent);">
+        <span>ENCODING</span> <span>→</span> <span>CONSOLIDATION</span> <span>→</span> <span>RETRIEVAL</span>
+      </div>
+      <div class="alone-text">Sleep is when CONSOLIDATION occurs. Without it: encoding without storing.</div>
+    </div>
+
+    <!-- SEC 3: SPACED REPETITION -->
+    <div class="glass-panel">
+      <h2>THE FORGETTING CURVE</h2>
+      <div class="curve-container">
+        <div class="curve-line base"></div>
+        <div class="curve-line rep1"></div>
+        <div class="curve-line rep2"></div>
+      </div>
+      <div class="stat-data red">Without review: you forget 70% in 24 hours.</div>
+      <div class="stat-data green">With review at intervals: retention stays above 90%.</div>
+      <div class="explanation">Optimal spacing schedule:<br>Review 1: 1 day after<br>Review 2: 3 days after<br>Review 3: 7 days after<br>Review 4: 21 days after (permanent)</div>
+    </div>
+
+    <!-- SEC 4: TEST ANXIETY -->
+    <div class="glass-panel">
+      <h2 style="color:var(--warning);">TEST ANXIETY</h2>
+      <div class="stat-data" style="border-color:var(--warning); color:var(--warning);">CORTISOL: ELEVATED · PREFRONTAL CORTEX: PARTIALLY OFFLINE</div>
+      <div class="explanation">Test anxiety literally reduces cognitive function. The brain in fear prioritizes survival over recall.</div>
+      <div class="narrative">This is evolution working against your exam.</div>
+      <div class="stat-data green" style="margin-top:20px;">STRATEGIES: 4-7-8 BREATHING · COLD WATER EXPOSURE · RECALL COMPETENCE</div>
+    </div>
+
+    <!-- SEC 5: ACTIVE RECALL -->
+    <div class="glass-panel">
+      <h2>ACTIVE RECALL VS PASSIVE REVIEW</h2>
+      <div class="split-panel">
+        <div class="half">
+          <div class="highlight-book"></div>
+          <div class="stat-data red" style="font-size:0.8rem;">Highlighting: 62% retention</div>
+        </div>
+        <div class="half">
+          <div class="flashcard">?</div>
+          <div class="stat-data green" style="font-size:0.8rem;">Active recall: 91% retention</div>
+        </div>
+      </div>
+      <div class="explanation">The illusion of knowing: you recognize it highlighted.</div>
+      <div class="alone-text" style="color:var(--gold);">The test tests retrieval. Practice retrieval.</div>
+    </div>
+
+    <!-- SEC 6: SLEEP -->
+    <div class="glass-panel">
+      <h2>WHAT HAPPENS WHILE YOU SLEEP</h2>
+      <div class="stat-data">N2 SLEEP: Sleep spindles transfer memory from hippocampus to cortex</div>
+      <div class="stat-data">N3 SLOW WAVE: Motor skills and facts consolidated</div>
+      <div class="stat-data">REM: Emotional memory processed. Connections between concepts form.</div>
+      <div class="alone-text" style="color:var(--gold); font-size:1.5rem; text-align:center;">A student who sleeps 8 hours learns more than one who studies those extra 2 hours.</div>
+    </div>
+
+    <!-- SEC 7: POMODORO -->
+    <div class="glass-panel">
+      <h2>THE POMODORO SCIENCE</h2>
+      <div class="timer-css">25:00</div>
+      <div class="stat-data">FOCUSED ATTENTION SPAN: 25-35 minutes maximum in most adults</div>
+      <div class="explanation">After 35 minutes: attention quality drops significantly without a break. The breaks aren't wasting time. They're consolidating what you just learned.</div>
+      <div class="alone-text">Your brain processes during breaks.</div>
+    </div>
+
+    <!-- SEC 8: TOOLKIT -->
+    <div class="glass-panel" style="margin-bottom:20vh;">
+      <h2>THE STUDY TOOLKIT</h2>
+      <div class="toolkit-card"><strong style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--positive);">RETRIEVAL PRACTICE:</strong> Test yourself. Not your highlighter.</div>
+      <div class="toolkit-card"><strong style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--positive);">INTERLEAVING:</strong> Switch subjects. Not same topic repeated.</div>
+      <div class="toolkit-card"><strong style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--positive);">DUAL CODING:</strong> Words + visuals. Both hemispheres.</div>
+      <div class="narrative" style="color:var(--gold); font-size:2rem; text-align:center; margin-top:40px;">The brain that learns how to learn has the greatest advantage.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.08;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.85;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // Network Canvas
+  const canvas = document.getElementById('network-canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let nodes = [];
+
+  function resizeCanvas() {
+    width = window.innerWidth; height = window.innerHeight;
+    canvas.width = width; canvas.height = height;
+    initNodes();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  
+  function initNodes() {
+    nodes = [];
+    for(let i=0; i<50; i++) {
+      nodes.push({
+        x: Math.random()*width, y: Math.random()*height,
+        vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5
+      });
+    }
+  }
+  resizeCanvas();
+
+  function drawNetwork(intensity) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#0088ff';
+    ctx.strokeStyle = `rgba(0, 136, 255, ${0.1 + intensity*0.3})`;
+    
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      if(n.x<0 || n.x>width) n.vx*=-1;
+      if(n.y<0 || n.y>height) n.vy*=-1;
+      
+      ctx.beginPath(); ctx.arc(n.x, n.y, 2, 0, Math.PI*2); ctx.fill();
+    });
+
+    for(let i=0; i<nodes.length; i++) {
+      for(let j=i+1; j<nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x; const dy = nodes[i].y - nodes[j].y;
+        const dist = dx*dx + dy*dy;
+        if(dist < 15000) {
+          ctx.beginPath(); ctx.moveTo(nodes[i].x, nodes[i].y); ctx.lineTo(nodes[j].x, nodes[j].y); ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // Audio System
+  let audioCtx, masterGain, focusSynth;
+  let isMuted = true;
+  let currentPhase = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(0,136,255,0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Focus Synth (lo-fi pad)
+    focusSynth = audioCtx.createOscillator();
+    const fGain = audioCtx.createGain();
+    focusSynth.type = 'sine'; focusSynth.frequency.value = 174;
+    focusSynth.connect(fGain); fGain.connect(masterGain);
+    fGain.gain.value = 0.1;
+    focusSynth.start();
+  }
+
+  function setMusicTension(phase) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    if(phase === 3) { // Anxiety
+      focusSynth.frequency.setTargetAtTime(220, now, 0.5);
+      focusSynth.type = 'triangle';
+    } else if (phase === 5) { // Sleep
+      focusSynth.frequency.setTargetAtTime(60, now, 1);
+      focusSynth.type = 'sine';
+    } else if (phase === 7) { // Toolkit
+      focusSynth.frequency.setTargetAtTime(329.63, now, 0.5); // E4 brighter
+      focusSynth.type = 'sine';
+    } else { // Normal focus
+      focusSynth.frequency.setTargetAtTime(174, now, 0.5);
+      focusSynth.type = 'sine';
+    }
+  }
+
+  const panels = document.querySelectorAll('.glass-panel');
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    let activeIndex = 0;
+
+    panels.forEach((p, i) => {
+      const rect = p.getBoundingClientRect();
+      const pCenter = rect.top + currentY + rect.height/2;
+      
+      if(centerLine >= pCenter - vh/2.5 && centerLine <= pCenter + vh/2.5) {
+        p.classList.add('active');
+        activeIndex = i;
+      } else {
+        if(Math.abs(centerLine - pCenter) > vh) p.classList.remove('active');
+      }
+    });
+
+    if(activeIndex !== currentPhase) {
+      currentPhase = activeIndex;
+      setMusicTension(currentPhase);
+    }
+    
+    // Network intensity increases as scroll goes down
+    const intensity = Math.min(1, Math.max(0, currentY / (maxScroll || 1)));
+    drawNetwork(intensity);
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>seed_to_plate</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;700&family=Space+Mono&display=swap');
+
+  :root {
+    --bg-sky: #0a1020;
+    --soil-top: #2d1f0a;
+    --soil-mid: #1a1208;
+    --soil-bot: #0a0806;
+    --glass: rgba(100,200,100,0.05);
+    --border: rgba(100,200,100,0.15);
+    --blur: blur(24px) saturate(150%);
+    --accent: #4a8c2a;
+    --gold: #d4a843;
+    --text: #e0e0e0;
+  }
+
+  body, html {
+    margin: 0; padding: 0; height: 100vh; overflow: hidden;
+    background: var(--bg-sky); color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Layered Background */
+  .bg-container { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:0; pointer-events:none;}
+  .sky { height: 30vh; background: var(--bg-sky); transition: background 2s;}
+  .soil { height: 70vh; background: linear-gradient(to bottom, var(--soil-top) 0%, var(--soil-mid) 30%, var(--soil-bot) 100%); position: relative; border-top: 2px solid #3d2f1a;}
+  .sun { position: absolute; top: 10vh; right: 10vw; width: 60px; height: 60px; background: var(--gold); border-radius: 50%; box-shadow: 0 0 50px var(--gold); transition: all 2s;}
+
+  #mute-btn {
+    position: fixed; top: 20px; right: 20px; z-index: 100;
+    background: transparent; border: 1px solid var(--accent); color: white;
+    font-size: 20px; cursor: pointer; padding: 10px; border-radius: 5px;
+  }
+
+  /* Day Counter */
+  .day-counter {
+    position: fixed; top: 40vh; left: 20px; z-index: 100;
+    font-family: 'Space Mono', monospace; color: var(--gold); font-size: 1.5rem; font-weight: bold;
+    transform: translateY(-50%); background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border-left: 2px solid var(--accent);
+  }
+  .day-label { font-size: 0.8rem; color: #aaa; margin-top: 5px;}
+
+  /* Scroll Engine */
+  #scroll-container { width: 100vw; height: 100vh; position: relative; z-index: 10; }
+  .wrapper { display: flex; flex-direction: column; width: 100%; align-items: center; padding-top: 20vh; padding-bottom: 30vh; }
+
+  /* Glass Panels */
+  .glass-panel {
+    background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    border-radius: 16px; padding: 30px; margin: 30px 0; width: 80vw; max-width: 600px;
+    opacity: 0.2; transform: translateX(50px); transition: all 0.8s ease; position: relative;
+    margin-left: 10vw; /* shift right to leave room for left counter */
+  }
+  .glass-panel.active { opacity: 1; transform: translateX(0); }
+
+  /* Typography */
+  h2 { font-family: 'Bebas Neue', cursive; font-size: 2.5rem; color: white; margin: 0 0 10px 0; letter-spacing: 1px;}
+  .farmer-voice { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; line-height: 1.4; color: #ddd; font-style: italic;}
+  .alone-text { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; color: var(--gold); margin: 15px 0;}
+  .science-text { font-size: 1rem; line-height: 1.6; color: #bbb; margin-top: 15px;}
+  .data-point { font-family: 'Space Mono', monospace; font-size: 0.9rem; color: var(--accent); margin: 5px 0;}
+
+  /* CSS Animations & Art */
+  .art-container { position: absolute; left: -100px; top: 50%; transform: translateY(-50%); width: 80px; height: 80px; display: flex; justify-content: center; align-items: center;}
+  
+  .seed { width: 15px; height: 25px; background: #c89f5a; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; position: relative; }
+  .active .seed::after { content:''; position:absolute; bottom:-20px; left:6px; width:2px; height:20px; background: #e8d0a0; animation: growRoot 2s forwards;}
+  .active .seed::before { content:''; position:absolute; top:-15px; left:6px; width:3px; height:15px; background: var(--accent); animation: growShoot 2s forwards;}
+  
+  @keyframes growRoot { 0%{height:0;} 100%{height:30px;} }
+  @keyframes growShoot { 0%{height:0;} 100%{height:20px;} }
+
+  .plant { width: 4px; height: 0; background: var(--accent); position: relative; transition: height 1s; transform-origin: bottom;}
+  .active .plant { height: 60px; }
+  .leaf { position: absolute; width: 20px; height: 10px; background: var(--accent); border-radius: 0 10px 0 10px; opacity: 0; transition: opacity 0.5s 1s; }
+  .leaf.left { left: -18px; top: 20px; transform: rotate(-30deg); }
+  .leaf.right { right: -18px; top: 10px; transform: rotate(30deg); }
+  .active .leaf { opacity: 1; }
+
+  .harvester { width: 60px; height: 40px; background: #b33; border-radius: 4px; position: relative;}
+  .harvester::before { content:''; position:absolute; left:-10px; bottom:0; width:10px; height:20px; background:#666; border-radius:50%;}
+
+  .plate { width: 60px; height: 60px; background: white; border-radius: 50%; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); position: relative;}
+  .food { position: absolute; top: 15px; left: 15px; width: 30px; height: 30px; background: var(--gold); border-radius: 40% 60% 50% 50%; }
+
+  .price-arrow { display: flex; align-items: center; font-family: 'Space Mono'; font-size: 0.8rem; gap: 5px; flex-wrap: wrap; margin-top: 15px;}
+  .arrow { color: #666; }
+
+  @media (max-width: 768px) {
+    .glass-panel { margin-left: 0; width: 90vw; padding: 20px; }
+    .art-container { position: relative; left: 0; top: 0; transform: none; margin-bottom: 20px; }
+    .day-counter { top: 10px; left: 10px; transform: none; display: flex; gap: 10px; align-items: baseline; font-size: 1rem; padding: 5px 10px; flex-direction: row;}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-container">
+  <div class="sky" id="sky"><div class="sun" id="sun"></div></div>
+  <div class="soil"></div>
+</div>
+
+<div class="day-counter">
+  <span id="day-num">DAY: 0</span>
+  <div class="day-label" id="day-label">SOIL PREPARATION</div>
+</div>
+
+<button id="mute-btn">🌾</button>
+
+<div id="scroll-container">
+  <div class="wrapper" id="wrapper">
+
+    <!-- STAGE 1 -->
+    <div class="glass-panel" data-day="0" data-label="SOIL PREPARATION">
+      <h2>SOIL PREPARATION</h2>
+      <div class="farmer-voice">"He knows this field's pH without testing it. His father taught him. His hands remember."</div>
+      <div class="science-text" style="background:rgba(0,0,0,0.4); padding:10px; border-radius:4px;">
+        <div class="data-point">SOIL pH: 6.5</div>
+        <div class="data-point">N-P-K RATIO: BALANCED</div>
+        <div class="data-point">ORGANIC MATTER: 3.2%</div>
+      </div>
+    </div>
+
+    <!-- STAGE 2 -->
+    <div class="glass-panel" data-day="2" data-label="SEED PLANTING">
+      <div class="art-container"><div class="seed"></div></div>
+      <h2>SEED PLANTING</h2>
+      <div class="science-text">Each seed contains the complete genetic blueprint of the crop.</div>
+      <div class="farmer-voice">The farmer plants by intuition calibrated by 20 years.</div>
+      <div class="data-point" style="margin-top:15px;">SEEDS PLANTED: 847 per acre</div>
+      <div class="data-point">GERMINATION RATE: 85% expected</div>
+    </div>
+
+    <!-- STAGE 3 -->
+    <div class="glass-panel" data-day="10" data-label="GERMINATION">
+      <div class="art-container"><div class="seed"></div></div>
+      <h2>GERMINATION</h2>
+      <div class="farmer-voice">The seed doesn't know what's above it or below it.</div>
+      <div class="alone-text">It just follows the chemistry.</div>
+      <div class="science-text">Light goes this way. Water goes that way. The seed obeys its code.</div>
+    </div>
+
+    <!-- STAGE 4 -->
+    <div class="glass-panel" data-day="45" data-label="GROWING">
+      <div class="art-container">
+        <div class="plant">
+          <div class="leaf left"></div><div class="leaf right"></div>
+        </div>
+      </div>
+      <h2>GROWING</h2>
+      <div class="farmer-voice">For 76 days: sun, water, soil, time. The farmer watches and waits and intervenes.</div>
+      <div style="background:rgba(255,160,0,0.1); border-left:3px solid #ffa000; padding:10px; margin-top:15px;">
+        <div class="data-point" style="color:#ffa000;">DAY 45: APHID RISK DETECTED</div>
+        <div class="science-text" style="margin-top:0;">Organic neem spray applied</div>
+      </div>
+    </div>
+
+    <!-- STAGE 5 -->
+    <div class="glass-panel" data-day="120" data-label="HARVEST">
+      <div class="art-container"><div class="harvester"></div></div>
+      <h2>HARVEST</h2>
+      <div class="farmer-voice">The decision to harvest is made by looking at the sky and the grain and a lifetime of knowing.</div>
+      <div class="alone-text">No app teaches this.</div>
+      <div style="background:rgba(0,0,0,0.4); padding:10px; border-radius:4px;">
+        <div class="data-point">YIELD: 3.2 TONS/ACRE</div>
+        <div class="data-point">MARKET PRICE: ₹2,100/quintal</div>
+        <div style="font-family:'Bebas Neue'; font-size:1.5rem; color:var(--gold); margin-top:10px;">GROSS REVENUE: ₹67,200/acre</div>
+        <div style="font-family:'Bebas Neue'; font-size:1.2rem; color:#aaa;">COST: ₹45,000/acre · PROFIT: ₹22,200</div>
+      </div>
+    </div>
+
+    <!-- STAGE 6 -->
+    <div class="glass-panel" data-day="123" data-label="TRANSPORT">
+      <h2>TRANSPORT AND WASTE</h2>
+      <div class="data-point" style="color:#ff5555; font-size:1.2rem;">POST-HARVEST LOSS IN INDIA: 15-20% of crop</div>
+      <div class="data-point" style="color:#ff5555;">₹92,000 crore worth of food is lost between farm and plate annually in India.</div>
+      <div class="farmer-voice" style="margin-top:20px;">The farmer grew it. The system lost it.</div>
+    </div>
+
+    <!-- STAGE 7 -->
+    <div class="glass-panel" data-day="125" data-label="THE MANDI">
+      <h2>THE MANDI</h2>
+      <div class="science-text">The farmer sells to a middleman who sells to a middleman who sells to you.</div>
+      <div class="price-arrow">
+        <span>Farm: ₹20/kg</span><span class="arrow">→</span>
+        <span>Mandi: ₹35/kg</span><span class="arrow">→</span>
+        <span>Wholesale: ₹55/kg</span><span class="arrow">→</span>
+        <span style="color:white; font-weight:bold;">Retail: ₹80/kg</span>
+      </div>
+      <div class="alone-text" style="font-size:1.5rem;">The farmer receives 25% of what you pay.</div>
+    </div>
+
+    <!-- STAGE 8 -->
+    <div class="glass-panel" data-day="127" data-label="YOUR PLATE">
+      <div class="art-container"><div class="plate"><div class="food"></div></div></div>
+      <h2 style="color:var(--gold); font-size:3rem;">YOUR PLATE</h2>
+      <div class="farmer-voice" style="font-size:1.8rem; color:white;">127 days. One farmer's year. Your meal.</div>
+      <div class="alone-text" style="color:#aaa;">He doesn't know you're eating it.</div>
+      <div class="alone-text" style="color:#aaa;">You don't know he grew it.</div>
+      <div class="farmer-voice" style="color:var(--gold); margin-top:30px;">Both of these things are worth changing.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentY = 0, targetY = 0;
+  const ease = 0.075;
+  const wrapper = document.getElementById('wrapper');
+  let maxScroll = 0;
+
+  function updateMaxScroll() { maxScroll = Math.max(0, wrapper.scrollHeight - window.innerHeight); }
+  window.addEventListener('resize', updateMaxScroll);
+  setTimeout(updateMaxScroll, 100);
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    targetY += e.deltaY * 0.85;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  let touchStartY = 0;
+  window.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    targetY += (touchStartY - e.touches[0].clientY) * 1.5;
+    touchStartY = e.touches[0].clientY;
+    targetY = Math.max(0, Math.min(targetY, maxScroll));
+  }, { passive: false });
+
+  // DOM Elements
+  const panels = document.querySelectorAll('.glass-panel');
+  const dayNum = document.getElementById('day-num');
+  const dayLabel = document.getElementById('day-label');
+  const sky = document.getElementById('sky');
+
+  // Audio System
+  let audioCtx, masterGain, earthDrone, rhythmOsc;
+  let isMuted = true;
+  let currentPhase = -1;
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').style.background = isMuted ? 'transparent' : 'rgba(74, 140, 42, 0.2)';
+    if(!audioCtx && !isMuted) initAudio();
+    if(masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.8, audioCtx.currentTime, 0.1);
+    if(!isMuted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.value = 0.8;
+    
+    // Earth drone
+    earthDrone = audioCtx.createOscillator();
+    const eGain = audioCtx.createGain();
+    earthDrone.type = 'sawtooth'; earthDrone.frequency.value = 60;
+    
+    // Lowpass filter for mud/earth sound
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 150;
+    
+    earthDrone.connect(filter); filter.connect(eGain); eGain.connect(masterGain);
+    eGain.gain.value = 0.1;
+    earthDrone.start();
+  }
+
+  function triggerMusicChange(phaseIndex) {
+    if(!audioCtx || isMuted) return;
+    const now = audioCtx.currentTime;
+    
+    if(phaseIndex === 4) { // Harvest energy
+      const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      osc.type = 'square'; osc.frequency.value = 110;
+      osc.connect(g); g.connect(masterGain);
+      g.gain.setValueAtTime(0.05, now); g.gain.exponentialRampToValueAtTime(0.001, now+1);
+      osc.start(); osc.stop(now+1);
+    } else if(phaseIndex === 7) { // Final resolution
+      const freqs = [261.63, 329.63, 392.00, 523.25]; // C major
+      freqs.forEach(f => {
+        const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f;
+        osc.connect(g); g.connect(masterGain);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.05, now+1);
+        g.gain.exponentialRampToValueAtTime(0.001, now+4);
+        osc.start(); osc.stop(now+4);
+      });
+    }
+  }
+
+  function checkScroll() {
+    const vh = window.innerHeight;
+    const centerLine = currentY + vh/2;
+    let activeIndex = 0;
+
+    panels.forEach((p, i) => {
+      const rect = p.getBoundingClientRect();
+      const pCenter = rect.top + currentY + rect.height/2;
+      
+      if(centerLine >= pCenter - vh/2 && centerLine <= pCenter + vh/2) {
+        p.classList.add('active');
+        activeIndex = i;
+      }
+    });
+
+    // Update Counter based on active panel
+    if(panels[activeIndex]) {
+      const targetDay = parseInt(panels[activeIndex].dataset.day);
+      // Simple lerp for counter visual effect
+      let currentDisplay = parseInt(dayNum.innerText.replace('DAY: ', '')) || 0;
+      if(currentDisplay !== targetDay) {
+        let step = targetDay > currentDisplay ? 1 : -1;
+        if(Math.abs(targetDay - currentDisplay) > 10) step *= 5;
+        dayNum.innerText = `DAY: ${currentDisplay + step}`;
+      }
+      dayLabel.innerText = panels[activeIndex].dataset.label;
+      
+      if(activeIndex !== currentPhase) {
+        currentPhase = activeIndex;
+        triggerMusicChange(currentPhase);
+        
+        // Background shifts
+        if(currentPhase >= 7) { // Final plate
+          sky.style.background = '#1a5c8a'; // brighter blue
+        } else if (currentPhase >= 4) { // Harvest
+          sky.style.background = '#4a5a7a'; // day blue
+        } else {
+          sky.style.background = 'var(--bg-sky)'; // dawn/night
+        }
+      }
+    }
+  }
+
+  function tick() {
+    currentY += (targetY - currentY) * ease;
+    wrapper.style.transform = `translateY(-${currentY}px)`;
+    checkScroll();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+</script>
+</body>
+</html>

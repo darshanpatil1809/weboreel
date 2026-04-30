@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>civic_scorecard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@1,400&family=DM+Sans:wght@300;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #040408;
+    --glass: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.1);
+    --blue: #0033cc;
+    --saffron: #ff8c00;
+    --green: #00cc66;
+    --red: #cc0033;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg-dark); color: #f5f5f5;
+    font-family: 'DM Sans', sans-serif; overflow-x: hidden;
+  }
+
+  /* Typography */
+  h1, h2, h3, .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+  .mono { font-family: 'Space Mono', monospace; }
+  .story { font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+  /* Background Glow */
+  #bg-glow {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,140,0,0.03) 0%, transparent 50%, rgba(0,204,102,0.03) 100%);
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: var(--glass); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border); border-radius: 16px; padding: 2rem;
+  }
+
+  /* Layout */
+  #scroll-container { width: 100%; position: relative; will-change: transform; display: none; }
+  .section {
+    min-height: 100vh; width: 100vw; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; position: relative; padding: 4rem 2rem;
+  }
+
+  /* Intro */
+  #intro {
+    height: 100vh; width: 100vw; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  }
+  #start-btn {
+    margin-top: 3rem; background: var(--glass); border: 1px solid var(--saffron); color: #fff;
+    padding: 1rem 3rem; border-radius: 30px; font-family: 'Bebas Neue'; font-size: 1.5rem; cursor: pointer;
+    transition: all 0.3s;
+  }
+  #start-btn:hover { background: rgba(255,140,0,0.2); transform: scale(1.05); }
+
+  /* Audio Btn */
+  #mute-btn {
+    position: fixed; top: 2vw; right: 2vw; z-index: 100; font-size: 1.5rem;
+    cursor: pointer; background: none; border: none; filter: grayscale(100%); transition: filter 0.3s;
+  }
+
+  /* Rating Cards */
+  .rating-grid { display: flex; flex-direction: column; gap: 4rem; width: 100%; max-width: 800px; }
+  .rating-card { width: 100%; }
+  
+  /* Sliders */
+  .slider-container { margin: 2rem 0; width: 100%; position: relative; }
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; background: transparent;
+  }
+  input[type=range]:focus { outline: none; }
+  input[type=range]::-webkit-slider-runnable-track {
+    width: 100%; height: 8px; cursor: pointer; background: rgba(255,255,255,0.1); border-radius: 4px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    height: 24px; width: 24px; border-radius: 50%; background: var(--saffron); cursor: pointer; -webkit-appearance: none; margin-top: -8px;
+    box-shadow: 0 0 15px rgba(255,140,0,0.5); border: 2px solid #fff;
+  }
+  .slider-labels { display: flex; justify-content: space-between; margin-top: 10px; opacity: 0.6; font-size: 0.8rem; }
+  .score-display { text-align: center; font-size: 3rem; color: var(--blue); margin-top: -1rem; }
+
+  /* Radar Chart */
+  #radar-container {
+    width: 400px; height: 400px; position: relative; margin: 3rem auto;
+  }
+  #radar-canvas { position: absolute; top:0; left:0; width:100%; height:100%; }
+  
+  /* Result Cards */
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; width:100%; max-width:800px; margin-top: 2rem; }
+  .action-card { border-top: 4px solid var(--green); }
+
+  .reveal { opacity: 0; transform: translateY(30px); transition: all 1s var(--ease); }
+  .reveal.active { opacity: 1; transform: translateY(0); }
+
+  @media(max-width: 768px) {
+    h1 { font-size: 3.5rem !important; }
+    #radar-container { width: 300px; height: 300px; }
+    .section { padding: 4rem 1rem; }
+    .rating-card { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-glow"></div>
+<button id="mute-btn">🏛️</button>
+
+<div id="intro">
+  <h1 class="bebas" style="font-size: 6rem; letter-spacing: 5px;">CIVIC SCORECARD</h1>
+  <p class="story" style="font-size: 2rem; color: var(--saffron); max-width: 600px; margin: 1rem 0;">Not your political beliefs. Your civic behavior.</p>
+  <p style="opacity: 0.8; max-width: 500px;">These are the things that make cities work or fail.</p>
+  <button id="start-btn">BEGIN ASSESSMENT</button>
+</div>
+
+<div id="scroll-container">
+  
+  <div class="section">
+    <div class="rating-grid" id="ratings-form">
+      <!-- Ratings injected via JS -->
+    </div>
+
+    <div style="margin-top: 5rem; text-align:center;" class="reveal" id="submit-section">
+      <button id="calc-btn" style="background:var(--blue); border:none; color:#fff; padding:1rem 3rem; border-radius:30px; font-family:'Bebas Neue'; font-size:1.5rem; cursor:pointer;">REVEAL MY SCORECARD</button>
+    </div>
+  </div>
+
+  <div class="section" id="sec-result" style="display:none; min-height: 120vh;">
+    <h2 class="bebas reveal" style="font-size:4rem;">YOUR CIVIC PROFILE</h2>
+    
+    <div id="radar-container" class="reveal">
+      <canvas id="radar-canvas" width="400" height="400"></canvas>
+      <div id="final-score" class="bebas" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:4rem; text-shadow:0 0 20px rgba(0,0,0,0.8);">0/100</div>
+    </div>
+
+    <div class="glass reveal" style="width:100%; max-width:800px; margin-bottom:2rem; text-align:center;">
+      <p class="mono" id="comp-above" style="color:var(--green); margin-bottom:1rem;"></p>
+      <p class="mono" id="comp-below" style="color:var(--red);"></p>
+    </div>
+
+    <h3 class="bebas reveal" style="font-size:2.5rem; color:var(--saffron); margin-top:2rem;">IMPROVEMENT PATHS</h3>
+    <div class="result-grid reveal" id="action-grid">
+      <!-- action cards injected here -->
+    </div>
+
+    <div style="margin-top:5rem; max-width:800px; text-align:center;" class="reveal">
+      <p class="story" style="font-size:2.5rem; color:var(--saffron);">"The health of a democracy is defined not by its elections but by its citizens between elections."</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const duties = [
+    { id: 'voting', title: "VOTING", desc: "Do you vote in elections — local, state, and national?", stat: "National average: 6.7 (66.7% turnout)", tip: "Register: voterportal.eci.gov.in · Takes 10 mins", avg: 6.7 },
+    { id: 'waste', title: "WASTE SEGREGATION", desc: "Do you separate wet, dry, and hazardous waste?", stat: "Only 22% of Indians consistently segregate waste", tip: "Unsegregated: 85% goes to landfill. Segregated: 60% recycled.", avg: 2.2 },
+    { id: 'water', title: "WATER CONSERVATION", desc: "Do you actively conserve water in daily use?", stat: "Avg Indian household wastes 40L daily through habit.", tip: "Turn off tap while brushing · Fix leaks · Shorter showers", avg: 5.0 },
+    { id: 'tax', title: "TAX COMPLIANCE", desc: "Do you file taxes honestly and on time?", stat: "Only 6.5% of Indians file income tax.", tip: "If you're under threshold: still good practice to file.", avg: 4.0 },
+    { id: 'property', title: "PUBLIC PROPERTY", desc: "Do you respect and report damage to public property?", stat: "Annual cost of vandalism in India: ₹4,300 crore", tip: "Reporting: Know your local municipal corporation complaint number", avg: 5.5 },
+    { id: 'traffic', title: "TRAFFIC RULES", desc: "Do you follow traffic rules even when no one is watching?", stat: "Traffic accidents: 1.5 lakh deaths annually in India.", tip: "Red light jumping, helmet wearing, phone use while driving", avg: 4.5 },
+    { id: 'community', title: "COMMUNITY PARTICIPATION", desc: "Do you participate in local community decisions?", stat: "RWA participation, Ward meetings.", tip: "Most issues can be reported via Swachh Bharat app.", avg: 3.0 },
+    { id: 'energy', title: "ENERGY CONSERVATION", desc: "Do you actively reduce energy consumption?", stat: "India's per capita power consumption is rising 6% annually", tip: "Switch off ACs when not in room. Use natural light.", avg: 5.0 },
+    { id: 'inclusive', title: "INCLUSIVE BEHAVIOR", desc: "Do you actively practice inclusive civic behavior?", stat: "Yielding to differently-abled, respecting accessibility spaces.", tip: "No legal enforcement possible. Your choice entirely.", avg: 6.0 },
+    { id: 'education', title: "CIVIC EDUCATION", desc: "Do you stay informed about civic and political matters?", stat: "Understanding how your city works, who represents you.", tip: "Your rights: Article 19-22 (Freedom), Article 32 (Remedies)", avg: 4.0 }
+  ];
+
+  let userScores = new Array(10).fill(5);
+
+  const grid = document.getElementById('ratings-form');
+  duties.forEach((d, i) => {
+    const card = document.createElement('div');
+    card.className = 'glass rating-card reveal';
+    card.innerHTML = `
+      <h2 class="bebas" style="font-size:2rem; color:var(--saffron);">${i+1}. ${d.title}</h2>
+      <p style="margin: 1rem 0; font-size:1.1rem;">${d.desc}</p>
+      <div class="slider-container">
+        <input type="range" min="0" max="10" value="5" class="slider" data-idx="${i}">
+        <div class="slider-labels"><span>0 - Never</span><span>10 - Always</span></div>
+      </div>
+      <div class="bebas score-display" id="val-${i}">5</div>
+      <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1);">
+        <p class="mono" style="font-size:0.8rem; color:var(--blue);">${d.stat}</p>
+        <p class="mono" style="font-size:0.8rem; margin-top:0.5rem; opacity:0.7;">${d.tip}</p>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Events
+  document.getElementById('start-btn').onclick = () => {
+    document.getElementById('intro').style.display = 'none';
+    document.getElementById('scroll-container').style.display = 'block';
+    isScrollActive = true;
+    checkReveals();
+  };
+
+  document.querySelectorAll('.slider').forEach(el => {
+    el.addEventListener('input', (e) => {
+      const idx = e.target.getAttribute('data-idx');
+      const val = e.target.value;
+      userScores[idx] = parseInt(val);
+      document.getElementById(`val-${idx}`).innerText = val;
+      playSliderTick();
+    });
+  });
+
+  document.getElementById('calc-btn').onclick = () => {
+    document.getElementById('sec-result').style.display = 'flex';
+    target = document.getElementById('sec-result').offsetTop; // scroll down
+    generateReport();
+  };
+
+  // Smooth Scroll
+  let current = 0, target = 0;
+  const ease = 0.08;
+  const scrollContainer = document.getElementById('scroll-container');
+  let isScrollActive = false;
+  
+  function getMax() { return scrollContainer.getBoundingClientRect().height - window.innerHeight; }
+
+  window.addEventListener('wheel', e => {
+    if(!isScrollActive) return;
+    e.preventDefault();
+    target += e.deltaY;
+    target = Math.max(0, Math.min(target, getMax()));
+  }, { passive: false });
+
+  let touchY = 0;
+  window.addEventListener('touchstart', e => touchY = e.touches[0].clientY, {passive:true});
+  window.addEventListener('touchmove', e => {
+    if(!isScrollActive) return;
+    e.preventDefault();
+    target += (touchY - e.touches[0].clientY) * 1.5;
+    target = Math.max(0, Math.min(target, getMax()));
+    touchY = e.touches[0].clientY;
+  }, { passive: false });
+
+  function tick() {
+    if(isScrollActive) {
+      current += (target - current) * ease;
+      scrollContainer.style.transform = `translateY(${-current}px)`;
+      checkReveals();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function checkReveals() {
+    const h = window.innerHeight;
+    document.querySelectorAll('.reveal:not(.active)').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if(rect.top < h * 0.9) el.classList.add('active');
+    });
+  }
+
+  function generateReport() {
+    // Math
+    const total = userScores.reduce((a,b)=>a+b,0);
+    document.getElementById('final-score').innerText = `${total}/100`;
+    let color = total > 70 ? 'var(--green)' : (total > 40 ? 'var(--saffron)' : 'var(--red)');
+    document.getElementById('final-score').style.color = color;
+
+    // Comparisons
+    let above = [], below = [];
+    userScores.forEach((s, i) => {
+      if(s > duties[i].avg) above.push(duties[i].title);
+      else below.push(duties[i].title);
+    });
+
+    document.getElementById('comp-above').innerText = "YOU SCORE ABOVE AVERAGE IN: " + (above.length ? above.join(', ') : 'None');
+    document.getElementById('comp-below').innerText = "YOU SCORE BELOW AVERAGE IN: " + (below.length ? below.join(', ') : 'None');
+
+    // Improvements (Top 3 lowest scores)
+    let sortedIndices = userScores.map((s, i) => ({s, i})).sort((a,b) => a.s - b.s);
+    const actionGrid = document.getElementById('action-grid');
+    actionGrid.innerHTML = '';
+    for(let i=0; i<3; i++) {
+      let d = duties[sortedIndices[i].i];
+      let act = document.createElement('div');
+      act.className = 'glass action-card';
+      act.innerHTML = `
+        <h4 class="bebas" style="font-size:1.5rem;">FOCUS: ${d.title}</h4>
+        <p style="margin-top:1rem; font-size:0.9rem;">${d.tip}</p>
+      `;
+      actionGrid.appendChild(act);
+    }
+
+    // Radar Chart Animation
+    drawRadar(userScores);
+    playFanfare();
+  }
+
+  function drawRadar(scores) {
+    const canvas = document.getElementById('radar-canvas');
+    const ctx = canvas.getContext('2d');
+    const cx = 200, cy = 200, radius = 150;
+    
+    let progress = 0;
+    function anim() {
+      progress += 0.03;
+      if(progress > 1) progress = 1;
+      
+      ctx.clearRect(0,0,400,400);
+      
+      // Draw Grid
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      for(let step=1; step<=5; step++) {
+        let r = radius * (step/5);
+        ctx.beginPath();
+        for(let i=0; i<=10; i++) {
+          let angle = (Math.PI * 2 * i) / 10 - Math.PI/2;
+          let x = cx + r * Math.cos(angle);
+          let y = cy + r * Math.sin(angle);
+          if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+      }
+
+      // Draw Axes
+      for(let i=0; i<10; i++) {
+        let angle = (Math.PI * 2 * i) / 10 - Math.PI/2;
+        ctx.beginPath(); ctx.moveTo(cx,cy);
+        ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        ctx.stroke();
+        
+        // Labels
+        if(progress === 1) {
+          let lx = cx + (radius+20) * Math.cos(angle);
+          let ly = cy + (radius+20) * Math.sin(angle);
+          ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.font = "10px Space Mono";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          let label = duties[i].title.split(' ')[0]; // short label
+          ctx.fillText(label, lx, ly);
+        }
+      }
+
+      // Draw Data
+      ctx.beginPath();
+      for(let i=0; i<=10; i++) {
+        let idx = i%10;
+        let angle = (Math.PI * 2 * i) / 10 - Math.PI/2;
+        let r = radius * (scores[idx]/10) * progress;
+        let x = cx + r * Math.cos(angle);
+        let y = cy + r * Math.sin(angle);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.fillStyle = "rgba(0, 51, 204, 0.3)";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0, 51, 204, 1)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      if(progress < 1) requestAnimationFrame(anim);
+    }
+    anim();
+  }
+
+  // Web Audio
+  let audioCtx, masterGain;
+  let isMuted = true;
+  let audioInit = false;
+
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    muteBtn.style.filter = isMuted ? 'grayscale(100%)' : 'grayscale(0%)';
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.05, audioCtx.currentTime, 0.5);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+    
+    // Ambient Pad
+    [261.63, 329.63, 392.00].forEach(f => {
+      let osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      osc.connect(masterGain);
+      osc.start();
+    });
+    audioInit = true;
+  }
+
+  function playSliderTick() {
+    if(!audioInit || isMuted) return;
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.frequency.value = 600;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+  }
+
+  function playFanfare() {
+    if(!audioInit || isMuted) return;
+    [523.25, 659.25, 783.99].forEach((f, i) => { // C5, E5, G5
+      let osc = audioCtx.createOscillator();
+      let gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.2);
+      gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + i*0.2 + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+      osc.connect(gain); gain.connect(masterGain);
+      osc.start(audioCtx.currentTime + i*0.2); osc.stop(audioCtx.currentTime + 4);
+    });
+  }
+
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>
