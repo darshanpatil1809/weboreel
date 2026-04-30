@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Midnight Diner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Playfair+Display:ital@1&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #080a0c;
+    --wood-dark: #1f1410;
+    --wood-light: #2c1d18;
+    --text-color: rgba(255, 255, 255, 0.85);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: var(--text-color);
+    font-family: 'Noto Serif JP', serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Rain Window Background */
+  canvas#rain-window {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 60%;
+    z-index: 1;
+    opacity: 0.6;
+    filter: blur(2px);
+  }
+
+  /* The Counter */
+  .counter {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background: linear-gradient(to bottom, var(--wood-light), var(--wood-dark));
+    box-shadow: inset 0 20px 50px rgba(0,0,0,0.8);
+    z-index: 2;
+    border-top: 4px solid #110a08;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    padding-bottom: 5vh;
+  }
+
+  /* Wood grain texture */
+  .counter::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(0,0,0,0.05) 10px, rgba(0,0,0,0.05) 20px);
+    pointer-events: none;
+    opacity: 0.3;
+  }
+
+  /* Interaction Area */
+  .interaction-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .dialogue-box {
+    background: rgba(10, 15, 20, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    pointer-events: auto;
+    transition: opacity 1s, transform 1s;
+    margin-bottom: 20vh;
+  }
+
+  .dialogue-box.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+  }
+
+  .chef-text {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .order-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    text-align: center;
+    padding: 0.5rem;
+    width: 80%;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .order-input:focus {
+    border-color: rgba(255, 200, 100, 0.8);
+  }
+
+  /* The Dish */
+  .dish-container {
+    position: absolute;
+    bottom: 25%;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    opacity: 0;
+    z-index: 5;
+    transition: all 2s cubic-bezier(0.1, 0.8, 0.2, 1);
+    pointer-events: auto;
+  }
+
+  .dish-container.served {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .bowl {
+    width: 200px;
+    height: 80px;
+    background: linear-gradient(to bottom, #2a2a30, #111);
+    border-radius: 10px 10px 100px 100px;
+    box-shadow: 
+      0 30px 40px rgba(0,0,0,0.8),
+      inset 0 2px 5px rgba(255,255,255,0.1);
+    position: relative;
+    display: flex;
+    justify-content: center;
+    transition: all 1s;
+  }
+
+  .soup {
+    position: absolute;
+    top: 5px;
+    width: 180px;
+    height: 20px;
+    background: #c89551;
+    border-radius: 50%;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    transition: all 1s;
+    overflow: hidden;
+  }
+
+  .garnish {
+    position: absolute;
+    transition: all 1s;
+  }
+
+  .steam {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .steam-particle {
+    position: absolute;
+    bottom: 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    filter: blur(8px);
+    animation: rise 4s infinite linear;
+  }
+
+  @keyframes rise {
+    0% { transform: translateY(0) scale(1); opacity: 0; }
+    20% { opacity: 0.5; }
+    80% { opacity: 0; }
+    100% { transform: translateY(-100px) scale(3); opacity: 0; }
+  }
+
+  .result-text {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    opacity: 0;
+    transition: opacity 2s;
+    z-index: 10;
+    pointer-events: none;
+    width: 100%;
+  }
+
+  .result-text.visible {
+    opacity: 1;
+  }
+
+  .result-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 0.5rem;
+  }
+
+  .result-desc {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.1em;
+  }
+
+  .audio-toggle {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    color: white;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+  }
+</style>
+</head>
+<body>
+
+  <canvas id="rain-window"></canvas>
+
+  <div class="counter"></div>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">🏮</button>
+
+  <div class="interaction-layer">
+    <div class="dialogue-box" id="dialogue">
+      <div class="chef-text">It's late. What are you hungry for?</div>
+      <input type="text" class="order-input" id="order" placeholder="Type a feeling..." autocomplete="off">
+    </div>
+
+    <div class="result-text" id="result-text">
+      <div class="result-title" id="dish-name">Warmth</div>
+      <div class="result-desc" id="dish-desc">Made just for you.</div>
+    </div>
+  </div>
+
+  <div class="dish-container" id="dish">
+    <div class="steam" id="steam-container"></div>
+    <div class="bowl" id="bowl">
+      <div class="soup" id="soup">
+        <div class="garnish" id="garnish1"></div>
+        <div class="garnish" id="garnish2"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Rain Canvas
+  const canvas = document.getElementById('rain-window');
+  const ctx = canvas.getContext('2d');
+  let drops = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight * 0.6;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class RainDrop {
+    constructor() {
+      this.reset();
+      this.y = Math.random() * canvas.height;
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = -10;
+      this.len = Math.random() * 20 + 10;
+      this.speed = Math.random() * 5 + 5;
+      this.alpha = Math.random() * 0.3 + 0.1;
+    }
+    update() {
+      this.y += this.speed;
+      this.x += this.speed * 0.1; // slight wind
+      if (this.y > canvas.height) this.reset();
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + this.len * 0.1, this.y + this.len);
+      ctx.strokeStyle = `rgba(150, 180, 255, ${this.alpha})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  for(let i=0; i<150; i++) drops.push(new RainDrop());
+
+  function animateRain() {
+    ctx.fillStyle = 'rgba(8, 10, 12, 0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drops.forEach(d => { d.update(); d.draw(); });
+    requestAnimationFrame(animateRain);
+  }
+  animateRain();
+
+  // Steam
+  const steamContainer = document.getElementById('steam-container');
+  function createSteam() {
+    steamContainer.innerHTML = '';
+    for(let i=0; i<5; i++) {
+      const p = document.createElement('div');
+      p.className = 'steam-particle';
+      p.style.left = `${20 + Math.random() * 60}%`;
+      p.style.width = `${20 + Math.random() * 40}px`;
+      p.style.height = p.style.width;
+      p.style.animationDelay = `${Math.random() * 2}s`;
+      p.style.animationDuration = `${3 + Math.random() * 2}s`;
+      steamContainer.appendChild(p);
+    }
+  }
+  createSteam();
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let rainNoise, rainGain;
+  let masterGain;
+  let currentMusic = null;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Continuous Rain Noise
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    
+    rainNoise = audioCtx.createBufferSource();
+    rainNoise.buffer = buffer;
+    rainNoise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 400; // muffled rain
+    
+    rainGain = audioCtx.createGain();
+    rainGain.gain.value = isMuted ? 0 : 0.1;
+    
+    rainNoise.connect(filter);
+    filter.connect(rainGain);
+    rainGain.connect(masterGain);
+    rainNoise.start();
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (rainGain) rainGain.gain.value = isMuted ? 0 : 0.1;
+    if (masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.5, audioCtx.currentTime, 0.1);
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🏮';
+  }
+
+  function playCookingSounds() {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    // Chop
+    for(let i=0; i<6; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(100, t + i*0.2);
+      osc.frequency.exponentialRampToValueAtTime(40, t + i*0.2 + 0.05);
+      
+      gain.gain.setValueAtTime(0.2, t + i*0.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.2 + 0.05);
+      
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(t + i*0.2);
+      osc.stop(t + i*0.2 + 0.1);
+    }
+
+    // Sizzle
+    setTimeout(() => {
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 2000;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0, t+1.2);
+      gain.gain.linearRampToValueAtTime(0.05, t+1.3);
+      gain.gain.linearRampToValueAtTime(0, t+3);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      noise.start(t+1.2);
+    }, 1200);
+  }
+
+  function playDishMusic(type) {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    // Fade out previous
+    if (currentMusic) {
+      currentMusic.gain.setTargetAtTime(0, t, 1);
+    }
+    
+    const musicNode = audioCtx.createGain();
+    musicNode.gain.value = 0;
+    musicNode.connect(masterGain);
+    currentMusic = musicNode;
+    
+    if (type === 'love') {
+      // Warm harp-like chords
+      [261.63, 329.63, 392.00, 493.88].forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        
+        gain.gain.setValueAtTime(0, t + i*0.3);
+        gain.gain.linearRampToValueAtTime(0.05, t + i*0.3 + 2);
+        gain.gain.linearRampToValueAtTime(0.02, t + 10);
+        
+        osc.connect(gain);
+        gain.connect(musicNode);
+        osc.start(t);
+      });
+    } else if (type === 'ambition') {
+      // Deep drone
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 55;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(100, t);
+      filter.frequency.linearRampToValueAtTime(400, t + 5);
+      
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.1, t + 3);
+      
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(musicNode);
+      osc.start(t);
+    } else if (type === 'sleep') {
+      // White noise wash
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      
+      // LFO for filter
+      const lfo = audioCtx.createOscillator();
+      lfo.frequency.value = 0.1;
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.value = 200;
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      lfo.start();
+      filter.frequency.value = 300;
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.05, t + 4);
+      
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(musicNode);
+      noise.start(t);
+    } else {
+      // Default: soft hum
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = 110;
+      
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.05, t + 2);
+      
+      osc.connect(gain);
+      gain.connect(musicNode);
+      osc.start(t);
+    }
+    
+    musicNode.gain.setTargetAtTime(1, t, 1);
+  }
+
+  // Logic
+  const input = document.getElementById('order');
+  const dialogue = document.getElementById('dialogue');
+  const dishContainer = document.getElementById('dish');
+  const resultText = document.getElementById('result-text');
+  
+  const bowl = document.getElementById('bowl');
+  const soup = document.getElementById('soup');
+  const g1 = document.getElementById('garnish1');
+  const g2 = document.getElementById('garnish2');
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && input.value.trim() !== '') {
+      handleOrder(input.value.trim().toLowerCase());
+    }
+  });
+
+  document.body.addEventListener('click', () => {
+    if(!audioInit && !isMuted) initAudio();
+  }, {once:true});
+
+  function handleOrder(val) {
+    if(!audioInit && !isMuted) initAudio();
+    
+    // Hide dialogue
+    dialogue.classList.add('hidden');
+    resultText.classList.remove('visible');
+    dishContainer.classList.remove('served');
+    
+    playCookingSounds();
+
+    let type = 'default';
+    if(val.includes('love') || val.includes('heart') || val.includes('warm')) type = 'love';
+    if(val.includes('ambition') || val.includes('fire') || val.includes('power')) type = 'ambition';
+    if(val.includes('sleep') || val.includes('rest') || val.includes('peace')) type = 'sleep';
+
+    setTimeout(() => {
+      serveDish(type, val);
+    }, 4000);
+  }
+
+  function serveDish(type, rawVal) {
+    // Reset styles
+    bowl.style.background = 'linear-gradient(to bottom, #2a2a30, #111)';
+    soup.style.background = '#c89551';
+    soup.style.boxShadow = 'inset 0 0 10px rgba(0,0,0,0.5)';
+    g1.style = '';
+    g2.style = '';
+
+    let title = "Comforting Ramen";
+    let desc = "A simple broth to ground you.";
+
+    if (type === 'love') {
+      bowl.style.background = 'linear-gradient(to bottom, #4a2a30, #2a1111)';
+      soup.style.background = 'radial-gradient(circle, #ff8da1, #d6455d)';
+      soup.style.boxShadow = 'inset 0 0 20px rgba(255,100,100,0.5), 0 0 30px rgba(255,100,150,0.4)';
+      
+      g1.style.width = '30px'; g1.style.height = '30px';
+      g1.style.background = '#ffcad4'; g1.style.borderRadius = '50%';
+      g1.style.top = '10px'; g1.style.left = '40px';
+      
+      title = "Hearty Sakura Broth";
+      desc = "Warmth for the spaces left behind.";
+    } 
+    else if (type === 'ambition') {
+      bowl.style.background = 'linear-gradient(to bottom, #1a1a1a, #000)';
+      bowl.style.borderRadius = '0 0 50px 50px';
+      soup.style.background = 'linear-gradient(45deg, #d42a2a, #ff9900)';
+      
+      g1.style.width = '100px'; g1.style.height = '4px';
+      g1.style.background = '#fff'; g1.style.transform = 'rotate(45deg)';
+      g1.style.top = '10px'; g1.style.left = '40px';
+      
+      title = "Spicy Dragon Noodles";
+      desc = "Fuel for the climb.";
+    }
+    else if (type === 'sleep') {
+      bowl.style.background = 'linear-gradient(to bottom, #1e293b, #0f172a)';
+      soup.style.background = 'linear-gradient(to bottom, #38bdf8, #0ea5e9)';
+      soup.style.opacity = '0.8';
+      
+      g1.style.width = '40px'; g1.style.height = '10px';
+      g1.style.background = 'rgba(255,255,255,0.8)';
+      g1.style.borderRadius = '10px';
+      g1.style.top = '15px'; g1.style.left = '70px';
+      
+      title = "Midnight Cloud Soup";
+      desc = "Rest now. The world can wait.";
+    }
+
+    document.getElementById('dish-name').innerText = title;
+    document.getElementById('dish-desc').innerText = desc;
+
+    dishContainer.classList.add('served');
+    playDishMusic(type);
+    
+    setTimeout(() => {
+      resultText.classList.add('visible');
+    }, 1000);
+
+    // Reset input for next time
+    setTimeout(() => {
+      input.value = '';
+      dialogue.querySelector('.chef-text').innerText = "Anything else?";
+      dialogue.classList.remove('hidden');
+      resultText.classList.remove('visible');
+      setTimeout(() => dishContainer.classList.remove('served'), 1000);
+    }, 12000);
+  }
+
+</script>
+</body>
+</html>

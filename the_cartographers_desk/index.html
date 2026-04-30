@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>The Cartographer's Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Quintessential&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #14110e;
+    --wood: #2c1e16;
+    --parchment: #e8dbb7;
+    --ink: #3b2f2f;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--wood);
+    color: var(--ink);
+    font-family: 'IM Fell English', serif;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* Desk Texture */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 15px, rgba(0,0,0,0.1) 15px, rgba(0,0,0,0.1) 30px);
+    z-index: -2;
+  }
+
+  /* Base Map (Parchment, ancient style) */
+  .map-container {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    height: 80vh;
+    max-width: 1200px;
+    background: var(--parchment);
+    box-shadow: 
+      0 20px 50px rgba(0,0,0,0.8),
+      inset 0 0 100px rgba(139, 115, 85, 0.5);
+    border-radius: 5px;
+    /* Rough edges illusion */
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+    overflow: hidden;
+  }
+
+  /* Generated Ancient Map via CSS Gradients & SVG Filters */
+  .ancient-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+      radial-gradient(circle at 30% 40%, rgba(59,47,47,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 70% 60%, rgba(59,47,47,0.15) 0%, transparent 50%);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  /* SVG Noise for Paper texture */
+  .paper-noise {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0.4;
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+
+  .map-title {
+    position: absolute;
+    top: 2rem; left: 3rem;
+    font-family: 'Quintessential', cursive;
+    font-size: 3rem;
+    color: var(--ink);
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+  }
+
+  /* Satellite Map Layer */
+  .satellite-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    /* Abstract procedural "satellite" terrain */
+    background: 
+      radial-gradient(circle at 30% 40%, #1a3c34 0%, transparent 30%),
+      radial-gradient(circle at 70% 60%, #2c3e50 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, #4a5d23 0%, transparent 60%);
+    background-color: #0d1f2d; /* Ocean base */
+    /* Add some terrain noise via another SVG or css pattern */
+    background-image: repeating-radial-gradient(circle at 50% 50%, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
+    
+    /* Masking for the magnifying glass */
+    -webkit-mask-image: radial-gradient(circle 120px at var(--mx, -500px) var(--my, -500px), black 90%, transparent 100%);
+    mask-image: radial-gradient(circle 120px at var(--mx, -500px) var(--my, -500px), black 90%, transparent 100%);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* Magnifying Glass Element */
+  .magnifying-glass {
+    position: absolute;
+    width: 260px; height: 260px; /* slightly larger than mask */
+    border-radius: 50%;
+    border: 10px solid #8b7355; /* Brass/Wood rim */
+    box-shadow: 
+      0 10px 20px rgba(0,0,0,0.5),
+      inset 0 0 20px rgba(0,0,0,0.8),
+      inset 5px 5px 10px rgba(255,255,255,0.2);
+    /* Handle */
+    transform: translate(-50%, -50%);
+    top: var(--my, -500px);
+    left: var(--mx, -500px);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .magnifying-glass::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -80px;
+    width: 40px; height: 120px;
+    background: linear-gradient(90deg, #3a2318, #5a3c28, #3a2318);
+    border-radius: 10px;
+    transform: rotate(-45deg);
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.6);
+  }
+
+  /* Candle Lighting Effects */
+  .candle-glow {
+    position: absolute;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at 10% 20%, rgba(255, 180, 50, 0.15), transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(255, 150, 30, 0.1), transparent 50%);
+    pointer-events: none;
+    z-index: 15;
+    animation: flicker 4s infinite alternate ease-in-out;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 0.8; }
+    20% { opacity: 1; }
+    40% { opacity: 0.9; }
+    60% { opacity: 1.1; }
+    80% { opacity: 0.85; }
+    100% { opacity: 0.95; }
+  }
+
+  /* Audio Toggle */
+  .audio-toggle {
+    position: absolute;
+    top: 2rem; right: 2rem;
+    background: rgba(20, 17, 14, 0.8);
+    border: 1px solid #8b7355;
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    color: #8b7355;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100;
+  }
+
+  /* Instruction */
+  .instruction {
+    position: absolute;
+    bottom: 2rem; left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2rem;
+    color: rgba(232, 219, 183, 0.5);
+    letter-spacing: 0.1em;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- SVG Filter for Paper -->
+  <svg width="0" height="0" style="position:absolute;">
+    <filter id="paper-texture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" result="noise" />
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 0.9 0 0 0  0 0.8 0 0 0  0 0 0 0.3 0" />
+    </filter>
+  </svg>
+
+  <div class="candle-glow"></div>
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">🕯️</button>
+  <div class="instruction">DRAG THE GLASS TO REVEAL TRUTH</div>
+
+  <div class="map-container" id="map">
+    <div class="paper-noise" style="filter: url(#paper-texture);"></div>
+    <div class="ancient-layer"></div>
+    <div class="map-title">Terra Incognita</div>
+    
+    <!-- Revealed Satellite view -->
+    <div class="satellite-layer" id="satellite"></div>
+    
+    <!-- Physical Glass Frame -->
+    <div class="magnifying-glass" id="glass"></div>
+  </div>
+
+<script>
+  // Interaction Logic
+  const mapEl = document.getElementById('map');
+  const satEl = document.getElementById('satellite');
+  const glassEl = document.getElementById('glass');
+  
+  let isHovering = false;
+
+  mapEl.addEventListener('mousemove', (e) => {
+    // Get coords relative to map
+    const rect = mapEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    satEl.style.setProperty('--mx', `${x}px`);
+    satEl.style.setProperty('--my', `${y}px`);
+    glassEl.style.setProperty('--mx', `${x}px`);
+    glassEl.style.setProperty('--my', `${y}px`);
+    
+    // Play sliding sound if moved significantly
+    playSlideSound(Math.abs(e.movementX) + Math.abs(e.movementY));
+  });
+
+  mapEl.addEventListener('mouseenter', () => {
+    isHovering = true;
+    glassEl.style.opacity = 1;
+    if(!audioInit && !isMuted) initAudio();
+  });
+
+  mapEl.addEventListener('mouseleave', () => {
+    isHovering = false;
+    // Move offscreen
+    satEl.style.setProperty('--mx', `-500px`);
+    glassEl.style.opacity = 0;
+  });
+
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain, fireGain, slideGain;
+  let lastSlideTime = 0;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Fire Crackle (Noise with random amplitude spikes)
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      // Base noise
+      data[i] = (Math.random() * 2 - 1) * 0.1;
+      // Spikes for crackle
+      if (Math.random() > 0.999) {
+        data[i] = (Math.random() * 2 - 1) * 0.8;
+      }
+    }
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 800; // Warm fire
+    
+    fireGain = audioCtx.createGain();
+    fireGain.gain.value = isMuted ? 0 : 0.3;
+    
+    noise.connect(filter);
+    filter.connect(fireGain);
+    fireGain.connect(masterGain);
+    noise.start();
+
+    // Slide noise node setup
+    slideGain = audioCtx.createGain();
+    slideGain.gain.value = 0;
+    
+    const slideBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const sData = slideBuffer.getChannelData(0);
+    for(let i=0; i<audioCtx.sampleRate; i++) sData[i] = Math.random() * 2 - 1;
+    
+    const sNoise = audioCtx.createBufferSource();
+    sNoise.buffer = slideBuffer;
+    sNoise.loop = true;
+    
+    const sFilter = audioCtx.createBiquadFilter();
+    sFilter.type = 'bandpass';
+    sFilter.frequency.value = 400; // Paper friction freq
+    
+    sNoise.connect(sFilter);
+    sFilter.connect(slideGain);
+    slideGain.connect(masterGain);
+    sNoise.start();
+
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (fireGain) fireGain.gain.value = isMuted ? 0 : 0.3;
+    if (slideGain) slideGain.gain.value = 0;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🕯️';
+  }
+
+  function playSlideSound(speed) {
+    if (!audioInit || isMuted || !isHovering) return;
+    const t = audioCtx.currentTime;
+    
+    if (speed > 2) {
+      const vol = Math.min(speed * 0.005, 0.15);
+      slideGain.gain.setTargetAtTime(vol, t, 0.05);
+      lastSlideTime = t;
+    }
+    
+    // Quick fade out if stopped
+    setTimeout(() => {
+      if (audioCtx.currentTime - lastSlideTime >= 0.1) {
+        slideGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+      }
+    }, 150);
+  }
+
+  document.body.addEventListener('click', () => {
+    if(!audioInit && !isMuted) initAudio();
+  }, {once:true});
+
+</script>
+</body>
+</html>

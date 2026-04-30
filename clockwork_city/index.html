@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Clockwork City</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #121517;
+    --brass: #b5a642;
+    --brass-dark: #7a6e27;
+    --copper: #b87333;
+    --copper-dark: #7c481e;
+    --iron: #434b4d;
+    --iron-dark: #222728;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: var(--brass);
+    font-family: 'Space Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* Dummy height for scrolling */
+  #scroll-dummy {
+    height: 30000px; /* Lots of scroll room */
+    width: 1px;
+  }
+
+  /* Isometric Viewport */
+  .viewport {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 2000px;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  /* The City Board */
+  .city-grid {
+    position: relative;
+    width: 1200px;
+    height: 1200px;
+    transform-style: preserve-3d;
+    /* Isometric transform */
+    transform: rotateX(60deg) rotateZ(-45deg);
+    background: radial-gradient(circle, rgba(67, 75, 77, 0.2) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  /* Gear Architecture */
+  .gear-node {
+    position: absolute;
+    transform-style: preserve-3d;
+    /* Rotation driven by JS */
+  }
+
+  .gear {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    /* 3D thickness */
+    transform-style: preserve-3d;
+  }
+
+  .gear::before, .gear::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: inherit;
+    width: 100%; height: 100%;
+  }
+  .gear::after {
+    transform: translate(-50%, -50%) translateZ(-10px); /* Extrusion */
+    filter: brightness(0.5);
+  }
+
+  /* Teeth via conic-gradient or dashed borders (dashed border is faster for performance) */
+  .gear-brass {
+    background: radial-gradient(circle, var(--brass) 40%, transparent 40%, transparent 60%, var(--brass) 60%);
+    border: 15px dashed var(--brass-dark);
+    box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.8);
+  }
+
+  .gear-copper {
+    background: radial-gradient(circle, var(--copper) 30%, transparent 30%, transparent 70%, var(--copper) 70%);
+    border: 20px dashed var(--copper-dark);
+    box-shadow: 0 0 30px rgba(0,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.9);
+  }
+
+  .gear-iron {
+    background: radial-gradient(circle, var(--iron) 50%, transparent 50%, transparent 80%, var(--iron) 80%);
+    border: 10px dashed var(--iron-dark);
+    box-shadow: 0 0 15px rgba(0,0,0,0.4), inset 0 0 5px rgba(0,0,0,0.7);
+  }
+
+  /* Center Pins */
+  .pin {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) translateZ(10px);
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff, #444);
+    box-shadow: 0 10px 10px rgba(0,0,0,0.5);
+  }
+
+  /* Building elements rising from gears */
+  .building {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform-style: preserve-3d;
+    background: rgba(181, 166, 66, 0.2);
+    border: 2px solid var(--brass);
+    /* Dynamic heights via JS */
+  }
+
+  /* UI Layer */
+  .ui-layer {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 10;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2rem;
+  }
+
+  .title {
+    font-family: 'Cinzel', serif;
+    font-size: 3rem;
+    color: var(--brass);
+    text-shadow: 0 0 20px rgba(181, 166, 66, 0.5);
+    letter-spacing: 0.1em;
+  }
+
+  .instruction {
+    font-size: 0.9rem;
+    color: rgba(181, 166, 66, 0.5);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .time-readout {
+    font-size: 1.5rem;
+    color: var(--copper);
+  }
+
+  .audio-toggle {
+    position: absolute;
+    top: 2rem; right: 2rem;
+    background: rgba(18, 21, 23, 0.8);
+    border: 1px solid var(--brass);
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    color: var(--brass);
+    cursor: pointer;
+    pointer-events: auto;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    backdrop-filter: blur(5px);
+  }
+</style>
+</head>
+<body>
+
+  <div id="scroll-dummy"></div>
+
+  <div class="viewport">
+    <div class="city-grid" id="city">
+      <!-- Gears generated via JS -->
+    </div>
+  </div>
+
+  <div class="ui-layer">
+    <div>
+      <div class="title">THE CLOCKWORK CITY</div>
+      <div class="instruction">SCROLL TO ADVANCE TIME</div>
+    </div>
+    <div class="time-readout" id="time-display">00:00:00:000</div>
+    <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">⚙️</button>
+  </div>
+
+<script>
+  // City Generation
+  const city = document.getElementById('city');
+  const gears = [];
+  
+  // Gear definitions: {x, y, r, type, ratio, dir}
+  // Base central gear
+  const gearLayout = [
+    {x: 600, y: 600, r: 150, type: 'gear-copper', dir: 1, z: 0},
+    // Ring 1
+    {x: 400, y: 600, r: 80, type: 'gear-brass', dir: -1, z: 10},
+    {x: 800, y: 600, r: 80, type: 'gear-brass', dir: -1, z: 10},
+    {x: 600, y: 400, r: 80, type: 'gear-brass', dir: -1, z: 10},
+    {x: 600, y: 800, r: 80, type: 'gear-brass', dir: -1, z: 10},
+    // Ring 2 (interlocking with ring 1)
+    {x: 250, y: 600, r: 100, type: 'gear-iron', dir: 1, z: -10},
+    {x: 950, y: 600, r: 100, type: 'gear-iron', dir: 1, z: -10},
+    {x: 600, y: 250, r: 100, type: 'gear-iron', dir: 1, z: -10},
+    {x: 600, y: 950, r: 100, type: 'gear-iron', dir: 1, z: -10},
+    // Offshoots
+    {x: 350, y: 350, r: 120, type: 'gear-copper', dir: 1, z: 20}, // Driven by (600,400) and (400,600) theoretically, dir must match
+    {x: 850, y: 350, r: 120, type: 'gear-copper', dir: 1, z: 20},
+    {x: 350, y: 850, r: 120, type: 'gear-copper', dir: 1, z: 20},
+    {x: 850, y: 850, r: 120, type: 'gear-copper', dir: 1, z: 20},
+    // Small details
+    {x: 200, y: 350, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 350, y: 200, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 1000, y: 350, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 850, y: 200, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 200, y: 850, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 350, y: 1000, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 1000, y: 850, r: 50, type: 'gear-brass', dir: -1, z: 5},
+    {x: 850, y: 1000, r: 50, type: 'gear-brass', dir: -1, z: 5},
+  ];
+
+  gearLayout.forEach((g, i) => {
+    const node = document.createElement('div');
+    node.className = 'gear-node';
+    node.style.left = `${g.x}px`;
+    node.style.top = `${g.y}px`;
+    node.style.transform = `translateZ(${g.z}px)`;
+    
+    const gearEl = document.createElement('div');
+    gearEl.className = `gear ${g.type}`;
+    gearEl.style.width = `${g.r * 2}px`;
+    gearEl.style.height = `${g.r * 2}px`;
+    
+    const pin = document.createElement('div');
+    pin.className = 'pin';
+    pin.style.width = `${g.r * 0.2}px`;
+    pin.style.height = `${g.r * 0.2}px`;
+    
+    // Some gears have "buildings" (extruded towers)
+    if (i % 3 === 0) {
+      const bldg = document.createElement('div');
+      bldg.className = 'building';
+      const w = g.r * 0.4;
+      const h = g.r * 0.8;
+      bldg.style.width = `${w}px`;
+      bldg.style.height = `${w}px`;
+      bldg.style.transform = `translate(-50%, -50%) translateZ(${h/2}px) rotateX(90deg)`; // Simplistic 3D box approximation
+      // Full 3D box is complex in pure CSS without many divs, we'll use a rotated plane as a symbolic tower.
+      gearEl.appendChild(bldg);
+    }
+    
+    gearEl.appendChild(pin);
+    node.appendChild(gearEl);
+    city.appendChild(node);
+    
+    // Store reference for animation
+    gears.push({
+      element: node,
+      baseRatio: 150 / g.r, // Smaller gears rotate faster
+      dir: g.dir
+    });
+  });
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.4;
+    masterGain.connect(audioCtx.destination);
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (masterGain) masterGain.gain.value = isMuted ? 0 : 0.4;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '⚙️';
+  }
+
+  // Audio trigger based on scroll distance
+  let lastTickDist = 0;
+  function playTick(speed) {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    // Mechanical click
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800 + Math.random()*200, t);
+    osc.frequency.exponentialRampToValueAtTime(100, t + 0.05);
+    
+    // Volume based on speed
+    const vol = Math.min(0.3 + speed * 0.05, 0.8);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 0.05);
+    
+    // Occasional low metallic clunk
+    if (Math.random() > 0.8) {
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(200, t);
+      osc2.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+      
+      gain2.gain.setValueAtTime(0.5, t);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      
+      osc2.connect(gain2);
+      gain2.connect(masterGain);
+      osc2.start(t);
+      osc2.stop(t + 0.2);
+    }
+  }
+
+  // Scroll Animation Loop
+  let targetRotation = 0;
+  let currentRotation = 0;
+  let ease = 0.1;
+  const timeDisplay = document.getElementById('time-display');
+
+  window.addEventListener('scroll', () => {
+    // Each 10px scrolled = 1 degree of base rotation
+    targetRotation = window.scrollY / 10;
+    if (!audioInit && !isMuted) initAudio();
+  });
+
+  function renderLoop() {
+    const diff = targetRotation - currentRotation;
+    currentRotation += diff * ease;
+    
+    // Trigger audio based on delta
+    const absDiff = Math.abs(diff);
+    if (absDiff > 0.1) {
+      lastTickDist += absDiff;
+      if (lastTickDist > 2) { // Play tick every 2 degrees of movement
+        playTick(absDiff);
+        lastTickDist = 0;
+      }
+    }
+    
+    // Update Gears
+    gears.forEach(g => {
+      const r = currentRotation * g.baseRatio * g.dir;
+      g.element.style.transform = `rotateZ(${r}deg)`;
+    });
+    
+    // Update Time Display
+    const totalSeconds = Math.floor(currentRotation * 3600); // Abstract time metric
+    const h = String(Math.floor(totalSeconds / 3600) % 24).padStart(2, '0');
+    const m = String(Math.floor(totalSeconds / 60) % 60).padStart(2, '0');
+    const s = String(totalSeconds % 60).padStart(2, '0');
+    const ms = String(Math.floor((currentRotation * 1000) % 1000)).padStart(3, '0');
+    timeDisplay.innerText = `${h}:${m}:${s}:${ms}`;
+    
+    requestAnimationFrame(renderLoop);
+  }
+  
+  requestAnimationFrame(renderLoop);
+
+</script>
+</body>
+</html>

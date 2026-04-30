@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Subway to Nowhere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0a0c;
+    --car-dark: #1a1a20;
+    --car-light: #2a2a30;
+    --window-glow: #e0e0ff;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: #fff;
+    font-family: 'Courier Prime', monospace;
+    overflow-x: hidden;
+    height: 100vh;
+  }
+
+  /* Dummy scroll height */
+  #scroll-dummy {
+    height: 20000px;
+    width: 1px;
+  }
+
+  .viewport {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    z-index: 1;
+    background: var(--bg-dark);
+    transition: background 0.5s;
+  }
+
+  /* Blackout state */
+  .viewport.blackout {
+    background: #000;
+  }
+  .viewport.blackout .subway-car { opacity: 0.05; }
+  .viewport.blackout .tunnel-view { opacity: 0; }
+
+  /* Subway Car Interior */
+  .subway-car {
+    position: relative;
+    width: 90vw;
+    height: 80vh;
+    max-width: 1200px;
+    background: linear-gradient(to bottom, var(--car-dark), var(--car-light) 20%, var(--car-dark) 80%, #000);
+    border-radius: 20px;
+    box-shadow: inset 0 0 100px #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 50px;
+    z-index: 10;
+    transition: opacity 0.2s;
+  }
+
+  /* The Window */
+  .window-frame {
+    width: 100%;
+    height: 100%;
+    border: 20px solid #111;
+    border-radius: 15px;
+    background: #000;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.8);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Reflections on Glass */
+  .window-glass {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .seat-reflection {
+    position: absolute;
+    bottom: -50px; left: 10%;
+    width: 80%; height: 150px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 10px;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  /* Tunnel Background Canvas */
+  canvas#tunnel {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 5;
+    filter: blur(2px) contrast(1.2);
+  }
+
+  /* UI Layer */
+  .ui-panel {
+    position: fixed;
+    top: 2rem; left: 2rem;
+    z-index: 30;
+    color: rgba(255,255,255,0.5);
+    text-shadow: 0 0 5px rgba(0,0,0,1);
+  }
+  
+  .speed-readout {
+    font-size: 2rem;
+    color: var(--window-glow);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+
+  .audio-toggle {
+    position: fixed;
+    top: 2rem; right: 2rem;
+    background: rgba(10,10,12,0.8);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    color: white;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100;
+    pointer-events: auto;
+  }
+
+  .flicker-anim {
+    animation: lightFlicker 0.5s ease-in-out;
+  }
+
+  @keyframes lightFlicker {
+    0% { opacity: 1; }
+    10% { opacity: 0; }
+    20% { opacity: 1; }
+    40% { opacity: 0.2; }
+    50% { opacity: 1; }
+    70% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+</style>
+</head>
+<body>
+
+  <div id="scroll-dummy"></div>
+
+  <div class="ui-panel">
+    <div class="speed-readout" id="speed">0 KM/H</div>
+    <div>SCROLL TO ACCELERATE</div>
+  </div>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">🚇</button>
+
+  <div class="viewport" id="viewport">
+    <div class="subway-car" id="car">
+      <div class="window-frame">
+        <canvas id="tunnel"></canvas>
+        <div class="window-glass">
+          <div class="seat-reflection"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Tunnel Visuals
+  const canvas = document.getElementById('tunnel');
+  const ctx = canvas.getContext('2d');
+  
+  let lights = [];
+  let pillars = [];
+
+  function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  // Give time for layout
+  setTimeout(resizeCanvas, 100);
+
+  // Train Physics
+  let targetSpeed = 0;
+  let currentSpeed = 0;
+  let scrollPos = 0;
+  
+  const speedDisplay = document.getElementById('speed');
+  const viewport = document.getElementById('viewport');
+  const car = document.getElementById('car');
+
+  let blackoutTimer = null;
+  let isBlackout = false;
+
+  window.addEventListener('scroll', () => {
+    // Determine speed from scroll depth
+    // Map scroll to speed: 0 = 0km/h, 10000 = ~120km/h
+    targetSpeed = Math.min((window.scrollY / 10000) * 120, 150);
+    if (!audioInit && !isMuted) initAudio();
+  });
+
+  function spawnTunnelObjects() {
+    // Generate static layout that loops
+    for(let i=0; i<20; i++) {
+      // Light strips on roof
+      lights.push({
+        x: i * 800,
+        w: 300,
+        y: 20
+      });
+      // Pillars
+      pillars.push({
+        x: i * 400 + 200,
+        w: 80
+      });
+    }
+  }
+  spawnTunnelObjects();
+
+  let tunnelOffset = 0;
+
+  function renderLoop() {
+    // Accelerate/Decelerate
+    currentSpeed += (targetSpeed - currentSpeed) * 0.05;
+    
+    speedDisplay.innerText = `${Math.floor(currentSpeed)} KM/H`;
+
+    // Blackout Logic
+    if (currentSpeed < 5 && targetSpeed === 0) {
+      if (!isBlackout && !blackoutTimer) {
+        blackoutTimer = setTimeout(() => {
+          car.classList.add('flicker-anim');
+          setTimeout(() => {
+            viewport.classList.add('blackout');
+            isBlackout = true;
+          }, 500);
+        }, 2000);
+      }
+    } else {
+      if (isBlackout || blackoutTimer) {
+        clearTimeout(blackoutTimer);
+        blackoutTimer = null;
+        isBlackout = false;
+        viewport.classList.remove('blackout');
+        car.classList.remove('flicker-anim');
+      }
+    }
+
+    // Move Tunnel
+    tunnelOffset += currentSpeed * 2; // px per frame
+    if (tunnelOffset > 16000) tunnelOffset = 0; // Loop seamlessly
+
+    // Draw
+    ctx.fillStyle = '#0a0a0c'; // tunnel dark
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!isBlackout) {
+      // Draw Grid lines on wall
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 2;
+      for(let i=0; i<canvas.height; i+=50) {
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+      }
+
+      // Draw objects
+      lights.forEach(l => {
+        let drawX = l.x - tunnelOffset;
+        // Wrap around
+        while(drawX < -1000) drawX += 16000;
+        
+        if (drawX > -1000 && drawX < canvas.width) {
+          // Draw blurred light
+          const grad = ctx.createLinearGradient(drawX, l.y, drawX+l.w, l.y+50);
+          grad.addColorStop(0, 'rgba(220, 220, 255, 0.8)');
+          grad.addColorStop(1, 'rgba(150, 150, 255, 0.2)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(drawX, l.y, l.w, 40);
+        }
+      });
+
+      pillars.forEach(p => {
+        let drawX = p.x - tunnelOffset;
+        while(drawX < -1000) drawX += 16000;
+        
+        if (drawX > -1000 && drawX < canvas.width) {
+          ctx.fillStyle = '#111'; // dark pillar
+          ctx.fillRect(drawX, 0, p.w, canvas.height);
+          // Highlight edge
+          ctx.fillStyle = 'rgba(255,255,255,0.1)';
+          ctx.fillRect(drawX + p.w - 5, 0, 5, canvas.height);
+        }
+      });
+    }
+
+    // Audio update
+    if (audioInit && !isMuted) {
+      updateAudioPhysics(currentSpeed);
+    }
+
+    // Shake car based on speed
+    if (currentSpeed > 10 && !isBlackout) {
+      const shakeY = (Math.random() - 0.5) * (currentSpeed / 20);
+      car.style.transform = `translateY(${shakeY}px)`;
+    } else {
+      car.style.transform = `translateY(0)`;
+    }
+
+    requestAnimationFrame(renderLoop);
+  }
+  
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain, rumbleGain, clatterGain;
+  let clatterOsc;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Deep continuous rumble (filtered noise + low osc)
+    const rumbleOsc = audioCtx.createOscillator();
+    rumbleOsc.type = 'sawtooth';
+    rumbleOsc.frequency.value = 40;
+    
+    const rumbleFilter = audioCtx.createBiquadFilter();
+    rumbleFilter.type = 'lowpass';
+    rumbleFilter.frequency.value = 100;
+    
+    rumbleGain = audioCtx.createGain();
+    rumbleGain.gain.value = 0; // Depends on speed
+    
+    rumbleOsc.connect(rumbleFilter);
+    rumbleFilter.connect(rumbleGain);
+    rumbleGain.connect(masterGain);
+    rumbleOsc.start();
+
+    // Rhythmic Clatter
+    // We'll simulate clatter using an LFO modulating the amplitude of white noise
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    
+    const clatterFilter = audioCtx.createBiquadFilter();
+    clatterFilter.type = 'bandpass';
+    clatterFilter.frequency.value = 800; // Track frequency
+    
+    clatterGain = audioCtx.createGain();
+    clatterGain.gain.value = 0; // Depends on speed
+    
+    noise.connect(clatterFilter);
+    clatterFilter.connect(clatterGain);
+    clatterGain.connect(masterGain);
+    noise.start();
+
+    // LFO for rhythm
+    clatterOsc = audioCtx.createOscillator();
+    clatterOsc.type = 'square';
+    clatterOsc.frequency.value = 0; // Rate depends on speed
+    
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 0.5; // Depth of modulation
+    clatterOsc.connect(lfoGain);
+    // Modulate the gain of the noise
+    lfoGain.connect(clatterGain.gain);
+    clatterOsc.start();
+
+    audioInit = true;
+    requestAnimationFrame(renderLoop);
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    else if (!isMuted && !audioInit) requestAnimationFrame(renderLoop); // fallback start
+    
+    isMuted = !isMuted;
+    if (masterGain) masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.5, audioCtx.currentTime, 0.1);
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🚇';
+  }
+
+  function updateAudioPhysics(speed) {
+    const t = audioCtx.currentTime;
+    
+    if (speed < 1) {
+      rumbleGain.gain.setTargetAtTime(0, t, 0.1);
+      clatterOsc.frequency.setTargetAtTime(0, t, 0.1);
+      // Base clatter gain needs to drop if LFO stops high
+      clatterGain.gain.setTargetAtTime(0, t, 0.1);
+      return;
+    }
+
+    // Map speed 0-120 to audio parameters
+    // Rumble volume increases with speed
+    const rVol = Math.min((speed / 120) * 0.4 + 0.1, 0.6);
+    rumbleGain.gain.setTargetAtTime(rVol, t, 0.1);
+
+    // Clatter speed (LFO Hz)
+    // 10kmh = 2Hz, 120kmh = 15Hz
+    const clatHz = Math.max((speed / 120) * 15, 2);
+    clatterOsc.frequency.setTargetAtTime(clatHz, t, 0.1);
+
+    // Base gain for clatter (LFO swings around this)
+    const cVol = Math.min((speed / 120) * 0.3 + 0.1, 0.4);
+    // Disconnect LFO temporarily to reset base gain safely? No, setTargetAtTime handles it.
+    // LFO modulates the gain parameter, so base value matters.
+    clatterGain.gain.setTargetAtTime(cVol, t, 0.1);
+  }
+
+  // Start logic if not muted but user clicks
+  document.body.addEventListener('click', () => {
+    if(!audioInit && !isMuted) initAudio();
+  }, {once:true});
+
+  // Start visual loop immediately
+  requestAnimationFrame(renderLoop);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>startup_os</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-blur: blur(25px) saturate(150%);
+    --accent: #5e6ad2;
+    --accent-light: #9ba4f5;
+    --text-main: #ffffff;
+    --text-muted: #a0a5b5;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: #0b0f19;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    user-select: none;
+  }
+
+  /* Animated Mesh Gradient Background */
+  #desktop-bg {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+    background: radial-gradient(circle at 0% 0%, rgba(94, 106, 210, 0.2), transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(255, 107, 157, 0.15), transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(0, 255, 136, 0.1), transparent 50%);
+    animation: bgPulse 20s ease-in-out infinite alternate;
+  }
+  @keyframes bgPulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.2); }
+  }
+
+  /* Top Bar */
+  #top-bar {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 30px;
+    background: rgba(11, 15, 25, 0.6);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--glass-border);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px; font-size: 0.8rem; z-index: 1000;
+  }
+  .tb-left { display: flex; gap: 20px; align-items: center; }
+  .tb-logo { font-weight: 600; letter-spacing: 1px; color: var(--accent-light); }
+  .tb-menu { display: flex; gap: 15px; color: var(--text-muted); cursor: pointer; }
+  .tb-right { display: flex; gap: 15px; align-items: center; }
+
+  /* Window System */
+  .window {
+    position: absolute;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .window.active {
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+  }
+  .win-header {
+    height: 40px; border-bottom: 1px solid var(--glass-border);
+    display: flex; align-items: center; padding: 0 15px;
+    background: rgba(255,255,255,0.02);
+    cursor: grab;
+  }
+  .win-header:active { cursor: grabbing; }
+  .win-controls { display: flex; gap: 8px; margin-right: 15px; }
+  .win-btn { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+  .win-btn.close { background: #ff5f56; }
+  .win-btn.min { background: #ffbd2e; }
+  .win-btn.max { background: #27c93f; }
+  .win-title { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); pointer-events: none; }
+  .win-content { flex: 1; position: relative; overflow: hidden; }
+
+  /* Metrics App */
+  #win-metrics { width: 600px; height: 400px; top: 80px; left: 50px; }
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; height: 100%; }
+  .m-card { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); }
+  .m-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+  .m-val { font-family: 'Space Mono'; font-size: 2rem; color: var(--accent-light); }
+  .m-val.green { color: #00ff88; }
+  .m-chart-container { grid-column: 1 / -1; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); position: relative; padding: 10px; display:flex; flex-direction:column; }
+  #m-canvas { width: 100%; flex: 1; }
+
+  /* Terminal App */
+  #win-term { width: 500px; height: 350px; top: 120px; left: 680px; }
+  .term-content { padding: 15px; font-family: 'Space Mono'; font-size: 0.8rem; color: #00ff88; overflow-y: auto; height: 100%; display: flex; flex-direction: column; }
+  .term-lines { flex: 1; overflow-y: auto; }
+  .t-line { margin-bottom: 4px; }
+  .t-input-wrap { display: flex; margin-top: 10px; }
+  .t-prompt { margin-right: 10px; }
+  #t-input { background: transparent; border: none; color: inherit; font-family: inherit; font-size: inherit; flex: 1; outline: none; }
+
+  /* Chat App */
+  #win-chat { width: 350px; height: 500px; top: 300px; left: 150px; }
+  .chat-layout { display: flex; flex-direction: column; height: 100%; }
+  .chat-msgs { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+  .chat-msg { display: flex; gap: 10px; animation: popIn 0.3s ease; }
+  @keyframes popIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+  .c-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .c-bubble { background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 0 12px 12px 12px; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.05); }
+  .c-name { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 3px; }
+  .chat-input { padding: 15px; border-top: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); }
+  .c-input-box { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 8px 15px; color: #fff; outline: none; font-family: inherit; }
+
+  #mute-btn { cursor: pointer; background: none; border: none; font-size: 1rem; opacity: 0.6; transition: 0.3s; }
+  #mute-btn:hover { opacity: 1; }
+
+  @media(max-width: 900px) {
+    body { overflow-y: auto; padding-top: 40px; padding-bottom: 20px; }
+    .window { position: relative; top: 0 !important; left: 0 !important; width: 90vw !important; margin: 0 auto 20px auto; height: 400px !important; }
+    .win-header { cursor: default; }
+  }
+</style>
+</head>
+<body>
+
+<div id="desktop-bg"></div>
+
+<div id="top-bar">
+  <div class="tb-left">
+    <div class="tb-logo">✦ VANGUARD_OS</div>
+    <div class="tb-menu">
+      <span>File</span><span>Edit</span><span>View</span><span>System</span>
+    </div>
+  </div>
+  <div class="tb-right">
+    <button id="mute-btn">🔈</button>
+    <span>WIFI</span>
+    <span>100%</span>
+    <span id="clock">12:00</span>
+  </div>
+</div>
+
+<!-- Metrics Window -->
+<div class="window active" id="win-metrics" style="z-index: 10;">
+  <div class="win-header">
+    <div class="win-controls"><div class="win-btn close"></div><div class="win-btn min"></div><div class="win-btn max"></div></div>
+    <div class="win-title">Metrics_Dashboard.app</div>
+  </div>
+  <div class="win-content metrics-grid">
+    <div class="m-card">
+      <div class="m-label">Monthly Recurring Revenue</div>
+      <div class="m-val green" id="v-mrr">$142,590</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Active Connections</div>
+      <div class="m-val" id="v-users">8,204</div>
+    </div>
+    <div class="m-chart-container">
+      <div class="m-label" style="position:absolute; top:15px; left:15px;">SERVER LOAD</div>
+      <canvas id="m-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Terminal Window -->
+<div class="window" id="win-term" style="z-index: 9;">
+  <div class="win-header">
+    <div class="win-controls"><div class="win-btn close"></div><div class="win-btn min"></div><div class="win-btn max"></div></div>
+    <div class="win-title">Terminal.app</div>
+  </div>
+  <div class="win-content term-content">
+    <div class="term-lines" id="t-lines">
+      <div class="t-line">Vanguard OS Kernel v4.2.1 initialized.</div>
+      <div class="t-line">Establishing secure link... SUCCESS.</div>
+    </div>
+    <div class="t-input-wrap">
+      <span class="t-prompt">admin@vanguard:~$</span>
+      <input type="text" id="t-input" autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+</div>
+
+<!-- Chat Window -->
+<div class="window" id="win-chat" style="z-index: 8;">
+  <div class="win-header">
+    <div class="win-controls"><div class="win-btn close"></div><div class="win-btn min"></div><div class="win-btn max"></div></div>
+    <div class="win-title">Team_Chat.app</div>
+  </div>
+  <div class="win-content chat-layout">
+    <div class="chat-msgs" id="c-msgs">
+      <div class="chat-msg">
+        <div class="c-avatar" style="background:#ff6b9d"></div>
+        <div>
+          <div class="c-name">Alice_Eng</div>
+          <div class="c-bubble">Servers are holding up well against the spike.</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-input">
+      <input type="text" class="c-input-box" placeholder="Message #general...">
+    </div>
+  </div>
+</div>
+
+<script>
+  const isMobile = window.innerWidth <= 900;
+
+  // --- Clock ---
+  setInterval(() => {
+    const d = new Date();
+    document.getElementById('clock').innerText = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }, 1000);
+
+  // --- Window Management ---
+  const windows = document.querySelectorAll('.window');
+  let zIndexCount = 10;
+
+  windows.forEach(win => {
+    win.addEventListener('mousedown', () => {
+      windows.forEach(w => w.classList.remove('active'));
+      win.classList.add('active');
+      zIndexCount++;
+      win.style.zIndex = zIndexCount;
+      if(audioInit && !isMuted) playClickSound();
+    });
+
+    if(!isMobile) {
+      const header = win.querySelector('.win-header');
+      let isDragging = false;
+      let startX, startY, initialX, initialY;
+
+      header.addEventListener('mousedown', e => {
+        isDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        initialX = win.offsetLeft; initialY = win.offsetTop;
+      });
+
+      window.addEventListener('mousemove', e => {
+        if(!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        win.style.left = `${initialX + dx}px`;
+        win.style.top = `${initialY + dy}px`;
+      });
+
+      window.addEventListener('mouseup', () => { isDragging = false; });
+    }
+  });
+
+  // --- Metrics App ---
+  let mrr = 142590;
+  let users = 8204;
+  const elMrr = document.getElementById('v-mrr');
+  const elUsers = document.getElementById('v-users');
+  
+  setInterval(() => {
+    if(Math.random() > 0.5) {
+      mrr += Math.floor(Math.random() * 50);
+      elMrr.innerText = `$${mrr.toLocaleString()}`;
+    }
+    if(Math.random() > 0.3) {
+      users += Math.floor(Math.random() * 10) - 3;
+      elUsers.innerText = users.toLocaleString();
+    }
+  }, 1000);
+
+  // Chart
+  const canvas = document.getElementById('m-canvas');
+  const ctx = canvas.getContext('2d');
+  let loadData = [];
+  for(let i=0; i<50; i++) loadData.push(50 + Math.random()*20);
+
+  function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth - 20;
+    canvas.height = canvas.parentElement.clientHeight - 40;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  setTimeout(resizeCanvas, 100); // initial sizing
+
+  function drawChart() {
+    if(!canvas.width) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    
+    ctx.beginPath();
+    ctx.strokeStyle = '#9ba4f5';
+    ctx.lineWidth = 2;
+    const w = canvas.width / (loadData.length - 1);
+    
+    for(let i=0; i<loadData.length; i++) {
+      const x = i * w;
+      const y = canvas.height - (loadData[i] / 100 * canvas.height);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    
+    // Fill
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+    grad.addColorStop(0, 'rgba(155, 164, 245, 0.3)');
+    grad.addColorStop(1, 'rgba(155, 164, 245, 0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  setInterval(() => {
+    let last = loadData[loadData.length-1];
+    let next = last + (Math.random()-0.5)*15;
+    next = Math.max(20, Math.min(next, 95));
+    loadData.push(next);
+    loadData.shift();
+    drawChart();
+  }, 500);
+
+  // --- Terminal App ---
+  const termLines = document.getElementById('t-lines');
+  const termInput = document.getElementById('t-input');
+  
+  const autoLogs = [
+    "Scaling DB instances...", "Running health checks... OK",
+    "Incoming traffic spike detected. Auto-scaling workers.",
+    "Deploying patch 2.4.1...", "Cache cleared."
+  ];
+
+  function printTerm(txt, color='#00ff88') {
+    const l = document.createElement('div');
+    l.className = 't-line';
+    l.style.color = color;
+    l.innerText = txt;
+    termLines.appendChild(l);
+    termLines.scrollTop = termLines.scrollHeight;
+  }
+
+  setInterval(() => {
+    if(Math.random() > 0.7) printTerm(`> [SYS] ${autoLogs[Math.floor(Math.random()*autoLogs.length)]}`, '#a0a5b5');
+  }, 4000);
+
+  termInput.addEventListener('keypress', e => {
+    if(e.key === 'Enter') {
+      const val = termInput.value.trim();
+      if(val) {
+        printTerm(`admin@vanguard:~$ ${val}`, '#fff');
+        termInput.value = '';
+        setTimeout(() => {
+          if(val === 'clear') termLines.innerHTML = '';
+          else if (val === 'help') printTerm("Commands: clear, help, status, deploy");
+          else if (val === 'status') printTerm("All systems operational. Load: Normal.", '#00ff88');
+          else if (val === 'deploy') { printTerm("Deploying to production...", '#ffbd2e'); setTimeout(() => printTerm("Deployment successful.", '#00ff88'), 1500); }
+          else printTerm(`command not found: ${val}`, '#ff5f56');
+        }, 300);
+      }
+    }
+  });
+
+  // --- Chat App ---
+  const chatMsgs = document.getElementById('c-msgs');
+  const chatInput = document.querySelector('.c-input-box');
+  
+  const bots = [
+    { name: 'Bob_Dev', color: '#4ecdc4', msgs: ["PR is merged.", "Anyone checked the logs?", "Coffee break ☕"] },
+    { name: 'CEO', color: '#ffbd2e', msgs: ["Great work today team.", "Let's push the release.", "Investors loved the demo."] }
+  ];
+
+  function addChat(name, color, text) {
+    const m = document.createElement('div');
+    m.className = 'chat-msg';
+    m.innerHTML = `
+      <div class="c-avatar" style="background:${color}"></div>
+      <div>
+        <div class="c-name">${name}</div>
+        <div class="c-bubble">${text}</div>
+      </div>
+    `;
+    chatMsgs.appendChild(m);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    if(audioInit && !isMuted) playNotifSound();
+  }
+
+  setInterval(() => {
+    if(Math.random() > 0.6) {
+      const bot = bots[Math.floor(Math.random()*bots.length)];
+      addChat(bot.name, bot.color, bot.msgs[Math.floor(Math.random()*bot.msgs.length)]);
+    }
+  }, 8000);
+
+  chatInput.addEventListener('keypress', e => {
+    if(e.key === 'Enter' && chatInput.value.trim()) {
+      addChat('You', '#5e6ad2', chatInput.value);
+      chatInput.value = '';
+    }
+  });
+
+  // --- Audio Engine ---
+  let audioCtx, masterGain, isMuted = true, audioInit = false;
+  
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    muteBtn.innerText = isMuted ? '🔈' : '🔊';
+    muteBtn.style.opacity = isMuted ? 0.6 : 1;
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.3, audioCtx.currentTime, 0.1);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+    
+    // Background sequencer (fast, hi-tech)
+    const notes = [440, 523.25, 659.25, 880]; // A4, C5, E5, A5
+    let step = 0;
+    
+    setInterval(() => {
+      if(isMuted) return;
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.value = notes[step % notes.length];
+      
+      // Pluck envelope
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2000, t);
+      filter.frequency.exponentialRampToValueAtTime(500, t + 0.2);
+      
+      osc.connect(filter); filter.connect(g); g.connect(masterGain);
+      osc.start(t); osc.stop(t + 0.3);
+      
+      step++;
+    }, 250); // 4 steps a second = 120bpm 8th notes
+
+    audioInit = true;
+  }
+
+  function playNotifSound() {
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.linearRampToValueAtTime(1046.50, t + 0.05);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.1, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(t); osc.stop(t + 0.25);
+  }
+
+  function playClickSound() {
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1500, t);
+    osc.frequency.exponentialRampToValueAtTime(500, t + 0.05);
+    g.gain.setValueAtTime(0.05, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(t); osc.stop(t + 0.1);
+  }
+
+</script>
+</body>
+</html>

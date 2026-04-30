@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>The Monolith's Song</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-white: #fcfcfc;
+    --monolith-black: #050505;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-white);
+    color: #111;
+    font-family: 'Cinzel', serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1500px;
+  }
+
+  /* Instruction */
+  .instruction {
+    position: absolute;
+    bottom: 3rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    letter-spacing: 0.5em;
+    color: rgba(0,0,0,0.3);
+    text-align: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* The Monolith Container (handles positioning and shadow) */
+  .monolith-wrapper {
+    position: relative;
+    width: 200px;
+    height: 500px;
+    transform-style: preserve-3d;
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Drop Shadow */
+  .monolith-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 150px; height: 400px;
+    background: rgba(0,0,0,0.15);
+    transform: translate(-50%, -50%) translateZ(-100px) scale(1.1);
+    filter: blur(20px);
+    transition: transform 0.1s ease-out;
+    pointer-events: none;
+  }
+
+  /* The 3D Object */
+  .monolith {
+    position: absolute;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .face {
+    position: absolute;
+    background: var(--monolith-black);
+    border: 1px solid #1a1a1a;
+  }
+
+  /* 1x4x9 proportions (roughly 50x200x450 for scale here) */
+  .front  { width: 200px; height: 500px; transform: translateZ(25px); background: #0a0a0a; box-shadow: inset 0 0 50px rgba(255,255,255,0.05); }
+  .back   { width: 200px; height: 500px; transform: rotateY(180deg) translateZ(25px); }
+  .right  { width: 50px; height: 500px; transform: rotateY(90deg) translateZ(175px); background: #000; }
+  .left   { width: 50px; height: 500px; transform: rotateY(-90deg) translateZ(25px); background: #111; }
+  .top    { width: 200px; height: 50px; transform: rotateX(90deg) translateZ(25px); background: #151515; }
+  .bottom { width: 200px; height: 50px; transform: rotateX(-90deg) translateZ(475px); }
+
+  /* Audio Toggle */
+  .audio-toggle {
+    position: absolute;
+    top: 2rem; right: 2rem;
+    background: none;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    color: rgba(0,0,0,0.5);
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100;
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="instruction">APPROACH</div>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">⬛</button>
+
+  <div class="monolith-wrapper" id="wrapper">
+    <div class="monolith">
+      <div class="face front"></div>
+      <div class="face back"></div>
+      <div class="face right"></div>
+      <div class="face left"></div>
+      <div class="face top"></div>
+      <div class="face bottom"></div>
+    </div>
+  </div>
+
+<script>
+  // Parallax Interaction
+  const wrapper = document.getElementById('wrapper');
+  let targetRotX = 0;
+  let targetRotY = 0;
+  let currentRotX = 0;
+  let currentRotY = 0;
+  
+  // Normalized mouse coords (0 to 1)
+  let normX = 0.5;
+  let normY = 0.5;
+
+  window.addEventListener('mousemove', (e) => {
+    // Map mouse position to rotation angles
+    // X axis rotation depends on mouse Y (tilt up/down)
+    // Y axis rotation depends on mouse X (turn left/right)
+    normX = e.clientX / window.innerWidth;
+    normY = e.clientY / window.innerHeight;
+    
+    targetRotY = (normX - 0.5) * 40; // Max 20 deg rotation
+    targetRotX = (0.5 - normY) * 20; // Max 10 deg tilt
+    
+    if(!audioInit && !isMuted) initAudio();
+  });
+
+  function renderLoop() {
+    // Smooth interpolation
+    currentRotX += (targetRotX - currentRotX) * 0.05;
+    currentRotY += (targetRotY - currentRotY) * 0.05;
+    
+    wrapper.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+    
+    // Offset shadow opposite to rotation
+    const shadowOffsetX = currentRotY * -2;
+    const shadowOffsetY = currentRotX * 2;
+    // We update the shadow via a CSS custom property or directly if we selected the pseudo-element. 
+    // Since pseudo-elements are hard to style via inline JS, we'll just animate the wrapper and the shadow's transform is tied to it in CSS implicitly, but we can do a trick:
+    
+    // Update audio formants based on position
+    if (audioInit && !isMuted) {
+      updateChoir(normX, normY);
+    }
+
+    requestAnimationFrame(renderLoop);
+  }
+  
+  requestAnimationFrame(renderLoop);
+
+
+  // Audio System - Generative Choir / Formant Synthesis
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain;
+  
+  // Voices
+  let voices = [];
+  
+  // Base chords (C minor 9)
+  const baseFrequencies = [65.41, 98.00, 155.56, 196.00, 293.66]; // C2, G2, Eb3, G3, D4
+
+  // Formant filter parameters for roughly A, E, I, O, U
+  const formants = {
+    'A': [730, 1090, 2440],
+    'E': [390, 1990, 2550],
+    'I': [270, 2290, 3010],
+    'O': [400, 840, 2820],
+    'U': [300, 870, 2240]
+  };
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Create 5 voices for the chord
+    baseFrequencies.forEach(freq => {
+      // Each voice needs an oscillator rich in harmonics (sawtooth), passed through parallel bandpass filters (formants)
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      
+      // Detune slightly for chorusing
+      const detuneOsc = audioCtx.createOscillator();
+      detuneOsc.type = 'sine';
+      detuneOsc.frequency.value = Math.random() * 2 + 1; // 1-3 Hz
+      const detuneGain = audioCtx.createGain();
+      detuneGain.gain.value = 5; // cents
+      detuneOsc.connect(detuneGain);
+      detuneGain.connect(osc.detune);
+      detuneOsc.start();
+
+      const voiceGain = audioCtx.createGain();
+      voiceGain.gain.value = 0; // Starts silent
+      
+      // 3 parallel filters per voice for formants
+      const f1 = audioCtx.createBiquadFilter();
+      const f2 = audioCtx.createBiquadFilter();
+      const f3 = audioCtx.createBiquadFilter();
+      
+      f1.type = 'bandpass'; f1.Q.value = 10;
+      f2.type = 'bandpass'; f2.Q.value = 10;
+      f3.type = 'bandpass'; f3.Q.value = 10;
+      
+      osc.connect(f1); f1.connect(voiceGain);
+      osc.connect(f2); f2.connect(voiceGain);
+      osc.connect(f3); f3.connect(voiceGain);
+      
+      voiceGain.connect(masterGain);
+      osc.start();
+      
+      voices.push({
+        osc: osc,
+        gain: voiceGain,
+        f1: f1,
+        f2: f2,
+        f3: f3,
+        baseFreq: freq
+      });
+    });
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    
+    const t = audioCtx.currentTime;
+    if (isMuted) {
+      voices.forEach(v => v.gain.gain.setTargetAtTime(0, t, 0.5));
+      document.getElementById('mute-btn').innerText = '🔇';
+    } else {
+      document.getElementById('mute-btn').innerText = '⬛';
+    }
+  }
+
+  function updateChoir(nx, ny) {
+    const t = audioCtx.currentTime;
+    
+    // Choose vowel based on X axis
+    // Interpolate between A -> E -> I -> O -> U
+    const vowelKeys = Object.keys(formants);
+    const index = nx * (vowelKeys.length - 1);
+    const idx1 = Math.floor(index);
+    const idx2 = Math.min(idx1 + 1, vowelKeys.length - 1);
+    const blend = index - idx1;
+    
+    const v1 = formants[vowelKeys[idx1]];
+    const v2 = formants[vowelKeys[idx2]];
+    
+    const targetF1 = v1[0] * (1-blend) + v2[0] * blend;
+    const targetF2 = v1[1] * (1-blend) + v2[1] * blend;
+    const targetF3 = v1[2] * (1-blend) + v2[2] * blend;
+
+    // Volume and Chord Spread based on Y axis
+    // Top of screen: dense harmony, loud
+    // Bottom of screen: sparse, quiet
+    const globalVol = (1 - ny) * 0.15; // Max 0.15 per voice
+    
+    voices.forEach((v, i) => {
+      // Update formants
+      v.f1.frequency.setTargetAtTime(targetF1, t, 0.1);
+      v.f2.frequency.setTargetAtTime(targetF2, t, 0.1);
+      v.f3.frequency.setTargetAtTime(targetF3, t, 0.1);
+      
+      // Update Volume (some voices fade out at bottom)
+      const voiceVol = globalVol * (i === 0 || i === 1 ? 1 : (1 - ny)); 
+      v.gain.gain.setTargetAtTime(voiceVol, t, 0.2);
+    });
+  }
+
+  document.body.addEventListener('click', () => {
+    if(!audioInit && !isMuted) initAudio();
+  }, {once:true});
+
+</script>
+</body>
+</html>

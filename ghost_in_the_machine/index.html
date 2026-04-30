@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Ghost in the Machine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #050a05;
+    --phosphor: #33ff00;
+    --phosphor-dim: #1a8000;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: #000;
+    color: var(--phosphor);
+    font-family: 'VT323', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* CRT Monitor Chassis */
+  .monitor {
+    position: relative;
+    width: 90vw;
+    max-width: 1000px;
+    height: 80vh;
+    background: #111;
+    border-radius: 40px;
+    padding: 30px;
+    box-shadow: 
+      inset 0 0 20px #000,
+      0 0 50px rgba(0,0,0,0.8),
+      0 0 0 20px #1a1a1a;
+  }
+
+  /* The actual screen area */
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-dark);
+    border-radius: 30px; /* CRT curve */
+    overflow: hidden;
+    box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+  }
+
+  /* Scanlines */
+  .screen::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 2;
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+  }
+
+  /* Screen flicker / glow */
+  .screen::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: radial-gradient(circle, rgba(51, 255, 0, 0.05) 0%, transparent 60%);
+    z-index: 3;
+    pointer-events: none;
+    animation: flicker 0.15s infinite;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 0.9; }
+    50% { opacity: 1; }
+    100% { opacity: 0.95; }
+  }
+
+  /* Curved screen bulge effect via inset shadow */
+  .tube-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    box-shadow: inset 0 0 40px rgba(0,0,0,1), inset 0 0 80px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 30px;
+  }
+
+  /* Input Area */
+  .terminal-input {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    color: var(--phosphor);
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
+    line-height: 1.5;
+    padding: 40px;
+    outline: none;
+    resize: none;
+    text-shadow: 0 0 5px var(--phosphor), 0 0 10px var(--phosphor-dim);
+    caret-color: var(--phosphor);
+    z-index: 1;
+    position: relative;
+  }
+
+  .terminal-input::selection {
+    background: var(--phosphor);
+    color: var(--bg-dark);
+  }
+
+  /* Audio Toggle */
+  .audio-toggle {
+    position: absolute;
+    bottom: -60px; right: 0;
+    background: #222;
+    border: 2px solid #333;
+    width: 40px; height: 40px;
+    border-radius: 5px;
+    color: #666;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 5px 0 #111;
+  }
+  .audio-toggle:active {
+    transform: translateY(5px);
+    box-shadow: 0 0 0 #111;
+  }
+  .audio-toggle.on {
+    color: var(--phosphor);
+    border-color: var(--phosphor-dim);
+  }
+
+  .status-led {
+    position: absolute;
+    bottom: -45px; left: 20px;
+    width: 10px; height: 10px;
+    background: var(--phosphor);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--phosphor);
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="monitor">
+    <div class="screen">
+      <textarea class="terminal-input" id="terminal" spellcheck="false" autofocus>SYSTEM READY. 
+AWAITING INPUT...
+>_ </textarea>
+      <div class="tube-overlay"></div>
+    </div>
+    <div class="status-led"></div>
+    <button class="audio-toggle" id="mute-btn">PWR</button>
+  </div>
+
+<script>
+  // Ghost Text Replacement Logic
+  const terminal = document.getElementById('terminal');
+  
+  // Dictionary of replacements (from -> to)
+  const dictionary = {
+    "work": "fade",
+    "happy": "hollow",
+    "love": "forget",
+    "sleep": "surrender",
+    "awake": "dreaming",
+    "morning": "twilight",
+    "friend": "stranger",
+    "home": "the void",
+    "safe": "watched",
+    "time": "entropy",
+    "life": "simulation",
+    "hope": "error",
+    "today": "the end",
+    "hello": "why",
+    "good": "inevitable",
+    "bad": "intended",
+    "me": "it",
+    "i am": "we are",
+    "my": "our",
+    "you": "the machine"
+  };
+
+  let lastValue = terminal.value;
+
+  terminal.addEventListener('input', (e) => {
+    let val = terminal.value;
+    
+    // Only process if we added text
+    if (val.length > lastValue.length) {
+      playTypingSound();
+      
+      // Get the last word typed (look back from cursor)
+      const cursorPos = terminal.selectionStart;
+      const textBeforeCursor = val.substring(0, cursorPos);
+      const words = textBeforeCursor.split(/([\s\.,!?]+)/); // split keeping delimiters
+      
+      if (words.length > 2) {
+        // usually words[words.length-1] is the delimiter (space), words[words.length-2] is the word
+        const lastWord = words[words.length - 2].toLowerCase();
+        
+        if (dictionary[lastWord]) {
+          // Ghost replacement
+          const replacement = dictionary[lastWord];
+          // Preserve original case if possible, but simplicity: lowercase replacement
+          words[words.length - 2] = replacement;
+          
+          const newTextBefore = words.join('');
+          const newText = newTextBefore + val.substring(cursorPos);
+          
+          // Subtle visual glitch
+          terminal.style.textShadow = `0 0 20px #f00, 2px 0 0 #0f0, -2px 0 0 #00f`;
+          setTimeout(() => {
+            terminal.style.textShadow = `0 0 5px var(--phosphor), 0 0 10px var(--phosphor-dim)`;
+          }, 100);
+
+          terminal.value = newText;
+          // Fix cursor position
+          terminal.selectionStart = terminal.selectionEnd = newTextBefore.length;
+          
+          playGhostSound();
+        }
+      }
+    }
+    lastValue = terminal.value;
+  });
+
+  // Audio System
+  let audioCtx;
+  let isPowered = false;
+  let audioInit = false;
+  let masterGain, crtWhineGain, humGain;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // 15kHz CRT Whine
+    const whineOsc = audioCtx.createOscillator();
+    whineOsc.type = 'sine';
+    whineOsc.frequency.value = 15000;
+    
+    crtWhineGain = audioCtx.createGain();
+    crtWhineGain.gain.value = 0; // starts off
+    whineOsc.connect(crtWhineGain);
+    crtWhineGain.connect(masterGain);
+    whineOsc.start();
+
+    // 60Hz Electric Hum
+    const humOsc = audioCtx.createOscillator();
+    humOsc.type = 'sawtooth';
+    humOsc.frequency.value = 60;
+    
+    const humFilter = audioCtx.createBiquadFilter();
+    humFilter.type = 'lowpass';
+    humFilter.frequency.value = 150;
+    
+    humGain = audioCtx.createGain();
+    humGain.gain.value = 0; // starts off
+    
+    humOsc.connect(humFilter);
+    humFilter.connect(humGain);
+    humGain.connect(masterGain);
+    humOsc.start();
+    
+    audioInit = true;
+  }
+
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    if (!audioInit) initAudio();
+    isPowered = !isPowered;
+    
+    if (isPowered) {
+      muteBtn.classList.add('on');
+      // Power on sounds
+      const t = audioCtx.currentTime;
+      crtWhineGain.gain.setTargetAtTime(0.01, t, 0.5); // very faint high pitch
+      humGain.gain.setTargetAtTime(0.03, t, 0.5);
+      
+      // Thump
+      const thump = audioCtx.createOscillator();
+      const tg = audioCtx.createGain();
+      thump.frequency.setValueAtTime(100, t);
+      thump.frequency.exponentialRampToValueAtTime(20, t+0.2);
+      tg.gain.setValueAtTime(0.5, t);
+      tg.gain.exponentialRampToValueAtTime(0.001, t+0.2);
+      thump.connect(tg); tg.connect(masterGain);
+      thump.start(t); thump.stop(t+0.2);
+    } else {
+      muteBtn.classList.remove('on');
+      const t = audioCtx.currentTime;
+      crtWhineGain.gain.setTargetAtTime(0, t, 0.1);
+      humGain.gain.setTargetAtTime(0, t, 0.1);
+    }
+  });
+
+  function playTypingSound() {
+    if (!audioInit || !isPowered) return;
+    const t = audioCtx.currentTime;
+    
+    // Mechanical click
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    // Random pitch for different keys
+    osc.frequency.setValueAtTime(300 + Math.random()*200, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 0.05);
+    
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  function playGhostSound() {
+    if (!audioInit || !isPowered) return;
+    const t = audioCtx.currentTime;
+    
+    // Digital glitch / static burst
+    const bufferSize = audioCtx.sampleRate * 0.2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1000, t);
+    filter.frequency.exponentialRampToValueAtTime(5000, t+0.1);
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+0.2);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    noise.start(t);
+  }
+
+  // Auto focus
+  document.addEventListener('click', () => terminal.focus());
+
+</script>
+</body>
+</html>

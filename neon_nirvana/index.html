@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Neon Nirvana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #050510;
+    --neon-blue: #00f3ff;
+    --neon-pink: #ff00ea;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Rain Canvas */
+  canvas#rain {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 1;
+    opacity: 0.6;
+    pointer-events: none;
+    filter: blur(1px);
+  }
+
+  /* Cyberpunk Gradient overlay */
+  .bg-gradient {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: linear-gradient(to bottom, rgba(0,243,255,0.05), rgba(255,0,234,0.1));
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  /* The Lotus */
+  .lotus-container {
+    position: relative;
+    width: 300px; height: 300px;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .petal {
+    position: absolute;
+    width: 60px;
+    height: 180px;
+    border-radius: 50% 50% 0 50%;
+    border: 2px solid var(--neon-blue);
+    box-shadow: 0 0 20px var(--neon-blue), inset 0 0 20px var(--neon-blue);
+    transform-origin: bottom center;
+    transition: all 1s;
+    mix-blend-mode: screen;
+  }
+
+  /* Base state (exhale) */
+  .petal:nth-child(1) { transform: rotate(0deg); }
+  .petal:nth-child(2) { transform: rotate(45deg); }
+  .petal:nth-child(3) { transform: rotate(90deg); }
+  .petal:nth-child(4) { transform: rotate(135deg); }
+  .petal:nth-child(5) { transform: rotate(180deg); }
+  .petal:nth-child(6) { transform: rotate(225deg); }
+  .petal:nth-child(7) { transform: rotate(270deg); }
+  .petal:nth-child(8) { transform: rotate(315deg); }
+
+  /* Breathing Animation Logic (handled via classes added by JS) */
+  /* Inhale state */
+  .breathing-in .petal {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 30px var(--neon-pink), inset 0 0 30px var(--neon-pink);
+    height: 220px;
+    width: 80px;
+  }
+  .breathing-in .petal:nth-child(1) { transform: rotate(0deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(2) { transform: rotate(45deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(3) { transform: rotate(90deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(4) { transform: rotate(135deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(5) { transform: rotate(180deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(6) { transform: rotate(225deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(7) { transform: rotate(270deg) translateY(-20px); }
+  .breathing-in .petal:nth-child(8) { transform: rotate(315deg) translateY(-20px); }
+
+  /* UI Text */
+  .instruction-text {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.5em;
+    color: #fff;
+    text-shadow: 0 0 10px var(--neon-blue);
+    z-index: 20;
+    transition: all 1s;
+    text-transform: uppercase;
+  }
+
+  .breathing-in .instruction-text {
+    text-shadow: 0 0 20px var(--neon-pink);
+    color: #ffd1ff;
+  }
+
+  /* Audio Toggle */
+  .btn-start {
+    position: absolute;
+    bottom: 20%;
+    background: transparent;
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    font-family: 'Orbitron', sans-serif;
+    padding: 1rem 3rem;
+    font-size: 1.2rem;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.2);
+    transition: all 0.3s;
+    z-index: 30;
+    text-transform: uppercase;
+  }
+
+  .btn-start:hover {
+    background: rgba(0, 243, 255, 0.1);
+    box-shadow: 0 0 30px rgba(0, 243, 255, 0.6), inset 0 0 20px rgba(0, 243, 255, 0.4);
+  }
+
+  .audio-toggle {
+    position: absolute;
+    top: 2rem; right: 2rem;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    color: white;
+    cursor: pointer;
+    z-index: 100;
+    display: none; /* hidden until started */
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+
+</style>
+</head>
+<body>
+
+  <canvas id="rain"></canvas>
+  <div class="bg-gradient"></div>
+
+  <div class="instruction-text" id="instruction">READY</div>
+
+  <div class="lotus-container" id="lotus">
+    <div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div><div class="petal"></div>
+    <div class="petal"></div><div class="petal"></div>
+  </div>
+
+  <button class="btn-start" id="start-btn" onclick="startSession()">INITIALIZE</button>
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">🔊</button>
+
+<script>
+  // Rain Canvas Animation
+  const canvas = document.getElementById('rain');
+  const ctx = canvas.getContext('2d');
+  let drops = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class RainDrop {
+    constructor() {
+      this.reset();
+      this.y = Math.random() * canvas.height;
+    }
+    reset() {
+      this.x = Math.random() * canvas.width;
+      this.y = -10;
+      this.len = Math.random() * 20 + 10;
+      this.speed = Math.random() * 10 + 10;
+      this.alpha = Math.random() * 0.3 + 0.1;
+      // Slight cyber-coloring
+      this.color = Math.random() > 0.5 ? 'rgba(0, 243, 255,' : 'rgba(255, 0, 234,';
+    }
+    update() {
+      this.y += this.speed;
+      this.x += this.speed * 0.05;
+      if (this.y > canvas.height) this.reset();
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(this.x + this.len * 0.05, this.y + this.len);
+      ctx.strokeStyle = `${this.color} ${this.alpha})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  for(let i=0; i<200; i++) drops.push(new RainDrop());
+
+  function animateRain() {
+    ctx.fillStyle = 'rgba(5, 5, 16, 0.4)'; // motion blur trail
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drops.forEach(d => { d.update(); d.draw(); });
+    requestAnimationFrame(animateRain);
+  }
+  animateRain();
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain, rainGain, droneGain, arpGain;
+  let arpOscs = [];
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Rain Noise
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    
+    const noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.value = 800; // muffled city rain
+    
+    rainGain = audioCtx.createGain();
+    rainGain.gain.value = 0.1;
+    
+    noise.connect(noiseFilter);
+    noiseFilter.connect(rainGain);
+    rainGain.connect(masterGain);
+    noise.start();
+
+    // Deep Bass Drone (Blade Runner style)
+    const droneOsc = audioCtx.createOscillator();
+    droneOsc.type = 'sawtooth';
+    droneOsc.frequency.value = 55; // A1
+    
+    const droneFilter = audioCtx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    droneFilter.frequency.value = 150;
+    
+    droneGain = audioCtx.createGain();
+    droneGain.gain.value = 0.2;
+    
+    droneOsc.connect(droneFilter);
+    droneFilter.connect(droneGain);
+    droneGain.connect(masterGain);
+    droneOsc.start();
+    
+    // Arpeggiator Setup
+    arpGain = audioCtx.createGain();
+    arpGain.gain.value = 0.15;
+    
+    // Synth Delay/Reverb effect
+    const delay = audioCtx.createDelay();
+    delay.delayTime.value = 0.5;
+    const feedback = audioCtx.createGain();
+    feedback.gain.value = 0.4;
+    delay.connect(feedback);
+    feedback.connect(delay);
+    arpGain.connect(delay);
+    delay.connect(masterGain);
+    arpGain.connect(masterGain);
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) return;
+    isMuted = !isMuted;
+    masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.5, audioCtx.currentTime, 0.1);
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+  }
+
+  // Pentatonic scale for synth wave arp [A2, C3, D3, E3, G3, A3]
+  const scale = [110.00, 130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00];
+  let arpInterval;
+
+  function setArpSpeed(speedMs, direction) {
+    if (arpInterval) clearInterval(arpInterval);
+    if (!audioInit || isMuted) return;
+    
+    let noteIndex = direction === 'up' ? 0 : scale.length - 1;
+    
+    arpInterval = setInterval(() => {
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'square';
+      osc.frequency.value = scale[noteIndex];
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(400, t);
+      filter.frequency.exponentialRampToValueAtTime(2000, t + 0.1);
+      
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.1, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(arpGain);
+      
+      osc.start(t);
+      osc.stop(t + 0.3);
+      
+      if (direction === 'up') {
+        noteIndex = (noteIndex + 1) % scale.length;
+      } else {
+        noteIndex = (noteIndex - 1 + scale.length) % scale.length;
+      }
+    }, speedMs);
+  }
+
+  // Breathing Logic (4-7-8 method approx)
+  const lotus = document.getElementById('lotus');
+  const instruction = document.getElementById('instruction');
+  const startBtn = document.getElementById('start-btn');
+  const muteBtn = document.getElementById('mute-btn');
+  let isRunning = false;
+
+  function startSession() {
+    if (!audioInit) initAudio();
+    startBtn.style.display = 'none';
+    muteBtn.style.display = 'flex';
+    isRunning = true;
+    breatheCycle();
+  }
+
+  function breatheCycle() {
+    if (!isRunning) return;
+
+    // INHALE (4s)
+    instruction.innerText = "BREATHE IN";
+    document.body.classList.add('breathing-in');
+    
+    // Audio shift
+    if(audioInit) {
+      const t = audioCtx.currentTime;
+      droneGain.gain.setTargetAtTime(0.3, t, 1);
+      setArpSpeed(200, 'up'); // faster, rising
+    }
+
+    setTimeout(() => {
+      // HOLD (7s)
+      instruction.innerText = "HOLD";
+      // Lotus keeps shape due to CSS transition retaining state
+      
+      if(audioInit) {
+        clearInterval(arpInterval); // pause arp
+      }
+
+      setTimeout(() => {
+        // EXHALE (8s)
+        instruction.innerText = "BREATHE OUT";
+        document.body.classList.remove('breathing-in');
+        
+        if(audioInit) {
+          const t = audioCtx.currentTime;
+          droneGain.gain.setTargetAtTime(0.1, t, 2);
+          setArpSpeed(400, 'down'); // slower, falling
+        }
+
+        setTimeout(() => {
+          breatheCycle();
+        }, 8000);
+
+      }, 7000);
+
+    }, 4000);
+  }
+
+</script>
+</body>
+</html>

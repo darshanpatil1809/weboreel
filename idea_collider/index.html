@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Idea Collider</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #04040a;
+    --cern-blue: #0096ff;
+    --cern-pink: #ff0096;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --blur: blur(40px) saturate(200%);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      linear-gradient(rgba(0, 150, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 150, 255, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -2;
+    pointer-events: none;
+  }
+
+  canvas#bg-particles {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .lab-panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      0 0 80px rgba(0, 150, 255, 0.08),
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 2rem;
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    color: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    font-family: 'Space Mono', monospace;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+    font-size: 1rem;
+    text-transform: uppercase;
+  }
+
+  .glass-input:focus {
+    border-color: rgba(0, 150, 255, 0.6);
+    box-shadow: 0 0 20px rgba(0, 150, 255, 0.2);
+  }
+
+  .input-blue:focus {
+    border-color: var(--cern-blue);
+    box-shadow: 0 0 20px rgba(0, 150, 255, 0.4);
+  }
+
+  .input-pink:focus {
+    border-color: var(--cern-pink);
+    box-shadow: 0 0 20px rgba(255, 0, 150, 0.4);
+  }
+
+  /* Main Layout */
+  .main-container {
+    display: flex;
+    flex: 1;
+    position: relative;
+  }
+
+  .center-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 2rem;
+  }
+
+  /* Input Section */
+  .input-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+    z-index: 10;
+  }
+
+  .particle-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 280px;
+  }
+
+  .particle-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: #aaa;
+    letter-spacing: 0.1em;
+  }
+
+  .vs-symbol {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    color: #666;
+    font-weight: bold;
+    margin-top: 1.5rem;
+  }
+
+  .btn-accelerate {
+    background: rgba(0, 150, 255, 0.1);
+    border: 1px solid var(--cern-blue);
+    color: white;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.2rem;
+    padding: 1rem 3rem;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0, 150, 255, 0.2), inset 0 0 10px rgba(0, 150, 255, 0.1);
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    position: absolute;
+    bottom: 2rem;
+    z-index: 10;
+  }
+
+  .btn-accelerate:hover:not(:disabled) {
+    background: rgba(0, 150, 255, 0.2);
+    box-shadow: 0 0 40px rgba(0, 150, 255, 0.6), inset 0 0 20px rgba(0, 150, 255, 0.3);
+    transform: scale(1.05);
+  }
+
+  .btn-accelerate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #444;
+    box-shadow: none;
+  }
+
+  /* Collider Ring */
+  .collider-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .collider-ring {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 150, 255, 0.1);
+    box-shadow: 0 0 30px rgba(0, 150, 255, 0.05), inset 0 0 30px rgba(0, 150, 255, 0.05);
+    transition: all 0.5s ease;
+  }
+
+  .collider-ring.active {
+    border-color: rgba(0, 150, 255, 0.5);
+    box-shadow: 0 0 80px rgba(0, 150, 255, 0.4), inset 0 0 80px rgba(0, 150, 255, 0.4);
+  }
+
+  .particle-a, .particle-b {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    margin-top: -6px; margin-left: -6px;
+    opacity: 0;
+    filter: blur(1px);
+  }
+
+  .particle-a {
+    background: var(--cern-blue);
+    box-shadow: 0 0 20px 5px var(--cern-blue);
+  }
+
+  .particle-b {
+    background: var(--cern-pink);
+    box-shadow: 0 0 20px 5px var(--cern-pink);
+  }
+
+  canvas#collider-trails {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+  }
+
+  .status-readout {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    color: white;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 2;
+  }
+
+  .flash-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Results */
+  .results-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .idea-card {
+    position: absolute;
+    width: 250px;
+    height: 180px;
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 20px rgba(0, 150, 255, 0.1);
+    border-radius: 16px;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    transform: scale(0);
+    opacity: 0;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .idea-card:hover {
+    box-shadow: 0 20px 45px rgba(0,0,0,0.6), 0 0 30px rgba(255, 0, 150, 0.2);
+    z-index: 30;
+  }
+
+  .idea-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: #888;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .idea-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+    flex-grow: 1;
+  }
+
+  .idea-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    color: #ccc;
+    margin-bottom: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .idea-market {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    color: var(--cern-blue);
+  }
+
+  .btn-explore {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    border-radius: 12px;
+    padding: 4px 0;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    text-align: center;
+    margin-top: auto;
+    cursor: pointer;
+  }
+
+  /* History Panel */
+  .history-panel {
+    width: 300px;
+    background: rgba(4, 4, 10, 0.6);
+    border-left: 1px solid rgba(255,255,255,0.05);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+    z-index: 5;
+  }
+
+  .history-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: #888;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .history-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .history-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .history-formula {
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 0.3rem;
+  }
+
+  .history-meta {
+    color: #666;
+    font-size: 0.7rem;
+  }
+
+  /* Physics Readout */
+  .physics-readout {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: #0096ff;
+    line-height: 1.6;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .audio-toggle {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    color: white;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .examples {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+
+  .example-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #888;
+    background: rgba(255,255,255,0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+
+  .example-tag:hover {
+    border-color: rgba(255,255,255,0.2);
+    color: #fff;
+  }
+
+  /* Mobile */
+  @media (max-width: 900px) {
+    .main-container {
+      flex-direction: column;
+    }
+    .history-panel {
+      width: 100%;
+      border-left: none;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      height: 250px;
+    }
+    .input-section {
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+    .vs-symbol {
+      margin: 0;
+      transform: rotate(90deg);
+    }
+    .collider-container {
+      width: 300px;
+      height: 300px;
+      margin-top: 50px;
+    }
+    .btn-accelerate {
+      bottom: auto;
+      top: 65vh;
+    }
+    .physics-readout {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <canvas id="bg-particles"></canvas>
+  
+  <div class="flash-overlay" id="flash"></div>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">⚛️</button>
+
+  <div class="physics-readout" id="physics">
+    BEAM ENERGY: 0 TeV<br>
+    LUMINOSITY: 0 × 10³⁴ cm⁻²s⁻¹<br>
+    COLLISION RATE: 0 Hz
+  </div>
+
+  <div class="main-container">
+    
+    <div class="center-stage">
+      
+      <div class="input-section" id="inputs">
+        <div class="particle-card lab-panel">
+          <div class="particle-label">PARTICLE A</div>
+          <input type="text" class="glass-input input-blue" id="inputA" placeholder="Concept, tech, industry..." autocomplete="off">
+        </div>
+        
+        <div class="vs-symbol">⚡ VS ⚡</div>
+        
+        <div class="particle-card lab-panel">
+          <div class="particle-label">PARTICLE B</div>
+          <input type="text" class="glass-input input-pink" id="inputB" placeholder="Concept, tech, industry..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="examples" id="examples">
+        <div class="example-tag" onclick="loadExample('BLOCKCHAIN', 'THERAPY')">BLOCKCHAIN × THERAPY</div>
+        <div class="example-tag" onclick="loadExample('TIKTOK', 'HOSPITALS')">TIKTOK × HOSPITALS</div>
+        <div class="example-tag" onclick="loadExample('MEDITATION', 'STOCKS')">MEDITATION × STOCKS</div>
+      </div>
+
+      <div class="collider-container" id="collider">
+        <div class="collider-ring" id="ring"></div>
+        <canvas id="collider-trails"></canvas>
+        <div class="particle-a" id="pa"></div>
+        <div class="particle-b" id="pb"></div>
+        <div class="status-readout" id="status">ACCELERATING TO 99.99% C</div>
+        
+        <div class="results-container" id="results"></div>
+      </div>
+
+      <button class="btn-accelerate" id="btn-accel" onclick="accelerate()">ACCELERATE</button>
+
+    </div>
+
+    <div class="history-panel">
+      <div class="history-title">COLLISION HISTORY</div>
+      <div id="history-list"></div>
+    </div>
+
+  </div>
+
+<script>
+  // BG Particles Canvas
+  const bgCanvas = document.getElementById('bg-particles');
+  const bgCtx = bgCanvas.getContext('2d');
+  let bgParticles = [];
+
+  function resize() {
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class BgParticle {
+    constructor() {
+      this.x = Math.random() * bgCanvas.width;
+      this.y = Math.random() * bgCanvas.height;
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = (Math.random() - 0.5) * 0.5;
+      this.r = Math.random() * 1.5;
+      this.alpha = Math.random() * 0.5;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0) this.x = bgCanvas.width;
+      if (this.x > bgCanvas.width) this.x = 0;
+      if (this.y < 0) this.y = bgCanvas.height;
+      if (this.y > bgCanvas.height) this.y = 0;
+    }
+    draw() {
+      bgCtx.fillStyle = `rgba(0, 150, 255, ${this.alpha})`;
+      bgCtx.beginPath();
+      bgCtx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      bgCtx.fill();
+    }
+  }
+
+  for (let i = 0; i < 50; i++) bgParticles.push(new BgParticle());
+
+  function animateBg() {
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    bgParticles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(animateBg);
+  }
+  animateBg();
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let idleOsc, idleGain;
+  let audioInit = false;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    // Idle hum
+    idleOsc = audioCtx.createOscillator();
+    idleOsc.type = 'sawtooth';
+    idleOsc.frequency.value = 60;
+    
+    idleGain = audioCtx.createGain();
+    idleGain.gain.value = isMuted ? 0 : 0.02;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 200;
+    
+    idleOsc.connect(filter);
+    filter.connect(idleGain);
+    idleGain.connect(audioCtx.destination);
+    idleOsc.start();
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (idleGain) idleGain.gain.value = isMuted ? 0 : 0.02;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '⚛️';
+  }
+
+  function playSound(type) {
+    if (!audioInit) initAudio();
+    if (isMuted) return;
+    
+    const t = audioCtx.currentTime;
+    
+    if (type === 'accelerate') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      
+      // Rising pitch
+      osc.frequency.setValueAtTime(110, t);
+      osc.frequency.exponentialRampToValueAtTime(880, t + 3);
+      
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.05, t + 0.5);
+      gain.gain.linearRampToValueAtTime(0.1, t + 2.8);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 3);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 3);
+      
+      // Noise build
+      const bufferSize = audioCtx.sampleRate * 3; // 3 seconds
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.setValueAtTime(100, t);
+      noiseFilter.frequency.exponentialRampToValueAtTime(2000, t + 3);
+      
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0, t);
+      noiseGain.gain.linearRampToValueAtTime(0.1, t + 3);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 3.1);
+      
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(t);
+      
+    } else if (type === 'boom') {
+      // Noise burst
+      const bufferSize = audioCtx.sampleRate * 0.5;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.setValueAtTime(1000, t);
+      noiseFilter.frequency.exponentialRampToValueAtTime(100, t + 0.5);
+      
+      const gain = audioCtx.createGain();
+      gain.gain.setValueAtTime(0.5, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      
+      noise.connect(noiseFilter);
+      noiseFilter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start(t);
+      
+      // Bass hit
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(100, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+      
+      oscGain.gain.setValueAtTime(0.8, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      
+      osc.connect(oscGain);
+      oscGain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.5);
+      
+    } else if (type === 'sparkle') {
+      const freqs = [800, 1047, 1319];
+      freqs.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        
+        gain.gain.setValueAtTime(0, t + i*0.1);
+        gain.gain.linearRampToValueAtTime(0.05, t + i*0.1 + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.1 + 0.5);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i*0.1);
+        osc.stop(t + i*0.1 + 0.5);
+      });
+    }
+  }
+
+  // Collider Logic
+  const inputA = document.getElementById('inputA');
+  const inputB = document.getElementById('inputB');
+  const btnAccel = document.getElementById('btn-accel');
+  const collider = document.getElementById('collider');
+  const ring = document.getElementById('ring');
+  const pa = document.getElementById('pa');
+  const pb = document.getElementById('pb');
+  const status = document.getElementById('status');
+  const flash = document.getElementById('flash');
+  const physics = document.getElementById('physics');
+  const resultsContainer = document.getElementById('results');
+  const historyList = document.getElementById('history-list');
+
+  // Trail Canvas
+  const trailCanvas = document.getElementById('collider-trails');
+  const tCtx = trailCanvas.getContext('2d');
+  
+  function resizeTrails() {
+    trailCanvas.width = collider.clientWidth;
+    trailCanvas.height = collider.clientHeight;
+  }
+  window.addEventListener('resize', resizeTrails);
+  resizeTrails();
+
+  let isAccelerating = false;
+  let accelStart = 0;
+  let trailAnimation;
+
+  function loadExample(a, b) {
+    inputA.value = a;
+    inputB.value = b;
+  }
+
+  const templates = [
+    "{A} × {B} = A {B}-powered {A} platform",
+    "What if {B} worked like {A}?",
+    "{A} subscription box for {B} enthusiasts",
+    "An AI that teaches {A} through the lens of {B}",
+    "{B} community but organized around {A} principles",
+    "The {A} of {B} — making {B} accessible through {A}",
+    "{A} + {B} = A new category that doesn't exist yet",
+    "Micro-SaaS for {A} professionals dealing with {B}",
+    "Gamified {A} applied to {B} habits"
+  ];
+
+  const marketSizes = ["$1.2B", "$450M", "$8.4B", "$2B", "$847B TAM", "$12B", "$50M"];
+
+  function generateIdeas(a, b) {
+    const aClean = a.trim() || 'Void';
+    const bClean = b.trim() || 'Nothing';
+    
+    // Pick 4 random templates
+    const shuffled = [...templates].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 4);
+    
+    return selected.map(tmpl => {
+      const title = tmpl.replace(/{A}/g, aClean).replace(/{B}/g, bClean);
+      return {
+        title: title,
+        desc: `Targeting early adopters at the intersection of ${aClean.toLowerCase()} and ${bClean.toLowerCase()}.`,
+        market: marketSizes[Math.floor(Math.random() * marketSizes.length)]
+      };
+    });
+  }
+
+  function renderHistory() {
+    const hist = JSON.parse(localStorage.getItem('collider_history') || '[]');
+    historyList.innerHTML = '';
+    hist.forEach(h => {
+      const el = document.createElement('div');
+      el.className = 'history-item';
+      el.innerHTML = `
+        <div class="history-formula">${h.a} × ${h.b}</div>
+        <div class="history-meta">→ ${h.count} ideas generated</div>
+      `;
+      el.onclick = () => {
+        loadExample(h.a, h.b);
+      };
+      historyList.appendChild(el);
+    });
+  }
+  renderHistory();
+
+  function saveHistory(a, b, count) {
+    const hist = JSON.parse(localStorage.getItem('collider_history') || '[]');
+    hist.unshift({a, b, count, time: Date.now()});
+    if (hist.length > 10) hist.pop();
+    localStorage.setItem('collider_history', JSON.stringify(hist));
+    renderHistory();
+  }
+
+  function accelerate() {
+    if (isAccelerating) return;
+    const valA = inputA.value.trim() || 'A';
+    const valB = inputB.value.trim() || 'B';
+    
+    if (!audioInit) initAudio();
+    playSound('accelerate');
+    
+    isAccelerating = true;
+    btnAccel.disabled = true;
+    resultsContainer.innerHTML = '';
+    
+    // UI changes
+    ring.classList.add('active');
+    document.getElementById('inputs').style.opacity = '0.2';
+    document.getElementById('examples').style.opacity = '0.2';
+    pa.style.opacity = 1;
+    pb.style.opacity = 1;
+    status.style.opacity = 1;
+    
+    accelStart = performance.now();
+    requestAnimationFrame(renderTrails);
+    
+    // Physics readout interval
+    const pInt = setInterval(() => {
+      const elapsed = performance.now() - accelStart;
+      if (elapsed > 3000) clearInterval(pInt);
+      const eng = Math.floor((elapsed / 3000) * 847);
+      const lum = (elapsed / 3000 * 4.5).toFixed(1);
+      const rate = Math.floor((elapsed / 3000) * 40000000);
+      physics.innerHTML = `BEAM ENERGY: ${eng} TeV<br>LUMINOSITY: ${lum} × 10³⁴ cm⁻²s⁻¹<br>COLLISION RATE: ${rate.toLocaleString()} Hz`;
+    }, 100);
+
+    setTimeout(() => {
+      // Collision
+      playSound('boom');
+      cancelAnimationFrame(trailAnimation);
+      tCtx.clearRect(0,0,trailCanvas.width, trailCanvas.height);
+      pa.style.opacity = 0;
+      pb.style.opacity = 0;
+      status.style.opacity = 0;
+      ring.classList.remove('active');
+      
+      // Flash
+      flash.style.opacity = 0.8;
+      setTimeout(() => flash.style.opacity = 0, 100);
+      
+      // Generate Ideas
+      const ideas = generateIdeas(valA, valB);
+      saveHistory(valA, valB, ideas.length);
+      
+      setTimeout(() => {
+        document.getElementById('inputs').style.opacity = '1';
+        document.getElementById('examples').style.opacity = '1';
+        
+        ideas.forEach((idea, i) => {
+          setTimeout(() => {
+            playSound('sparkle');
+            const card = document.createElement('div');
+            card.className = 'idea-card';
+            
+            // Random scatter
+            const angle = (Math.PI * 2 / ideas.length) * i;
+            const dist = 180 + Math.random() * 50;
+            const x = Math.cos(angle) * dist;
+            const y = Math.sin(angle) * dist;
+            const rot = (Math.random() - 0.5) * 10;
+            
+            card.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${rot}deg) scale(1)`;
+            card.style.opacity = 1;
+            
+            card.innerHTML = `
+              <div class="idea-header">💥 COLLISION PRODUCT #${i+1}</div>
+              <div class="idea-title">${idea.title}</div>
+              <div class="idea-desc">${idea.desc}</div>
+              <div class="idea-market">~${idea.market} MARKET</div>
+              <div class="btn-explore">EXPLORE THIS IDEA</div>
+            `;
+            resultsContainer.appendChild(card);
+          }, i * 300);
+        });
+        
+        setTimeout(() => {
+          isAccelerating = false;
+          btnAccel.disabled = false;
+        }, ideas.length * 300 + 500);
+        
+      }, 500);
+      
+    }, 3000);
+  }
+
+  function renderTrails(time) {
+    if (!isAccelerating) return;
+    
+    const elapsed = time - accelStart;
+    const progress = Math.min(elapsed / 3000, 1);
+    
+    // Clear with fade for trails
+    tCtx.fillStyle = 'rgba(4, 4, 10, 0.2)';
+    tCtx.fillRect(0, 0, trailCanvas.width, trailCanvas.height);
+    
+    const cx = trailCanvas.width / 2;
+    const cy = trailCanvas.height / 2;
+    const r = trailCanvas.width / 2 - 2;
+    
+    // Speed increases exponentially
+    const speed = 0.002 + (progress * progress * 0.05);
+    const angleA = time * speed;
+    const angleB = angleA + Math.PI; // Opposite side
+    
+    // If very close to end, converge to center
+    let rRender = r;
+    if (progress > 0.95) {
+      rRender = r * (1 - (progress - 0.95) * 20); // shrink to center quickly
+    }
+    
+    const ax = cx + Math.cos(angleA) * rRender;
+    const ay = cy + Math.sin(angleA) * rRender;
+    
+    const bx = cx + Math.cos(angleB) * rRender;
+    const by = cy + Math.sin(angleB) * rRender;
+    
+    pa.style.transform = `translate(${ax - cx}px, ${ay - cy}px)`;
+    pb.style.transform = `translate(${bx - cx}px, ${by - cy}px)`;
+    
+    tCtx.beginPath();
+    tCtx.arc(ax, ay, 4, 0, Math.PI*2);
+    tCtx.fillStyle = '#0096ff';
+    tCtx.fill();
+    
+    tCtx.beginPath();
+    tCtx.arc(bx, by, 4, 0, Math.PI*2);
+    tCtx.fillStyle = '#ff0096';
+    tCtx.fill();
+    
+    trailAnimation = requestAnimationFrame(renderTrails);
+  }
+
+</script>
+</body>
+</html>

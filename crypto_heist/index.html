@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>crypto_heist</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --glass-blur: blur(24px) saturate(180%);
+    --accent: #00ff88;
+    --accent2: #0088ff;
+    --danger: #ff3333;
+    --gold: #ffcc00;
+    --bg: #030508;
+    --text-main: #e0e0e0;
+    --text-muted: #888888;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+  }
+  
+  /* Background Effects */
+  #bg-elements {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+  }
+  .glow-orb {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.8;
+  }
+  .orb-green { background: rgba(0,255,136,0.06); width: 600px; height: 600px; top: -100px; left: -100px; }
+  .orb-blue { background: rgba(0,136,255,0.05); width: 500px; height: 500px; bottom: 10%; right: 10%; }
+  .orb-purple { background: rgba(136,0,255,0.04); width: 400px; height: 400px; top: 30%; left: 40%; }
+  
+  .hacker-grid {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: repeating-linear-gradient(transparent 0, transparent 49px, rgba(0,255,136,0.03) 50px),
+                      repeating-linear-gradient(90deg, transparent 0, transparent 49px, rgba(0,255,136,0.03) 50px);
+  }
+  
+  .scan-line {
+    position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+    background: rgba(0,255,136,0.1);
+    box-shadow: 0 0 10px rgba(0,255,136,0.5);
+    animation: scan 8s linear infinite;
+  }
+  @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+
+  /* Layout */
+  #dashboard {
+    display: grid;
+    grid-template-columns: 300px 1fr 350px;
+    grid-template-rows: 70px 1fr 200px;
+    gap: 20px;
+    padding: 20px;
+    height: 100vh;
+  }
+  
+  /* Glass Cards */
+  .card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  /* Header */
+  .header {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 30px;
+    background: rgba(0,255,136,0.04);
+  }
+  .header-left { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--accent); letter-spacing: 2px; }
+  .header-center { display: flex; align-items: center; gap: 10px; }
+  .status-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+  .header-right { display: flex; align-items: center; gap: 20px; font-size: 0.9rem; }
+  .avatar { width: 30px; height: 30px; background: #fff; border-radius: 50%; /* placeholder for anon avatar */ }
+  #mute-btn { cursor: pointer; background: none; border: none; font-size: 1.2rem; filter: grayscale(100%); transition: 0.3s; }
+  #mute-btn:hover { filter: grayscale(0%); }
+
+  /* Wallet Cards */
+  .wallets { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+  .wallet-card { padding: 15px; cursor: pointer; }
+  .wallet-card:hover { background: rgba(255,255,255,0.1); box-shadow: inset 0 0 20px rgba(0,255,136,0.1); }
+  .w-addr { font-size: 0.8rem; color: #fff; }
+  .w-bal { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--gold); line-height: 1; margin: 10px 0; }
+  .w-usd { font-size: 0.8rem; color: var(--text-muted); }
+  .w-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .w-badge { padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; background: rgba(255,255,255,0.1); }
+  .w-badge.cold { color: var(--accent2); }
+  .w-badge.hot { color: var(--danger); }
+  .w-badge.mixing { color: var(--accent); }
+  .w-locks { display: flex; gap: 3px; font-size: 0.8rem; }
+  .btn-transfer {
+    background: transparent; border: 1px solid var(--accent); color: var(--accent);
+    padding: 5px 10px; border-radius: 5px; font-family: inherit; cursor: pointer; font-size: 0.7rem; transition: 0.2s;
+  }
+  .btn-transfer:hover { background: var(--accent); color: #000; }
+
+  /* Chart Area */
+  .chart-area { grid-column: 2; grid-row: 2; padding: 20px; display: flex; flex-direction: column; }
+  .chart-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+  .asset-name { font-size: 1.2rem; font-weight: bold; }
+  .asset-change { color: var(--accent); }
+  .chart-controls button {
+    background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 5px; font-family: inherit; font-size: 0.8rem;
+  }
+  .chart-controls button.active { background: var(--accent); color: #000; }
+  #price-canvas { width: 100%; flex: 1; }
+
+  /* Transaction Log */
+  .tx-log { grid-column: 3; grid-row: 2; display: flex; flex-direction: column; }
+  .tx-header { padding: 15px; border-bottom: 1px solid var(--glass-border); font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 1px;}
+  .tx-list { padding: 15px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .tx-item {
+    background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px; font-size: 0.8rem;
+    animation: slideIn 0.3s ease-out; position: relative; overflow: hidden;
+  }
+  @keyframes slideIn { 0% { transform: translateY(-20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+  .tx-item.fade-out { opacity: 0; transition: opacity 0.5s; }
+  .tx-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .tx-pill { background: rgba(255,51,51,0.2); color: var(--danger); padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; }
+  .tx-route { margin-bottom: 5px; color: #ccc; }
+  .tx-bottom { display: flex; justify-content: space-between; align-items: center; }
+  .tx-amt { color: var(--accent); }
+  .tx-hash { font-size: 0.6rem; color: var(--text-muted); margin-top: 5px; word-break: break-all; }
+  .status-confirmed { color: var(--accent); }
+  .status-pending { color: var(--gold); }
+  
+  /* Market Ticker */
+  .market-ticker { grid-column: 1 / 3; grid-row: 3; overflow: hidden; white-space: nowrap; display: flex; align-items: center; }
+  .ticker-wrap { display: inline-block; animation: ticker 30s linear infinite; }
+  @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+  .ticker-item { display: inline-block; margin-right: 50px; font-size: 1.2rem; }
+  .ticker-up { color: var(--accent); }
+  .ticker-down { color: var(--danger); }
+
+  /* Terminal Console */
+  .terminal { grid-column: 3; grid-row: 3; padding: 15px; font-size: 0.8rem; color: var(--accent); display: flex; flex-direction: column; }
+  .term-output { flex: 1; overflow-y: auto; margin-bottom: 10px; }
+  .term-line { margin-bottom: 5px; text-shadow: 0 0 5px rgba(0,255,136,0.5); }
+  .term-input-line { display: flex; }
+  .term-input-line span { margin-right: 10px; }
+  #term-input { background: transparent; border: none; color: var(--accent); font-family: inherit; font-size: inherit; flex: 1; outline: none; }
+  .blinking-cursor { animation: blink 1s step-end infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Lock Overlay Effect */
+  .lock-overlay {
+    position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
+    display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none;
+    transition: opacity 0.5s; z-index: 10; font-size: 3rem;
+  }
+  .locked .lock-overlay { opacity: 1; pointer-events: auto; }
+
+  /* Transfer Modal */
+  #modal {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+    display: none; justify-content: center; align-items: center; z-index: 1000;
+  }
+  .modal-content {
+    background: rgba(20,20,20,0.8); border: 1px solid var(--glass-border); padding: 30px; border-radius: 20px;
+    width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; margin-bottom: 20px; color: var(--accent); }
+  .m-input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px; margin-bottom: 15px; border-radius: 5px; font-family: inherit; }
+  .m-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px rgba(0,255,136,0.2); }
+  .m-btns { display: flex; justify-content: space-between; margin-top: 20px; }
+  .btn-modal { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-family: inherit; font-weight: bold; }
+  .btn-confirm { background: var(--accent); color: #000; }
+  .btn-cancel { background: rgba(255,255,255,0.1); color: #fff; }
+
+  /* Mobile */
+  @media(max-width: 900px) {
+    #dashboard {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto 300px 100px 200px;
+      height: auto;
+      overflow-y: auto;
+    }
+    .header { grid-column: 1; grid-row: 1; }
+    .chart-area { grid-column: 1; grid-row: 2; min-height: 300px; }
+    .wallets { grid-column: 1; grid-row: 3; }
+    .tx-log { grid-column: 1; grid-row: 4; }
+    .market-ticker { grid-column: 1; grid-row: 5; }
+    .terminal { grid-column: 1; grid-row: 6; }
+    body { overflow-y: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-elements">
+  <div class="glow-orb orb-green"></div>
+  <div class="glow-orb orb-blue"></div>
+  <div class="glow-orb orb-purple"></div>
+  <div class="hacker-grid"></div>
+  <div class="scan-line"></div>
+</div>
+
+<div id="dashboard">
+  <!-- Header -->
+  <div class="card header">
+    <div class="header-left">⬡ OPERATION SATOSHI</div>
+    <div class="header-center">
+      <div class="status-dot"></div>
+      <div>SYSTEMS ACTIVE</div>
+    </div>
+    <div class="header-right">
+      <button id="mute-btn">🔐</button>
+      <div class="avatar"></div>
+      <div>USER: [REDACTED]</div>
+      <div id="clock">00:00:00</div>
+    </div>
+  </div>
+
+  <!-- Wallets -->
+  <div class="wallets">
+    <div class="card wallet-card">
+      <div class="lock-overlay">🔒</div>
+      <div class="w-addr">0x7F3a...9B2c</div>
+      <div class="w-bal">₿ 4.7291</div>
+      <div class="w-usd">≈ $ 312,485.20</div>
+      <div class="w-row">
+        <div class="w-badge cold">COLD</div>
+        <div class="w-locks">🔒🔒🔒</div>
+        <button class="btn-transfer" onclick="openModal()">TRANSFER</button>
+      </div>
+    </div>
+    <div class="card wallet-card">
+      <div class="lock-overlay">🔒</div>
+      <div class="w-addr">0x1A8f...3D4e</div>
+      <div class="w-bal">₿ 12.0450</div>
+      <div class="w-usd">≈ $ 795,830.15</div>
+      <div class="w-row">
+        <div class="w-badge mixing">MIXING</div>
+        <div class="w-locks">🔒🔒🔓</div>
+        <button class="btn-transfer" onclick="openModal()">TRANSFER</button>
+      </div>
+    </div>
+    <div class="card wallet-card" style="display:flex; justify-content:center; align-items:center;">
+      <button class="btn-transfer" style="font-size: 1rem; padding: 15px 30px;" onclick="lockAll()">LOCK ALL</button>
+    </div>
+  </div>
+
+  <!-- Chart Area -->
+  <div class="card chart-area">
+    <div class="chart-header">
+      <div>
+        <div class="asset-name">VOIDCOIN · VDC</div>
+        <div class="asset-change" id="price-change">▲ +4.7% (24h)</div>
+      </div>
+      <div class="chart-controls">
+        <button class="active">LINE</button>
+        <button>1H</button>
+        <button>24H</button>
+        <button>7D</button>
+      </div>
+    </div>
+    <canvas id="price-canvas"></canvas>
+  </div>
+
+  <!-- Transaction Log -->
+  <div class="card tx-log">
+    <div class="tx-header">TRANSACTION LOG</div>
+    <div class="tx-list" id="tx-list">
+      <!-- TXs appended here -->
+    </div>
+  </div>
+
+  <!-- Market Ticker -->
+  <div class="card market-ticker">
+    <div class="ticker-wrap" id="ticker-wrap">
+      <!-- Content populated by JS -->
+    </div>
+  </div>
+
+  <!-- Terminal Console -->
+  <div class="card terminal">
+    <div class="term-output" id="term-output"></div>
+    <div class="term-input-line">
+      <span>></span>
+      <input type="text" id="term-input" autocomplete="off" spellcheck="false" />
+      <span class="blinking-cursor">_</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal">
+  <div class="modal-content">
+    <div class="modal-title">SECURE TRANSFER</div>
+    <input type="text" class="m-input" placeholder="FROM: 0x..." value="0x7F3a82419B2c" readonly>
+    <input type="text" class="m-input" placeholder="TO: 0x...">
+    <input type="text" class="m-input" placeholder="AMOUNT (BTC)">
+    <input type="text" class="m-input" placeholder="NETWORK FEE" value="0.00015 BTC" readonly>
+    <div class="m-btns">
+      <button class="btn-modal btn-cancel" onclick="closeModal()">CANCEL</button>
+      <button class="btn-modal btn-confirm" onclick="confirmTransfer()">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Clock
+  setInterval(() => {
+    const d = new Date();
+    document.getElementById('clock').innerText = d.toLocaleTimeString('en-US', {hour12:false});
+  }, 1000);
+
+  // Chart
+  const canvas = document.getElementById('price-canvas');
+  const ctx = canvas.getContext('2d');
+  let prices = [];
+  let currentPrice = 65000;
+  
+  function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth - 40;
+    canvas.height = canvas.parentElement.clientHeight - 80;
+    initPrices();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  
+  function initPrices() {
+    prices = [];
+    let p = 65000;
+    for(let i=0; i<100; i++) {
+      p += (Math.random()-0.48)*100;
+      prices.push(p);
+    }
+  }
+
+  function drawChart() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    for(let i=0; i<5; i++) {
+      ctx.moveTo(0, canvas.height * (i/4));
+      ctx.lineTo(canvas.width, canvas.height * (i/4));
+    }
+    ctx.stroke();
+
+    if(prices.length === 0) return;
+
+    const min = Math.min(...prices) - 500;
+    const max = Math.max(...prices) + 500;
+    const range = max - min;
+    const w = canvas.width / (prices.length - 1);
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2;
+    for(let i=0; i<prices.length; i++) {
+      const x = i * w;
+      const y = canvas.height - ((prices[i] - min) / range) * canvas.height;
+      if(i===0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Fill
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.fillStyle = 'rgba(0,255,136,0.1)';
+    ctx.fill();
+
+    // Volume bars (fake)
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    for(let i=0; i<prices.length; i++) {
+      const x = i * w;
+      const vH = Math.random() * (canvas.height * 0.3);
+      ctx.fillRect(x - w/4, canvas.height - vH, w/2, vH);
+    }
+  }
+
+  setInterval(() => {
+    const change = (Math.random()-0.48)*150;
+    currentPrice += change;
+    prices.push(currentPrice);
+    if(prices.length > 100) prices.shift();
+    
+    const changeIndicator = document.getElementById('price-change');
+    if(change >= 0) {
+      changeIndicator.innerText = `▲ +${(Math.random()*5).toFixed(1)}% (24h)`;
+      changeIndicator.style.color = 'var(--accent)';
+      ctx.strokeStyle = '#00ff88';
+    } else {
+      changeIndicator.innerText = `▼ -${(Math.random()*5).toFixed(1)}% (24h)`;
+      changeIndicator.style.color = 'var(--danger)';
+      ctx.strokeStyle = '#ff3333';
+    }
+    
+    drawChart();
+  }, 300);
+
+  setTimeout(() => { resizeCanvas(); drawChart(); }, 100);
+
+  // Transactions
+  const txList = document.getElementById('tx-list');
+  function createTx() {
+    const item = document.createElement('div');
+    item.className = 'tx-item';
+    
+    const amt = (Math.random() * 5).toFixed(4);
+    const hash = Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+    const statusClass = Math.random() > 0.3 ? 'status-confirmed' : 'status-pending';
+    
+    item.innerHTML = `
+      <div class="tx-top">
+        <span class="tx-pill">[ENCRYPTED]</span>
+        <span style="color:#888;">Just now</span>
+      </div>
+      <div class="tx-route">0x${Math.floor(Math.random()*16777215).toString(16)}... → 0x${Math.floor(Math.random()*16777215).toString(16)}...</div>
+      <div class="tx-bottom">
+        <span class="tx-amt">₿ ${amt}</span>
+        <span class="${statusClass}">●</span>
+      </div>
+      <div class="tx-hash">${hash}</div>
+    `;
+    
+    txList.insertBefore(item, txList.firstChild);
+    
+    if(txList.children.length > 15) {
+      const last = txList.lastChild;
+      last.classList.add('fade-out');
+      setTimeout(() => last.remove(), 500);
+    }
+    
+    playAlertSound();
+  }
+  
+  setInterval(createTx, Math.random() * 3000 + 3000);
+  for(let i=0; i<5; i++) createTx(); // initial load
+
+  // Ticker
+  const tickerWrap = document.getElementById('ticker-wrap');
+  const pairs = ['VDC/USD', 'BTC/USDT', 'ETH/USDT', 'XMR/BTC', 'SOL/USD', 'ZEC/BTC'];
+  let tickerHtml = '';
+  for(let i=0; i<15; i++) {
+    const pair = pairs[i%pairs.length];
+    const val = (Math.random()*5000).toFixed(2);
+    const perc = (Math.random()*10 - 5).toFixed(1);
+    const colorClass = perc > 0 ? 'ticker-up' : 'ticker-down';
+    const arrow = perc > 0 ? '▲' : '▼';
+    tickerHtml += `<span class="ticker-item">${pair} ${val} <span class="${colorClass}">${arrow}${Math.abs(perc)}%</span></span>`;
+  }
+  tickerWrap.innerHTML = tickerHtml + tickerHtml; // double for seamless
+
+  // Terminal
+  const termOut = document.getElementById('term-output');
+  const termInput = document.getElementById('term-input');
+  
+  const seq = [
+    "> INITIALIZING SECURE CHANNEL...",
+    "> ENCRYPTED TUNNEL: ESTABLISHED",
+    "> SCANNING BLOCKCHAIN: 847,293 BLOCKS",
+    "> TARGET WALLET: IDENTIFIED",
+    "> MIXING SERVICE: ACTIVE",
+    "> WARNING: UNUSUAL ACTIVITY DETECTED",
+    "> COUNTER-MEASURES: DEPLOYED"
+  ];
+  
+  let lineIdx = 0;
+  function printTerminal() {
+    if(lineIdx >= seq.length) {
+      lineIdx = 0;
+      setTimeout(printTerminal, 5000); // loop delay
+      return;
+    }
+    
+    const txt = seq[lineIdx];
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'term-line';
+    termOut.appendChild(lineDiv);
+    
+    if(txt.includes('WARNING')) {
+      lineDiv.style.color = 'var(--danger)';
+      playWarningSound();
+    }
+    
+    let charIdx = 0;
+    const typeWriter = setInterval(() => {
+      lineDiv.textContent += txt[charIdx];
+      charIdx++;
+      termOut.scrollTop = termOut.scrollHeight;
+      if(charIdx >= txt.length) {
+        clearInterval(typeWriter);
+        lineIdx++;
+        setTimeout(printTerminal, 500);
+      }
+    }, 30);
+  }
+  
+  setTimeout(printTerminal, 1000);
+
+  termInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') {
+      const val = termInput.value;
+      if(!val) return;
+      
+      const lineDiv = document.createElement('div');
+      lineDiv.className = 'term-line';
+      lineDiv.style.color = '#fff';
+      lineDiv.textContent = `> ${val}`;
+      termOut.appendChild(lineDiv);
+      
+      termInput.value = '';
+      
+      setTimeout(() => {
+        const res = document.createElement('div');
+        res.className = 'term-line';
+        res.textContent = `COMMAND NOT RECOGNIZED IN THIS SECTOR.`;
+        termOut.appendChild(res);
+        termOut.scrollTop = termOut.scrollHeight;
+      }, 500);
+    }
+  });
+
+  // Interactions
+  function openModal() { document.getElementById('modal').style.display = 'flex'; }
+  function closeModal() { document.getElementById('modal').style.display = 'none'; }
+  function confirmTransfer() { 
+    closeModal(); 
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'term-line';
+    lineDiv.style.color = 'var(--gold)';
+    lineDiv.textContent = `> TRANSFER INITIATED. WAITING FOR CONFIRMATIONS...`;
+    termOut.appendChild(lineDiv);
+    termOut.scrollTop = termOut.scrollHeight;
+  }
+  
+  function lockAll() {
+    document.querySelectorAll('.wallet-card').forEach(c => {
+      if(!c.querySelector('.lock-overlay')) return;
+      c.classList.toggle('locked');
+    });
+    playWarningSound();
+  }
+
+  // --- Audio ---
+  let audioCtx, masterGain, isMuted = true, audioInit = false;
+  let synthOsc, bassOsc;
+
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    e.target.style.filter = isMuted ? 'grayscale(100%)' : 'grayscale(0%)';
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.05, audioCtx.currentTime, 0.1);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+    
+    // Bass drone
+    bassOsc = audioCtx.createOscillator();
+    bassOsc.type = 'sawtooth';
+    bassOsc.frequency.value = 55;
+    const bassFilter = audioCtx.createBiquadFilter();
+    bassFilter.type = 'lowpass';
+    bassFilter.frequency.value = 200;
+    bassOsc.connect(bassFilter);
+    bassFilter.connect(masterGain);
+    bassOsc.start();
+
+    // Lead synth sequence
+    synthOsc = audioCtx.createOscillator();
+    synthOsc.type = 'square';
+    const synthGain = audioCtx.createGain();
+    synthGain.gain.value = 0.02;
+    synthOsc.connect(synthGain);
+    
+    const delay = audioCtx.createDelay();
+    delay.delayTime.value = 0.3;
+    const fb = audioCtx.createGain();
+    fb.gain.value = 0.3;
+    delay.connect(fb); fb.connect(delay);
+    synthGain.connect(delay); delay.connect(masterGain);
+    synthGain.connect(masterGain);
+    synthOsc.start();
+    
+    const notes = [392, 494, 587];
+    let noteIdx = 0;
+    setInterval(() => {
+      if(isMuted) return;
+      synthOsc.frequency.setValueAtTime(notes[noteIdx], audioCtx.currentTime);
+      noteIdx = (noteIdx + 1) % notes.length;
+    }, 2000);
+
+    // Kick 130BPM
+    setInterval(() => {
+      if(isMuted) return;
+      const kickOsc = audioCtx.createOscillator();
+      const kickGain = audioCtx.createGain();
+      kickOsc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      kickGain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      kickGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      kickOsc.connect(kickGain); kickGain.connect(masterGain);
+      kickOsc.start(audioCtx.currentTime);
+      kickOsc.stop(audioCtx.currentTime + 0.1);
+    }, (60/130)*1000);
+
+    audioInit = true;
+  }
+
+  function playAlertSound() {
+    if(!audioInit || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+  }
+
+  function playWarningSound() {
+    if(!audioInit || isMuted) return;
+    for(let i=0; i<2; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 800;
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.3);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime + i*0.3 + 0.01);
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.3 + 0.2);
+      osc.connect(gain); gain.connect(masterGain);
+      osc.start(audioCtx.currentTime + i*0.3);
+      osc.stop(audioCtx.currentTime + i*0.3 + 0.2);
+    }
+  }
+
+</script>
+</body>
+</html>

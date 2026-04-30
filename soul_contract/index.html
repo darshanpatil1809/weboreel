@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Soul Contract</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Playfair+Display:ital,wght@0,400;1,400&family=Special+Elite&family=Space+Mono&family=DM+Sans:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #06060a;
+    --parchment: rgba(245, 240, 228, 0.06);
+    --parchment-border: rgba(245, 240, 228, 0.12);
+    --text-formal: rgba(245, 240, 228, 0.85);
+    --gold: #d4a843;
+    --red-wax: rgba(180, 20, 20, 0.8);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: var(--text-formal);
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, rgba(80, 20, 20, 0.15), transparent 70%);
+    pointer-events: none;
+    z-index: -2;
+  }
+
+  canvas#ash-particles {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Smooth scroll wrapper */
+  #scroll-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  #scroll-content {
+    will-change: transform;
+    padding: 10vh 0 20vh 0;
+  }
+
+  .document-container {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    padding: 0 2rem;
+  }
+
+  .contract-page {
+    background: var(--parchment);
+    backdrop-filter: blur(20px) saturate(120%);
+    border: 1px solid var(--parchment-border);
+    box-shadow:
+      0 20px 80px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(245, 240, 228, 0.1);
+    border-radius: 4px;
+    padding: 5rem 4rem;
+    margin-bottom: 6rem;
+    position: relative;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+
+  .contract-page.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Document Header */
+  .doc-header {
+    text-align: center;
+    border-top: 4px double rgba(245, 240, 228, 0.3);
+    border-bottom: 1px solid rgba(245, 240, 228, 0.2);
+    padding: 2rem 0;
+    margin-bottom: 4rem;
+    position: relative;
+  }
+  
+  .doc-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    color: #f5f0e4;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  .doc-header .version {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    color: rgba(245, 240, 228, 0.6);
+    margin-bottom: 1rem;
+  }
+
+  .doc-header .italic-sub {
+    font-style: italic;
+    font-size: 1.2rem;
+  }
+
+  /* Clauses */
+  .clause {
+    margin-bottom: 3rem;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+
+  .clause-main {
+    flex: 1;
+    min-width: 60%;
+  }
+
+  .clause-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--gold);
+    border-bottom: 1px solid rgba(212, 168, 67, 0.3);
+    padding-bottom: 0.5rem;
+    display: inline-block;
+  }
+
+  .clause-text {
+    font-size: 1.3rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .fine-print {
+    font-family: 'Special Elite', monospace;
+    font-size: 0.85rem;
+    color: rgba(245, 240, 228, 0.5);
+    margin-top: 1rem;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(245, 240, 228, 0.2);
+  }
+
+  .translation-sidebar {
+    flex: 0 0 250px;
+    background: rgba(245, 240, 228, 0.03);
+    border: 1px solid rgba(245, 240, 228, 0.08);
+    padding: 1.5rem;
+    border-radius: 4px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(245, 240, 228, 0.7);
+    height: fit-content;
+    position: relative;
+  }
+
+  .translation-sidebar::before {
+    content: 'TRANSLATION';
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: var(--bg-dark);
+    padding: 0 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+  }
+
+  /* Specific styling per clause */
+  .standalone {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    margin: 2rem 0;
+    text-align: center;
+  }
+  .gold-text { color: var(--gold); }
+  .gentle-humor { font-style: italic; opacity: 0.8; }
+  
+  /* Wax Seal CSS */
+  .wax-seal {
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at 30% 30%, #d43b3b, #8b0000 70%, #4a0000);
+    border-radius: 50% 45% 55% 45%;
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    box-shadow: 
+      0 5px 15px rgba(0,0,0,0.5),
+      inset 0 0 10px rgba(0,0,0,0.8),
+      inset 2px 2px 5px rgba(255,100,100,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-10deg);
+  }
+
+  .wax-seal::after {
+    content: '';
+    position: absolute;
+    top: 5px; left: 5px; right: 5px; bottom: 5px;
+    border: 1px solid rgba(0,0,0,0.3);
+    border-radius: 50% 55% 45% 50%;
+  }
+
+  .seal-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.6);
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    text-shadow: 1px 1px 0px rgba(255,100,100,0.2);
+  }
+
+  .signature-block {
+    margin-top: 4rem;
+    border-top: 1px solid rgba(245, 240, 228, 0.2);
+    padding-top: 3rem;
+    position: relative;
+    text-align: center;
+  }
+
+  .sig-line-1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 2rem;
+  }
+
+  .sig-line-2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .sig-line-3 {
+    font-size: 1.1rem;
+    opacity: 0.6;
+    margin-bottom: 3rem;
+  }
+
+  .sig-final {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    color: var(--gold);
+    margin-top: 3rem;
+  }
+
+  .large-seal {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+    right: auto;
+    bottom: auto;
+    transform: rotate(5deg);
+  }
+  .large-seal .seal-text { font-size: 1.1rem; }
+
+  /* Audio toggle */
+  .audio-toggle {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: rgba(245, 240, 228, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(245, 240, 228, 0.1);
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    color: white;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  @media (max-width: 800px) {
+    .contract-page {
+      padding: 3rem 2rem;
+    }
+    .clause {
+      flex-direction: column;
+    }
+    .translation-sidebar {
+      flex: 1 1 auto;
+      width: 100%;
+    }
+    .doc-header h1 {
+      font-size: 1.8rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <canvas id="ash-particles"></canvas>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">📜</button>
+
+  <div id="scroll-wrapper">
+    <div id="scroll-content">
+      <div class="document-container">
+
+        <div class="contract-page visible" data-index="0">
+          <div class="doc-header">
+            <h1>TERMS & CONDITIONS OF HUMAN EXISTENCE</h1>
+            <div class="version">UNIVERSAL CONTRACT &middot; VERSION 1.0 (FINAL) &middot; NON-NEGOTIABLE</div>
+            <div class="version">EFFECTIVE DATE: YOUR BIRTH DATE</div>
+            <div class="italic-sub" style="margin-top:2rem;">BY EXISTING, YOU AGREE TO ALL TERMS BELOW.</div>
+            <div class="wax-seal" style="top:2rem; right:2rem; bottom:auto;"><div class="seal-text">BINDING</div></div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="1">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 1 &mdash; CONSCIOUSNESS</div>
+              <div class="clause-text">1.1 THE PARTY OF THE FIRST PART (hereinafter 'YOU') is hereby granted awareness of its own existence.</div>
+              <div class="fine-print">NOTE: This cannot be revoked or paused. Not even during meetings.</div>
+            </div>
+            <div class="translation-sidebar">
+              You will know you exist. This is occasionally wonderful and occasionally the problem.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="2">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 2 &mdash; LOVE</div>
+              <div class="clause-text">2.1 YOU are permitted and in fact required to experience attachment to other instances of the human experience.</div>
+              <div class="clause-text">2.2 Said attachment carries risk of loss. Risk is non-negotiable.</div>
+              <div class="fine-print">See Clause 7 (Grief). These cannot be uncoupled.</div>
+            </div>
+            <div class="translation-sidebar">
+              You will love people. Some will leave. This is the price of Clause 2.1 and worth it.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="3">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 3 &mdash; TIME</div>
+              <div class="clause-text">3.1 THE PARTY is granted a single non-renewable allocation of time.</div>
+              <div class="clause-text">3.2 Duration: variable and undisclosed at contract signing.</div>
+              <div class="clause-text">3.3 Unused time does not roll over.</div>
+              <div class="fine-print">Attempts to 'save time' are noted and generally unsuccessful.</div>
+            </div>
+            <div class="translation-sidebar">
+              You get one pass. The length is not told to you. Please use it.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="4">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 4 &mdash; FAILURE</div>
+              <div class="clause-text">4.1 Periodic failures are required components of the human experience.</div>
+              <div class="clause-text">4.2 Failure at a thing does not constitute failure as a person.</div>
+              <div class="fine-print">This distinction is often missed. See also: Clause 4.2.</div>
+            </div>
+            <div class="translation-sidebar">
+              You will fail things. This is scheduled. It is how Clause 11 (Growth) occurs.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="5">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 5 &mdash; THE BODY</div>
+              <div class="clause-text">5.1 YOU are issued a biological unit for the duration of the contract.</div>
+              <div class="clause-text">5.2 The unit requires maintenance and will deteriorate regardless.</div>
+              <div class="clause-text">5.3 The unit is not YOU. It is your vehicle.</div>
+              <div class="fine-print">The unit will sometimes be the wrong size, the wrong shape, or not work correctly. This was not in the original spec.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="6">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 6 &mdash; CHANGE</div>
+              <div class="clause-text">6.1 YOU are contractually required to be different at age 40 than at age 20.</div>
+              <div class="clause-text">6.2 This is not failure. This is compliance.</div>
+            </div>
+            <div class="translation-sidebar">
+              The person you used to be was correct for then. The person you're becoming is correct for now. Both are you.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="7">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 7 &mdash; GRIEF</div>
+              <div class="clause-text">7.1 Loss is included in the human experience package.</div>
+              <div class="clause-text">7.2 See Clause 2 (Love). These cannot be separated.</div>
+              <div class="standalone">"7.3 The size of grief is proportional to the size of what was valued."</div>
+              <div class="clause-text" style="text-align:center; opacity:0.7;">7.4 This is not punishment. This is math.</div>
+            </div>
+            <div class="translation-sidebar">
+              Grief is love with nowhere to go. It means the love was real.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" id="clause-8" data-index="8">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 8 &mdash; JOY</div>
+              <div class="clause-text">8.1 JOY is available and recurrent throughout the contract period.</div>
+              <div class="clause-text">8.2 Joy is often found in places not included in the original plan.</div>
+              <div class="clause-text gentle-humor">8.3 The user is encouraged to notice Joy when it occurs, as the human unit is prone to overlooking it.</div>
+              <div class="fine-print" style="margin-top:2rem;">Joy does not require announcement or permission.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" data-index="9">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 9 &mdash; PURPOSE</div>
+              <div class="clause-text">9.1 Purpose is not pre-installed.</div>
+              <div class="clause-text">9.2 Purpose is assembled through use.</div>
+              <div class="standalone">"9.3 The user should not wait for purpose to arrive before beginning."</div>
+            </div>
+            <div class="translation-sidebar">
+              Begin. Purpose follows use. Not the other way.
+            </div>
+          </div>
+        </div>
+
+        <div class="contract-page" id="clause-10" data-index="10">
+          <div class="clause">
+            <div class="clause-main">
+              <div class="clause-title">CLAUSE 10 &mdash; TERMINATION</div>
+              <div class="clause-text">10.1 This contract terminates.</div>
+              <div class="clause-text">10.2 Date is not disclosed at signing.</div>
+              <div class="clause-text">10.3 Terms are non-negotiable.</div>
+              <div class="standalone gold-text">"10.4 All that was done, said, and felt during the contract period: permanent."</div>
+              <div class="clause-text" style="text-align:center;">10.5 Love: permanent.</div>
+              <div class="clause-text" style="text-align:center; font-style:italic;">10.6 This is the point.</div>
+            </div>
+          </div>
+
+          <div class="signature-block">
+            <div class="sig-line-1">BY EXISTING, YOU HAVE ACCEPTED THESE TERMS.</div>
+            <div class="sig-line-2">Signed: The Universe, on behalf of all parties</div>
+            <div class="sig-line-3">Witnessed by: Everyone you've ever met</div>
+            <div class="wax-seal large-seal" id="final-seal"><div class="seal-text">AGREED</div></div>
+            <div class="sig-final">Thank you for participating.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Ash particles
+  const canvas = document.getElementById('ash-particles');
+  const ctx = canvas.getContext('2d');
+  let ashes = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class Ash {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.s = Math.random() * 2 + 0.5;
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = Math.random() * 0.5 + 0.1;
+      this.alpha = Math.random() * 0.4 + 0.1;
+      this.angle = Math.random() * Math.PI * 2;
+      this.vangle = (Math.random() - 0.5) * 0.05;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.angle += this.vangle;
+      if (this.y > canvas.height) {
+        this.y = -10;
+        this.x = Math.random() * canvas.width;
+      }
+    }
+    draw() {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.angle);
+      ctx.fillStyle = `rgba(180, 180, 180, ${this.alpha})`;
+      ctx.fillRect(-this.s/2, -this.s/2, this.s, this.s);
+      ctx.restore();
+    }
+  }
+  for(let i=0; i<100; i++) ashes.push(new Ash());
+
+  function animateAshes() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ashes.forEach(a => { a.update(); a.draw(); });
+    requestAnimationFrame(animateAshes);
+  }
+  animateAshes();
+
+  // Smooth scroll logic
+  const body = document.body;
+  const scrollWrapper = document.getElementById('scroll-wrapper');
+  const scrollContent = document.getElementById('scroll-content');
+  
+  let targetScroll = 0;
+  let currentScroll = 0;
+  let ease = 0.075;
+  
+  function setBodyHeight() {
+    body.style.height = `${scrollContent.getBoundingClientRect().height}px`;
+  }
+  window.addEventListener('resize', setBodyHeight);
+  setTimeout(setBodyHeight, 500);
+
+  window.addEventListener('scroll', () => {
+    targetScroll = window.scrollY;
+  });
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain;
+  let ambientOsc1, ambientOsc2, ambientOsc3;
+  let convolver;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.4;
+    masterGain.connect(audioCtx.destination);
+    
+    // Reverb
+    convolver = audioCtx.createConvolver();
+    const rate = audioCtx.sampleRate;
+    const length = rate * 4;
+    const impulse = audioCtx.createBuffer(2, length, rate);
+    for (let i = 0; i < length; i++) {
+      const decay = Math.exp(-i / (rate * 1.5));
+      impulse.getChannelData(0)[i] = (Math.random() * 2 - 1) * decay;
+      impulse.getChannelData(1)[i] = (Math.random() * 2 - 1) * decay;
+    }
+    convolver.buffer = impulse;
+    convolver.connect(masterGain);
+    
+    const dry = audioCtx.createGain();
+    dry.gain.value = 0.6;
+    dry.connect(masterGain);
+
+    // Formal ambient [220, 277, 330]Hz minor pad
+    const freqs = [220, 277.18, 329.63];
+    const oscs = [];
+    
+    freqs.forEach(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      gain.gain.value = 0.025;
+      
+      osc.connect(gain);
+      gain.connect(convolver);
+      gain.connect(dry);
+      osc.start();
+      oscs.push({osc, gain});
+    });
+    
+    ambientOsc1 = oscs[0].osc;
+    ambientOsc2 = oscs[1].osc;
+    ambientOsc3 = oscs[2].osc;
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.4, audioCtx.currentTime, 0.1);
+    }
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '📜';
+  }
+
+  function playPageTurn() {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    const bufferSize = audioCtx.sampleRate * 0.1;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1500;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.05, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    
+    noise.start(t);
+  }
+
+  function shiftMusic(state) {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    if (state === 'joy') {
+      // Shift to major [261.63, 329.63, 392.00]
+      ambientOsc1.frequency.setTargetAtTime(261.63, t, 1);
+      ambientOsc2.frequency.setTargetAtTime(329.63, t, 1);
+      ambientOsc3.frequency.setTargetAtTime(392.00, t, 1);
+    } else if (state === 'termination') {
+      // Slow, deep [110Hz]
+      ambientOsc1.frequency.setTargetAtTime(110, t, 2);
+      ambientOsc2.frequency.setTargetAtTime(110.5, t, 2); // slight detune
+      ambientOsc3.frequency.setTargetAtTime(55, t, 2); // octave below
+    } else if (state === 'final') {
+      // Final warm major [261.63, 329.63, 392.00, 523.25]
+      ambientOsc1.frequency.setTargetAtTime(261.63, t, 2);
+      ambientOsc2.frequency.setTargetAtTime(329.63, t, 2);
+      ambientOsc3.frequency.setTargetAtTime(392.00, t, 2);
+      
+      const extraOsc = audioCtx.createOscillator();
+      const extraGain = audioCtx.createGain();
+      extraOsc.type = 'sine';
+      extraOsc.frequency.value = 523.25;
+      extraGain.gain.setValueAtTime(0, t);
+      extraGain.gain.linearRampToValueAtTime(0.02, t + 3);
+      extraGain.gain.linearRampToValueAtTime(0, t + 10);
+      extraOsc.connect(extraGain);
+      extraGain.connect(convolver);
+      extraOsc.start(t);
+      extraOsc.stop(t + 10);
+    } else {
+      // Normal minor [220, 277.18, 329.63]
+      ambientOsc1.frequency.setTargetAtTime(220, t, 1);
+      ambientOsc2.frequency.setTargetAtTime(277.18, t, 1);
+      ambientOsc3.frequency.setTargetAtTime(329.63, t, 1);
+    }
+  }
+
+  // Intersection Observer
+  const pages = document.querySelectorAll('.contract-page');
+  let viewedPages = new Set();
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        if (!entry.target.classList.contains('visible')) {
+          entry.target.classList.add('visible');
+          const index = entry.target.getAttribute('data-index');
+          if (index > 0 && !viewedPages.has(index)) {
+            playPageTurn();
+            viewedPages.add(index);
+          }
+          
+          if (index == 8) shiftMusic('joy');
+          else if (index == 10) shiftMusic('termination');
+          else shiftMusic('normal');
+        }
+      }
+    });
+  }, { threshold: 0.3 });
+
+  pages.forEach(p => observer.observe(p));
+  
+  // Observe final seal
+  const sealObserver = new IntersectionObserver((entries) => {
+    if(entries[0].isIntersecting) {
+      shiftMusic('final');
+      sealObserver.disconnect();
+    }
+  }, { threshold: 0.8 });
+  sealObserver.observe(document.getElementById('final-seal'));
+
+  // Render loop
+  function render() {
+    targetScroll = window.scrollY;
+    currentScroll += (targetScroll - currentScroll) * ease;
+    
+    if (Math.abs(targetScroll - currentScroll) < 0.1) {
+      currentScroll = targetScroll;
+    }
+    
+    scrollContent.style.transform = `translate3d(0, ${-currentScroll}px, 0)`;
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+  // Initialize audio on first click anywhere
+  document.body.addEventListener('click', () => {
+    if (!audioInit && !isMuted) initAudio();
+  }, {once: true});
+
+</script>
+</body>
+</html>

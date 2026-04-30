@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>aurora_hotel</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital@1&family=DM+Sans:wght@300&family=Playfair+Display:ital,wght@1,400&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff88;
+    --gold: #d4af37;
+    --cream: #fdfbf7;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: #020810;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow: hidden; /* smooth scroll handles this */
+  }
+
+  /* Typography */
+  h1, h2, h3, .playfair { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 400; }
+  .poetic { font-family: 'Cormorant Garamond', serif; font-style: italic; }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  /* Canvas Background */
+  #aurora-canvas {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+  }
+
+  /* Glassmorphism System */
+  .luxury-glass {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border-radius: 28px;
+  }
+  .nav-glass {
+    background: rgba(2, 8, 16, 0.3);
+    backdrop-filter: blur(40px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    transition: background 0.3s;
+  }
+  .nav-glass.scrolled {
+    background: rgba(2, 8, 16, 0.8);
+  }
+
+  /* Navigation */
+  nav {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 80px; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center; padding: 0 5vw;
+  }
+  .logo { font-size: 1.5rem; letter-spacing: 2px; }
+  .nav-links { display: flex; gap: 2vw; }
+  .nav-links a { color: #fff; text-decoration: none; font-size: 0.9rem; letter-spacing: 1px; cursor: pointer; }
+  .btn-book {
+    padding: 10px 24px; border-radius: 30px; border: 1px solid var(--green);
+    background: rgba(0,255,136,0.1); color: #fff; font-family: 'DM Sans'; cursor: pointer;
+    box-shadow: 0 0 15px rgba(0,255,136,0.2); transition: 0.3s;
+  }
+  .btn-book:hover { background: rgba(0,255,136,0.2); box-shadow: 0 0 25px rgba(0,255,136,0.4); }
+  #mute-btn { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; margin-left: 20px; }
+
+  /* Smooth Scroll Container */
+  #scroll-container {
+    width: 100%; position: relative; will-change: transform;
+  }
+  
+  section { position: relative; width: 100vw; display: flex; flex-direction: column; align-items: center; padding: 10vh 5vw; }
+  
+  /* Buttons */
+  .btn-glass {
+    padding: 12px 24px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1); color: #fff; font-family: 'DM Sans'; cursor: pointer; transition: 0.3s;
+  }
+  .btn-glass:hover { background: rgba(255,255,255,0.2); }
+
+  /* Hero Section */
+  .hero { height: 100vh; justify-content: center; }
+  .hero-panel {
+    width: 70vw; height: 55vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  }
+  .hero-label { color: var(--green); letter-spacing: 3px; font-size: 0.9rem; margin-bottom: 20px; }
+  .hero-title { font-size: clamp(3rem, 8vw, 6rem); margin-bottom: 10px; }
+  .hero-tag { font-size: 1.5rem; color: var(--cream); margin-bottom: 20px; }
+  .hero-rating { color: var(--gold); font-size: 0.7rem; letter-spacing: 2px; margin-bottom: 40px; }
+  .hero-btns { display: flex; gap: 20px; }
+  
+  .float-card { position: absolute; padding: 15px; border-radius: 16px; font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); }
+
+  /* Experience Section */
+  .experience { min-height: 100vh; justify-content: center; }
+  .section-title { font-size: 4rem; margin-bottom: 60px; text-align: center; }
+  .exp-grid { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+  .exp-card {
+    width: 250px; height: 300px; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; text-align: center;
+    transition: transform 0.4s var(--ease), box-shadow 0.4s;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(0,255,136,0.05));
+  }
+  .exp-card:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(0,255,136,0.15); }
+  .css-icon { width: 80px; height: 80px; margin-bottom: 20px; position: relative; }
+  
+  /* CSS Icons */
+  .icon-dome { border-radius: 50% 50% 0 0; border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); box-shadow: inset 0 10px 20px rgba(0,255,136,0.2); }
+  .icon-spa { background: radial-gradient(circle at bottom, rgba(255,100,50,0.4), transparent); border-bottom: 2px solid #fff; }
+  .icon-spa::after { content:''; position:absolute; top:10px; left:20px; width:40px; height:40px; border-radius:50%; box-shadow: 0 -10px 10px rgba(255,255,255,0.3); animation: steam 3s infinite; }
+  @keyframes steam { 0% { transform: translateY(0) scale(1); opacity:0.5; } 100% { transform: translateY(-30px) scale(1.5); opacity:0; } }
+  .icon-camera { border: 2px solid #fff; border-radius: 10px; display:flex; justify-content:center; align-items:center; }
+  .icon-camera::before { content:''; width:40px; height:40px; border-radius:50%; border: 2px solid #fff; background: rgba(0,255,136,0.2); }
+
+  /* Rooms Section */
+  .rooms { min-height: 100vh; justify-content: center; }
+  .rooms-grid { display: flex; gap: 40px; width: 90vw; flex-wrap: wrap; justify-content: center; }
+  .room-card { flex: 1; min-width: 300px; padding: 40px; display: flex; flex-direction: column; }
+  .room-title { font-size: 2rem; margin-bottom: 10px; }
+  .room-price { color: var(--gold); margin-bottom: 20px; font-size: 1.1rem; }
+  .room-art { width: 100%; height: 150px; margin-bottom: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); position: relative; overflow: hidden; display:flex; justify-content:center; align-items:flex-end; }
+  .room-amenities { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 30px; flex: 1; }
+  .pill { padding: 5px 12px; border-radius: 20px; background: rgba(255,255,255,0.1); font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1); }
+  .room-art.suite { background: linear-gradient(to top, rgba(255,255,255,0.1), transparent); border-top: 1px solid rgba(255,255,255,0.3); border-radius: 50% 50% 0 0; }
+  .room-art.cabin { background: transparent; }
+  .cabin-shape { width: 60px; height: 40px; background: rgba(255,255,255,0.1); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); margin-bottom: 10px;}
+  .room-art.observatory { border-radius: 50% 50% 0 0; background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.1); }
+  .obs-dome { width: 100px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 50px 50px 0 0; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.2); position: relative; }
+  .obs-dome::after { content:''; position:absolute; width:40px; height:2px; background:#fff; top:10px; left:50%; transform: rotate(-30deg); transform-origin: left; }
+
+  /* Booking Panel */
+  .booking { min-height: 100vh; justify-content: center; }
+  .booking-panel { width: min(800px, 90vw); padding: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .form-group { display: flex; flex-direction: column; gap: 10px; }
+  .form-group label { font-size: 0.8rem; letter-spacing: 1px; color: rgba(255,255,255,0.7); }
+  .glass-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); padding: 15px; border-radius: 12px; color: #fff; font-family: 'DM Sans'; outline: none; }
+  .glass-input:focus { border-color: var(--green); }
+  
+  .forecast-widget { grid-column: 1 / -1; background: rgba(0,255,136,0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(0,255,136,0.2); }
+  .fc-title { font-size: 0.8rem; letter-spacing: 2px; color: var(--green); margin-bottom: 15px; }
+  .fc-bars { display: flex; justify-content: space-between; align-items: flex-end; height: 60px; margin-bottom: 15px; }
+  .fc-bar { width: 15%; background: rgba(255,255,255,0.2); border-radius: 4px 4px 0 0; position: relative; }
+  .fc-bar.high { background: rgba(0,255,136,0.6); }
+  .fc-index { font-size: 0.9rem; color: #fff; }
+  
+  .btn-check { grid-column: 1 / -1; padding: 20px; font-size: 1.2rem; background: rgba(0,255,136,0.15); border: 1px solid var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.2); margin-top: 20px; }
+  .btn-check:hover { background: rgba(0,255,136,0.25); box-shadow: 0 0 30px rgba(0,255,136,0.4); }
+
+  /* Testimonials */
+  .testimonials { min-height: 80vh; justify-content: center; }
+  .test-grid { display: flex; gap: 30px; width: 80vw; flex-wrap: wrap; justify-content: center; }
+  .test-card { width: 300px; padding: 30px; position: relative; }
+  .test-quote { font-size: 1.2rem; margin-bottom: 20px; line-height: 1.5; }
+  .test-author { font-size: 0.9rem; color: rgba(255,255,255,0.7); }
+  .test-stars { color: var(--gold); margin-bottom: 10px; font-size: 0.8rem; letter-spacing: 2px; }
+
+  /* Footer */
+  .footer { padding: 40px; align-items: center; justify-content: center; text-align: center; border-radius: 28px 28px 0 0; border-bottom: none; width: 90vw; margin: 0 auto; }
+  .f-logo { font-size: 1.2rem; margin-bottom: 10px; }
+  .f-text { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 5px; }
+
+  /* Mobile */
+  @media(max-width: 768px) {
+    .nav-links { display: none; }
+    .hero-panel { width: 90vw; height: 65vh; }
+    .rooms-grid { flex-direction: column; }
+    .booking-panel { grid-template-columns: 1fr; width: 95vw; padding: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="aurora-canvas"></canvas>
+
+<nav class="nav-glass" id="nav">
+  <div class="logo playfair">✦ AURORA HOTEL</div>
+  <div class="nav-links">
+    <a>ROOMS</a>
+    <a>EXPERIENCE</a>
+    <a>GALLERY</a>
+  </div>
+  <div>
+    <button class="btn-book">BOOK NOW</button>
+    <button id="mute-btn">✦</button>
+  </div>
+</nav>
+
+<div id="scroll-container">
+  
+  <section class="hero">
+    <div class="hero-panel luxury-glass">
+      <div class="hero-label mono">TROMSØ, NORWAY · 69.6°N</div>
+      <div class="hero-title playfair">AURORA HOTEL</div>
+      <div class="hero-tag poetic">Where the sky performs nightly</div>
+      <div class="hero-rating mono">✦✦✦✦✦ · THE WORLD'S ONLY AURORA-GUARANTEED HOTEL</div>
+      <div class="hero-btns">
+        <button class="btn-glass">VIEW ROOMS</button>
+        <button class="btn-glass" style="border-color: var(--green); color: var(--green);">WATCH THE AURORA</button>
+      </div>
+    </div>
+    <div class="float-card" style="top:20vh; left:5vw; transform: rotate(-5deg);">
+      <div class="mono" style="color:var(--green)">FORECAST: KP 4.2</div>
+      <div style="font-size:0.7rem; color:#aaa; margin-top:5px;">High activity tonight</div>
+    </div>
+    <div class="float-card" style="bottom:20vh; right:5vw; transform: rotate(5deg);">
+      <div class="mono">-12°C</div>
+      <div style="font-size:0.7rem; color:#aaa; margin-top:5px;">Clear skies</div>
+    </div>
+  </section>
+
+  <section class="experience">
+    <h2 class="section-title playfair">Every night is opening night.</h2>
+    <div class="exp-grid">
+      <div class="exp-card luxury-glass">
+        <div class="css-icon icon-dome"></div>
+        <h3 class="playfair" style="font-size:1.5rem; margin-bottom:15px;">Aurora Viewing Pods</h3>
+        <p>Heated glass structures designed for unobstructed views of the phenomenon.</p>
+      </div>
+      <div class="exp-card luxury-glass">
+        <div class="css-icon icon-spa"></div>
+        <h3 class="playfair" style="font-size:1.5rem; margin-bottom:15px;">Thermal Spa</h3>
+        <p>Geothermal waters meeting arctic air beneath the dancing lights.</p>
+      </div>
+      <div class="exp-card luxury-glass">
+        <div class="css-icon icon-camera"></div>
+        <h3 class="playfair" style="font-size:1.5rem; margin-bottom:15px;">Sky Photography</h3>
+        <p>Professional rigs and in-suite tutorials for capturing the perfect moment.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="rooms">
+    <h2 class="section-title playfair" style="font-size:3rem;">Find your room beneath the lights.</h2>
+    <div class="rooms-grid">
+      <div class="room-card luxury-glass">
+        <div class="room-title playfair">Glass Suite</div>
+        <div class="room-price mono">from €890/night</div>
+        <div class="room-art suite"></div>
+        <div class="room-amenities">
+          <span class="pill">Aurora View</span><span class="pill">Private Sauna</span><span class="pill">Heated Floor</span>
+        </div>
+        <button class="btn-book" style="width:100%;">BOOK THIS ROOM</button>
+      </div>
+      
+      <div class="room-card luxury-glass">
+        <div class="room-title playfair">Nordic Cabin</div>
+        <div class="room-price mono">from €540/night</div>
+        <div class="room-art cabin"><div class="cabin-shape"></div></div>
+        <div class="room-amenities">
+          <span class="pill">Fireplace</span><span class="pill">Forest View</span><span class="pill">Telescope</span>
+        </div>
+        <button class="btn-book" style="width:100%;">BOOK THIS ROOM</button>
+      </div>
+      
+      <div class="room-card luxury-glass">
+        <div class="room-title playfair">The Observatory</div>
+        <div class="room-price mono">from €1,240/night</div>
+        <div class="pill" style="align-self:flex-start; margin-bottom:10px; background:rgba(212,175,55,0.2); color:var(--gold); border-color:var(--gold);">Highest rated room in Scandinavia · 2023</div>
+        <div class="room-art observatory"><div class="obs-dome"></div></div>
+        <div class="room-amenities">
+          <span class="pill">360° View</span><span class="pill">Private Astronomer</span><span class="pill">Aurora Call Service</span>
+        </div>
+        <button class="btn-book" style="width:100%;">BOOK THIS ROOM</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="booking">
+    <div class="booking-panel luxury-glass">
+      <div class="form-group">
+        <label>CHECK IN</label>
+        <input type="text" class="glass-input" placeholder="Select date" value="Nov 14, 2024">
+      </div>
+      <div class="form-group">
+        <label>CHECK OUT</label>
+        <input type="text" class="glass-input" placeholder="Select date" value="Nov 18, 2024">
+      </div>
+      <div class="form-group">
+        <label>GUESTS</label>
+        <select class="glass-input">
+          <option style="color:#000">2 Adults</option>
+          <option style="color:#000">1 Adult</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ROOM TYPE</label>
+        <select class="glass-input">
+          <option style="color:#000">Glass Suite</option>
+          <option style="color:#000">Nordic Cabin</option>
+        </select>
+      </div>
+      
+      <div class="forecast-widget">
+        <div class="fc-title mono">AURORA FORECAST: NEXT 5 NIGHTS</div>
+        <div class="fc-bars">
+          <div class="fc-bar high" style="height: 80%;"><div style="position:absolute; top:-20px; left:0; font-size:10px; color:#fff;">Nov14</div></div>
+          <div class="fc-bar" style="height: 40%;"><div style="position:absolute; top:-20px; left:0; font-size:10px; color:#fff;">Nov15</div></div>
+          <div class="fc-bar high" style="height: 90%;"><div style="position:absolute; top:-20px; left:0; font-size:10px; color:#fff;">Nov16</div></div>
+          <div class="fc-bar" style="height: 30%;"><div style="position:absolute; top:-20px; left:0; font-size:10px; color:#fff;">Nov17</div></div>
+          <div class="fc-bar" style="height: 50%;"><div style="position:absolute; top:-20px; left:0; font-size:10px; color:#fff;">Nov18</div></div>
+        </div>
+        <div class="fc-index mono">Current KP Index: 4.2 (STRONG ACTIVITY EXPECTED)</div>
+      </div>
+      
+      <button class="btn-glass btn-check" id="btn-check">CHECK AVAILABILITY</button>
+    </div>
+  </section>
+
+  <section class="testimonials">
+    <div class="test-grid">
+      <div class="test-card luxury-glass" style="transform: rotate(-2deg); margin-top:20px;">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote poetic">"I have seen the aurora 7 times in my life. None of them were like this. The glass suite is an architectural masterpiece."</div>
+        <div class="test-author mono">— E. H. · 🇬🇧</div>
+      </div>
+      <div class="test-card luxury-glass" style="transform: rotate(1deg); margin-top:-20px;">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote poetic">"Lying in bed while the sky exploded in green and purple above us is a memory I will carry forever."</div>
+        <div class="test-author mono">— M. S. · 🇺🇸</div>
+      </div>
+      <div class="test-card luxury-glass" style="transform: rotate(-1deg); margin-top:10px;">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote poetic">"The service is invisible until you need it, and perfect when you do. The observatory room lives up to every word."</div>
+        <div class="test-author mono">— J. L. · 🇫🇷</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer luxury-glass">
+    <div class="f-logo playfair">AURORA HOTEL · TROMSØ · EST. 2018</div>
+    <div class="f-text mono">69.6596° N, 18.9548° E</div>
+    <div class="f-text" style="margin-top:20px;">Privacy · Terms · Contact</div>
+  </footer>
+  <br><br>
+
+</div>
+
+<script>
+  // --- Smooth Scroll Engine ---
+  let current = 0, target = 0, velocity = 0;
+  const ease = 0.072;
+  const container = document.getElementById('scroll-container');
+  const nav = document.getElementById('nav');
+  
+  function getMaxScroll() {
+    return container.getBoundingClientRect().height - window.innerHeight;
+  }
+
+  document.body.style.height = `${container.getBoundingClientRect().height}px`;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    target += e.deltaY * 0.85;
+    target = Math.max(0, Math.min(target, getMaxScroll()));
+  }, { passive: false });
+
+  let touchStart = 0;
+  window.addEventListener('touchstart', e => touchStart = e.touches[0].clientY, {passive:true});
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    target += (touchStart - e.touches[0].clientY) * 1.5;
+    target = Math.max(0, Math.min(target, getMaxScroll()));
+    touchStart = e.touches[0].clientY;
+  }, { passive: false });
+
+  // Update body height if resized
+  window.addEventListener('resize', () => {
+    document.body.style.height = `${container.getBoundingClientRect().height}px`;
+  });
+
+  // --- Living Aurora Canvas ---
+  const canvas = document.getElementById('aurora-canvas');
+  const ctx = canvas.getContext('2d');
+  let time = 0;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    initStars();
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  let stars = [];
+  function initStars() {
+    stars = [];
+    for(let i=0; i<300; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5,
+        alpha: Math.random(),
+        speed: (Math.random() - 0.5) * 0.02
+      });
+    }
+  }
+
+  const curtains = [
+    { baseY: 0.3, freq: 0.003, amp: 80, r:0, g:255, b:136, opacity:0.15, speed:0.6 },
+    { baseY: 0.25, freq: 0.005, amp: 120, r:0, g:180, b:255, opacity:0.12, speed:0.4 },
+    { baseY: 0.35, freq: 0.002, amp: 60, r:136, g:0, b:255, opacity:0.10, speed:0.8 },
+    { baseY: 0.2,  freq: 0.007, amp: 40, r:0, g:255, b:200, opacity:0.08, speed:0.3 },
+    { baseY: 0.4,  freq: 0.004, amp: 90, r:255, g:100, b:200, opacity:0.06, speed:0.5 },
+  ];
+
+  function drawAurora(scrollY) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw stars
+    stars.forEach(s => {
+      ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+      s.alpha += s.speed;
+      if(s.alpha > 1 || s.alpha < 0) s.speed = -s.speed;
+    });
+
+    // Draw curtains, influenced by scrollY
+    const scrollEffect = scrollY * 0.1;
+    
+    ctx.globalCompositeOperation = 'screen';
+    
+    curtains.forEach(c => {
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height);
+      
+      for(let x = 0; x <= canvas.width; x += 20) {
+        // complex sine wave combination
+        const yOffset = Math.sin(x * c.freq + time * c.speed) * c.amp + 
+                        Math.cos(x * c.freq * 0.5 - time * c.speed * 1.5) * (c.amp/2);
+        
+        const y = canvas.height * c.baseY + yOffset - scrollEffect;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, `rgba(${c.r},${c.g},${c.b},0)`);
+      grad.addColorStop(0.3, `rgba(${c.r},${c.g},${c.b},${c.opacity})`);
+      grad.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+      
+      ctx.fillStyle = grad;
+      ctx.fill();
+    });
+    
+    ctx.globalCompositeOperation = 'source-over';
+    time += 0.02;
+  }
+
+  resizeCanvas();
+
+  // Animation loop
+  function tick() {
+    velocity = (target - current) * ease;
+    current += velocity;
+    
+    container.style.transform = `translateY(${-current}px)`;
+    
+    // Nav darkens on scroll
+    if(current > 50) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+
+    drawAurora(current);
+    
+    // Random crystal ping
+    if(audioInit && !isMuted && Math.random() < 0.001) playCrystalPing();
+
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // Interactive booking button
+  const btnCheck = document.getElementById('btn-check');
+  btnCheck.addEventListener('click', () => {
+    btnCheck.innerText = 'SEARCHING...';
+    btnCheck.style.opacity = '0.7';
+    setTimeout(() => {
+      btnCheck.innerText = 'DATES AVAILABLE · CONFIRM YOUR STAY →';
+      btnCheck.style.opacity = '1';
+      playSuccessSound();
+    }, 1500);
+  });
+
+  // --- Web Audio API ---
+  let audioCtx, masterGain, isMuted = true, audioInit = false;
+  let ambientOsc1, ambientOsc2, ambientFilter;
+
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    muteBtn.style.opacity = isMuted ? 0.5 : 1;
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.05, audioCtx.currentTime, 0.5);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    
+    // Wind noise
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+    }
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+    noiseSource.loop = true;
+    
+    const highpass = audioCtx.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.value = 4000;
+    
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = 0.02;
+    
+    noiseSource.connect(highpass); highpass.connect(noiseGain); noiseGain.connect(masterGain);
+    noiseSource.start();
+
+    // Deep pads
+    [60, 90, 120].forEach(f => {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const g = audioCtx.createGain();
+      g.gain.value = 0.02;
+      osc.connect(g); g.connect(masterGain);
+      osc.start();
+    });
+
+    masterGain.connect(audioCtx.destination);
+    audioInit = true;
+  }
+
+  function playCrystalPing() {
+    const freqs = [800, 1046.50, 1318.51];
+    const f = freqs[Math.floor(Math.random()*freqs.length)];
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.02, audioCtx.currentTime + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+    
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 3.1);
+  }
+
+  function playSuccessSound() {
+    if(!audioInit || isMuted) return;
+    const freqs = [523.25, 659.25, 783.99]; // C5, E5, G5
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.1);
+      gain.gain.linearRampToValueAtTime(0.03, audioCtx.currentTime + i*0.1 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 2);
+      osc.connect(gain); gain.connect(masterGain);
+      osc.start(audioCtx.currentTime + i*0.1);
+      osc.stop(audioCtx.currentTime + i*0.1 + 2.1);
+    });
+  }
+</script>
+</body>
+</html>

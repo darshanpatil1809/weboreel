@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>social_mirror</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --bg-light: #f5f7fa;
+    --bg-dark: #000000;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg-light);
+    color: #111;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden; /* handled by smooth scroll */
+    min-height: 100vh;
+  }
+
+  /* Spotlight Background */
+  #bg-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+    background: radial-gradient(circle var(--spot-size, 800px) at var(--mx, 50vw) var(--my, 50vh), rgba(255,255,255,0.8), transparent);
+    transition: background-color 0.5s;
+  }
+
+  /* Feed Container */
+  #scroll-container {
+    width: 100%; position: relative; will-change: transform;
+    display: flex; flex-direction: column; align-items: center; padding: 100px 0;
+  }
+  
+  /* Posts */
+  .post {
+    width: min(500px, 90vw); margin-bottom: 30px;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(var(--p-blur, 10px));
+    -webkit-backdrop-filter: blur(var(--p-blur, 10px));
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 16px; padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    transition: transform 0.1s;
+    transform: scale(var(--p-scale, 1));
+    filter: grayscale(var(--p-gray, 0)) contrast(var(--p-cont, 1));
+  }
+  
+  .post-header { display: flex; align-items: center; margin-bottom: 15px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); margin-right: 15px; }
+  .user-info { flex: 1; }
+  .username { font-weight: 600; font-size: 0.9rem; color: var(--txt-color, #111); text-shadow: 0 0 var(--txt-blur, 0px) var(--txt-color, #111); }
+  .time { font-size: 0.75rem; color: #888; }
+  
+  .post-content { margin-bottom: 15px; }
+  .text-line {
+    height: 14px; background: rgba(0,0,0,0.1); border-radius: 7px; margin-bottom: 8px; width: 100%;
+  }
+  .text-line.short { width: 60%; }
+  .post-image {
+    width: 100%; height: 250px; background: linear-gradient(135deg, rgba(0,0,0,0.05), rgba(0,0,0,0.1));
+    border-radius: 12px; margin-top: 10px;
+  }
+  
+  .post-footer { display: flex; gap: 20px; }
+  .action-icon {
+    width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.1);
+  }
+
+  /* Notifications */
+  #notifications { position: fixed; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+  .notif {
+    background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.5); border-radius: 10px;
+    padding: 15px 20px; font-size: 0.8rem; font-weight: 600;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    animation: slideIn 0.5s var(--ease), fadeOut 0.5s 4s forwards;
+  }
+  @keyframes slideIn { 0% { transform: translateX(100%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+  @keyframes fadeOut { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* UI Elements */
+  #time-tracker {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ui-bg, rgba(0,0,0,0.8)); color: var(--ui-txt, #fff);
+    padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+    z-index: 100; backdrop-filter: blur(10px); transition: 0.5s;
+  }
+  
+  #mute-btn {
+    position: fixed; top: 20px; left: 20px; z-index: 100;
+    background: var(--ui-bg, rgba(0,0,0,0.8)); color: var(--ui-txt, #fff);
+    border: none; width: 40px; height: 40px; border-radius: 50%;
+    cursor: pointer; transition: 0.5s; font-size: 1.2rem;
+  }
+
+  /* Glitch overlay deep in scroll */
+  #glitch-overlay {
+    position: fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index: 50;
+    mix-blend-mode: overlay; opacity: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px);
+  }
+
+</style>
+</head>
+<body>
+
+<div id="bg-container"></div>
+<div id="glitch-overlay"></div>
+
+<div id="notifications"></div>
+<div id="time-tracker">Scrolling for 0:00</div>
+<button id="mute-btn">🎵</button>
+
+<div id="scroll-container">
+  <!-- Posts injected here -->
+</div>
+
+<script>
+  // --- Post Generation ---
+  const container = document.getElementById('scroll-container');
+  let postCount = 0;
+  
+  function createPost() {
+    const post = document.createElement('div');
+    post.className = 'post';
+    post.dataset.idx = postCount;
+    
+    // Random gradient for avatar
+    const a1 = Math.floor(Math.random()*360);
+    const a2 = (a1 + 40) % 360;
+    
+    let contentHtml = '';
+    if(Math.random() > 0.5) {
+      contentHtml = `<div class="text-line"></div><div class="text-line"></div><div class="text-line short"></div>`;
+    } else {
+      contentHtml = `<div class="text-line short"></div><div class="post-image"></div>`;
+    }
+
+    post.innerHTML = `
+      <div class="post-header">
+        <div class="avatar" style="background: linear-gradient(45deg, hsl(${a1}, 80%, 60%), hsl(${a2}, 80%, 60%))"></div>
+        <div class="user-info">
+          <div class="username">@user_${Math.floor(Math.random()*9999)}</div>
+          <div class="time">${Math.floor(Math.random()*50)+1}m ago</div>
+        </div>
+      </div>
+      <div class="post-content">${contentHtml}</div>
+      <div class="post-footer">
+        <div class="action-icon"></div><div class="action-icon"></div><div class="action-icon"></div>
+      </div>
+    `;
+    
+    container.appendChild(post);
+    postCount++;
+  }
+
+  // Initial posts
+  for(let i=0; i<15; i++) createPost();
+
+  // --- Smooth & Infinite Scroll Engine ---
+  let current = 0, target = 0, velocity = 0;
+  const ease = 0.05;
+  const posts = document.getElementsByClassName('post');
+  
+  // Fake body height so native scrollbars kind of work, but we override
+  function getMaxScroll() { return container.scrollHeight - window.innerHeight; }
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    target += e.deltaY * 0.85;
+    if(target < 0) target = 0;
+  }, { passive: false });
+
+  let touchStart = 0;
+  window.addEventListener('touchstart', e => touchStart = e.touches[0].clientY, {passive:true});
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    target += (touchStart - e.touches[0].clientY) * 1.5;
+    if(target < 0) target = 0;
+    touchStart = e.touches[0].clientY;
+  }, { passive: false });
+
+  // --- Depth Distortion Logic ---
+  const MAX_DEPTH = 15000; // pixels where distortion maxes out
+  const bgContainer = document.getElementById('bg-container');
+  const glitchOver = document.getElementById('glitch-overlay');
+
+  function updateDistortion() {
+    const depthRatio = Math.min(current / MAX_DEPTH, 1); // 0 to 1
+    
+    // 1. Background Color
+    // From #f5f7fa to #000000
+    const r = Math.floor(245 * (1 - depthRatio));
+    const g = Math.floor(247 * (1 - depthRatio));
+    const b = Math.floor(250 * (1 - depthRatio));
+    document.body.style.backgroundColor = `rgb(${r},${g},${b})`;
+    
+    // 2. Spotlight size
+    const spotSize = 800 - (depthRatio * 750); // 800 to 50
+    bgContainer.style.setProperty('--spot-size', `${spotSize}px`);
+    bgContainer.style.opacity = 1 - (depthRatio * 0.5);
+
+    // 3. UI Colors invert
+    if(depthRatio > 0.5) {
+      document.documentElement.style.setProperty('--ui-bg', 'rgba(255,255,255,0.8)');
+      document.documentElement.style.setProperty('--ui-txt', '#000');
+    } else {
+      document.documentElement.style.setProperty('--ui-bg', 'rgba(0,0,0,0.8)');
+      document.documentElement.style.setProperty('--ui-txt', '#fff');
+    }
+
+    // 4. Glitch
+    glitchOver.style.opacity = Math.pow(depthRatio, 3);
+
+    // 5. Apply to each post based on its absolute position relative to scroll
+    for(let i=0; i<posts.length; i++) {
+      const p = posts[i];
+      // The deeper the post is physically, the more distorted it is inherently
+      const pRatio = Math.min((i * 300) / MAX_DEPTH, 1);
+      
+      const blurVal = 10 + (pRatio * 40); // 10 to 50
+      const grayVal = pRatio; // 0 to 1
+      const contVal = 1 + (pRatio * 2); // 1 to 3
+      const scaleVal = 1 - (pRatio * 0.1); // 1 to 0.9
+      
+      p.style.setProperty('--p-blur', `${blurVal}px`);
+      p.style.setProperty('--p-gray', `${grayVal}`);
+      p.style.setProperty('--p-cont', `${contVal}`);
+      p.style.setProperty('--p-scale', `${scaleVal}`);
+      
+      // Text illegibility
+      if(pRatio > 0.4) {
+        const blurTxt = (pRatio - 0.4) * 20;
+        p.style.setProperty('--txt-blur', `${blurTxt}px`);
+        p.style.setProperty('--txt-color', `transparent`);
+      }
+
+      // Dark mode glass inversion deep down
+      if(pRatio > 0.6) {
+        p.style.background = `rgba(0,0,0,0.4)`;
+        p.style.borderColor = `rgba(255,255,255,0.1)`;
+        p.style.boxShadow = `inset 0 0 50px rgba(0,0,0,0.8)`;
+      }
+    }
+
+    // Update Audio
+    updateAudioDistortion(depthRatio);
+  }
+
+  function tick() {
+    velocity = (target - current) * ease;
+    current += velocity;
+    container.style.transform = `translateY(${-current}px)`;
+
+    // Infinite scroll trigger
+    if(target > getMaxScroll() - 2000) {
+      for(let i=0; i<5; i++) createPost();
+    }
+
+    updateDistortion();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // --- Mouse Tracking ---
+  window.addEventListener('mousemove', e => {
+    bgContainer.style.setProperty('--mx', `${e.clientX}px`);
+    bgContainer.style.setProperty('--my', `${e.clientY}px`);
+  });
+
+  // --- Time Tracker ---
+  const timeTracker = document.getElementById('time-tracker');
+  let seconds = 0;
+  setInterval(() => {
+    seconds++;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    timeTracker.innerText = `Scrolling for ${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+
+  // --- Notifications ---
+  const notifContainer = document.getElementById('notifications');
+  const msgs = ["Someone liked your post", "New comment on your photo", "You have 3 new followers", "Trending: #design", "Don't miss out on this event"];
+  
+  setInterval(() => {
+    const depthRatio = Math.min(current / MAX_DEPTH, 1);
+    // Frequency increases slightly, then stops deep down
+    if(depthRatio > 0.8) return; 
+
+    const n = document.createElement('div');
+    n.className = 'notif';
+    
+    // Distort notif
+    if(depthRatio > 0.4) {
+      n.style.filter = `blur(${depthRatio*5}px) grayscale(1)`;
+      n.innerText = "S̷o̷m̷e̷o̷n̷e̷ ̷l̷i̷k̷e̷d̷";
+    } else {
+      n.innerText = msgs[Math.floor(Math.random()*msgs.length)];
+    }
+
+    notifContainer.appendChild(n);
+    setTimeout(() => n.remove(), 5000);
+    
+    if(audioInit && !isMuted) playNotifSound(depthRatio);
+  }, 3000);
+
+  // --- Web Audio API ---
+  let audioCtx, masterGain, isMuted = true, audioInit = false;
+  let beatInterval, chordInterval;
+  let filterNode, reverbNode, pannerNode;
+  
+  // Base freqs for Cmaj7 chord
+  const baseChords = [[261.63, 329.63, 392.00, 493.88]]; 
+
+  document.getElementById('mute-btn').addEventListener('click', () => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.4, audioCtx.currentTime, 0.1);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    
+    // Master FX Chain
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = 'lowpass';
+    filterNode.frequency.value = 20000; // Starts open
+
+    reverbNode = audioCtx.createConvolver();
+    // Simple noise impulse
+    const rate = audioCtx.sampleRate;
+    const length = rate * 3;
+    const impulse = audioCtx.createBuffer(2, length, rate);
+    for(let i=0; i<2; i++) {
+      const channel = impulse.getChannelData(i);
+      for(let j=0; j<length; j++) channel[j] = (Math.random() * 2 - 1) * Math.pow(1 - j/length, 2);
+    }
+    reverbNode.buffer = impulse;
+    const reverbGain = audioCtx.createGain();
+    reverbGain.gain.value = 0; // Starts dry
+    
+    const dryGain = audioCtx.createGain();
+    dryGain.gain.value = 1;
+
+    filterNode.connect(dryGain);
+    filterNode.connect(reverbNode);
+    reverbNode.connect(reverbGain);
+    
+    dryGain.connect(masterGain);
+    reverbGain.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+
+    // Loops
+    beatInterval = setInterval(playBeat, 500); // 120bpm
+    chordInterval = setInterval(playChord, 2000);
+
+    audioInit = true;
+    updateAudioDistortion(0);
+  }
+
+  let detuneAmt = 0;
+  function playChord() {
+    if(isMuted) return;
+    const t = audioCtx.currentTime;
+    baseChords[0].forEach(f => {
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      // Pitch drop deep down
+      osc.frequency.value = f * (1 - detuneAmt);
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.05, t + 0.1);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+      osc.connect(g); g.connect(filterNode);
+      osc.start(t); osc.stop(t + 2);
+    });
+  }
+
+  let step = 0;
+  function playBeat() {
+    if(isMuted) return;
+    const t = audioCtx.currentTime;
+    const isKick = step % 2 === 0;
+    
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    
+    if(isKick) {
+      osc.frequency.setValueAtTime(150 * (1-detuneAmt), t);
+      osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.1);
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+    } else {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(300 * (1-detuneAmt), t);
+      g.gain.setValueAtTime(0.05, t);
+      g.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+    }
+    
+    osc.connect(g); g.connect(filterNode);
+    osc.start(t); osc.stop(t + 0.1);
+    step++;
+  }
+
+  function playNotifSound(depth) {
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    
+    // Notif gets lower and weirder deep down
+    osc.frequency.setValueAtTime(800 * (1 - depth*0.8), t);
+    osc.frequency.linearRampToValueAtTime(1000 * (1 - depth*0.8), t + 0.1);
+    
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.1, t + 0.05);
+    g.gain.linearRampToValueAtTime(0, t + 0.2);
+    
+    osc.connect(g); g.connect(filterNode);
+    osc.start(t); osc.stop(t + 0.3);
+  }
+
+  function updateAudioDistortion(ratio) {
+    if(!audioInit) return;
+    
+    // Lowpass filter drops from 20000 to 200
+    const freq = 20000 - (19800 * ratio);
+    filterNode.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.5);
+
+    // Reverb wet mix increases
+    // Assuming we don't have direct access to dry/wet nodes here, we just modulate detune
+    detuneAmt = ratio * 0.5; // up to half pitch down
+  }
+
+</script>
+</body>
+</html>

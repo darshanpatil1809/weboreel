@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>nft_gallery</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050505;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent: #88ffcc;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background-color: var(--bg);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    perspective: 1200px;
+  }
+
+  /* Spotlight */
+  #spotlight {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none;
+    background: radial-gradient(circle 600px at var(--mx) var(--my), rgba(255,255,255,0.05), transparent 80%);
+    z-index: -1;
+  }
+
+  /* UI Layer */
+  #ui-layer {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 100;
+  }
+  .header {
+    position: absolute; top: 30px; left: 40px; right: 40px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 4px; pointer-events: auto; }
+  .btn-glass {
+    background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--glass-border);
+    padding: 10px 20px; color: #fff; font-family: 'Space Mono'; cursor: pointer; pointer-events: auto;
+    transition: 0.3s; border-radius: 4px; font-size: 0.8rem;
+  }
+  .btn-glass:hover { background: rgba(255,255,255,0.1); box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+  #mute-btn { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; pointer-events: auto; margin-left: 20px; opacity: 0.5; transition: 0.3s; }
+  #mute-btn:hover { opacity: 1; }
+
+  /* 3D Scene */
+  #scene {
+    position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+    transform-style: preserve-3d;
+  }
+
+  #corridor {
+    position: absolute; top: 0; left: 0;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+
+  /* Artworks */
+  .artwork-container {
+    position: absolute; width: 400px; height: 500px;
+    transform-style: preserve-3d;
+    transition: filter 0.3s, opacity 0.3s;
+    cursor: pointer;
+  }
+
+  .glass-frame {
+    position: absolute; width: 100%; height: 100%;
+    background: var(--glass);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.05);
+    padding: 20px; display: flex; flex-direction: column;
+    pointer-events: auto;
+  }
+
+  .art-canvas {
+    flex: 1; width: 100%; background: #111; border-radius: 4px;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+  }
+
+  .plaque {
+    margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+  }
+  .art-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 2px; }
+  .art-artist { font-size: 0.8rem; color: #aaa; margin-bottom: 10px; }
+  .art-price { font-family: 'Space Mono', monospace; color: var(--accent); font-size: 0.9rem; }
+
+  /* Modal Mode */
+  #modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+    opacity: 0; pointer-events: none; transition: opacity 0.5s; z-index: 50;
+  }
+  body.modal-active #modal-overlay { opacity: 1; pointer-events: auto; }
+  
+  .artwork-container.focused {
+    transition: transform 0.8s cubic-bezier(0.2, 1, 0.3, 1) !important;
+    z-index: 1000;
+  }
+  
+  .instruction {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    font-family: 'Space Mono'; font-size: 0.8rem; opacity: 0.5; pointer-events: none;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+
+  /* Mobile Fallback */
+  @media(max-width: 768px) {
+    body { overflow-y: auto; perspective: none; }
+    #scene, #corridor { position: static; transform: none !important; width: 100%; height: auto; }
+    .artwork-container {
+      position: relative; width: 90vw; height: 60vh; margin: 40px auto;
+      transform: none !important; top: auto !important; left: auto !important;
+    }
+    #modal-overlay { display: none; }
+    .instruction { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="spotlight" style="--mx: 50vw; --my: 50vh;"></div>
+
+<div id="ui-layer">
+  <div class="header">
+    <div class="logo">GALLERY_001</div>
+    <div>
+      <button class="btn-glass">CONNECT WALLET</button>
+      <button id="mute-btn">🎵</button>
+    </div>
+  </div>
+  <div class="instruction" id="scroll-inst">Scroll to navigate · Click to inspect</div>
+</div>
+
+<div id="modal-overlay"></div>
+
+<div id="scene">
+  <div id="corridor">
+    <!-- Artworks injected here -->
+  </div>
+</div>
+
+<script>
+  const isMobile = window.innerWidth <= 768;
+
+  // --- Artwork Generation ---
+  const corridor = document.getElementById('corridor');
+  const numArtworks = 10;
+  const zSpacing = 800;
+  const corridorWidth = 600; // Distance from center
+  const artworks = [];
+
+  const titles = ["VOID SCAPE", "NEURAL ECHO", "QUANTUM DRIFT", "SYNTHETIC DAWN", "CHROMATIC ABERRATION", "DIGITAL RUINS", "GHOST IN THE MACHINE", "FRACTAL DREAM", "SILICON SOUL", "NEON HORIZON"];
+  const artists = ["0xA1b...99c", "0x33F...e2A", "0x7F2...b11", "0x09C...4dE", "0x55A...f00"];
+
+  for(let i=0; i<numArtworks; i++) {
+    const isLeft = i % 2 === 0;
+    const zPos = -(i * zSpacing + 500); // Start a bit back
+    
+    const container = document.createElement('div');
+    container.className = 'artwork-container';
+    
+    // Initial 3D positioning
+    if(!isMobile) {
+      const xPos = isLeft ? -corridorWidth : corridorWidth - 400; // -400 adjusts for width
+      const rotY = isLeft ? 80 : -80;
+      container.style.transform = `translate3d(${xPos}px, -250px, ${zPos}px) rotateY(${rotY}deg)`;
+      container.dataset.ox = xPos;
+      container.dataset.oy = -250;
+      container.dataset.oz = zPos;
+      container.dataset.orot = rotY;
+    }
+
+    const price = (Math.random() * 5 + 0.1).toFixed(2);
+    
+    container.innerHTML = `
+      <div class="glass-frame">
+        <canvas class="art-canvas" width="360" height="360"></canvas>
+        <div class="plaque">
+          <div class="art-title">${titles[i]}</div>
+          <div class="art-artist">Artist: ${artists[i%artists.length]}</div>
+          <div class="art-price">${price} ETH</div>
+        </div>
+      </div>
+    `;
+    
+    corridor.appendChild(container);
+    artworks.push(container);
+    
+    // Draw procedural art
+    const canvas = container.querySelector('canvas');
+    drawProceduralArt(canvas, i);
+
+    // Interaction
+    if(!isMobile) {
+      container.addEventListener('click', () => toggleModal(container));
+    }
+  }
+
+  function drawProceduralArt(canvas, seed) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width; const h = canvas.height;
+    
+    // Type 1: Geometry
+    if(seed % 3 === 0) {
+      ctx.fillStyle = '#111'; ctx.fillRect(0,0,w,h);
+      for(let j=0; j<20; j++) {
+        ctx.strokeStyle = `hsla(${seed*40 + j*10}, 80%, 60%, 0.5)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(w/2 + Math.sin(j)*50, h/2 + Math.cos(j)*50, j*10, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    } 
+    // Type 2: Gradients
+    else if(seed % 3 === 1) {
+      const grad = ctx.createLinearGradient(0,0,w,h);
+      grad.addColorStop(0, `hsl(${seed*50}, 80%, 20%)`);
+      grad.addColorStop(1, `hsl(${seed*50 + 100}, 80%, 60%)`);
+      ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      for(let j=0; j<10; j++) {
+        ctx.fillRect(Math.random()*w, 0, Math.random()*20, h);
+      }
+    }
+    // Type 3: Particles
+    else {
+      ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0,0,w,h);
+      for(let j=0; j<100; j++) {
+        ctx.fillStyle = `hsla(${seed*30 + j}, 100%, 70%, ${Math.random()})`;
+        ctx.fillRect(Math.random()*w, Math.random()*h, Math.random()*4, Math.random()*20);
+      }
+    }
+  }
+
+  // --- Smooth Scroll Engine ---
+  let currentZ = 0, targetZ = 0, velocityZ = 0;
+  const ease = 0.08;
+  const maxScroll = (numArtworks - 1) * zSpacing + 1000;
+  let activeArt = null;
+
+  if(!isMobile) {
+    window.addEventListener('wheel', e => {
+      if(activeArt) return; // lock scroll in modal
+      e.preventDefault();
+      targetZ += e.deltaY * 1.5;
+      targetZ = Math.max(0, Math.min(targetZ, maxScroll));
+      document.getElementById('scroll-inst').style.opacity = 0;
+    }, { passive: false });
+
+    // Touch equivalent for z-scroll (swipe up moves forward)
+    let touchStart = 0;
+    window.addEventListener('touchstart', e => { touchStart = e.touches[0].clientY; }, {passive:true});
+    window.addEventListener('touchmove', e => {
+      if(activeArt) return;
+      e.preventDefault();
+      targetZ += (touchStart - e.touches[0].clientY) * 3;
+      targetZ = Math.max(0, Math.min(targetZ, maxScroll));
+      touchStart = e.touches[0].clientY;
+      document.getElementById('scroll-inst').style.opacity = 0;
+    }, { passive: false });
+
+    function tick() {
+      if(!activeArt) {
+        velocityZ = (targetZ - currentZ) * ease;
+        currentZ += velocityZ;
+        corridor.style.transform = `translate3d(0, 0, ${currentZ}px)`;
+
+        // Opacity/culling based on Z
+        artworks.forEach(art => {
+          const oz = parseFloat(art.dataset.oz);
+          const relativeZ = currentZ + oz; // distance from camera (camera is at z=0 relative to container's original pos)
+          
+          if(relativeZ > 200) {
+            // Passed behind camera
+            art.style.opacity = 0;
+          } else if (relativeZ < -3000) {
+            // Too far ahead
+            art.style.opacity = 0;
+          } else {
+            // Visible
+            let op = 1;
+            if(relativeZ > 0) op = 1 - (relativeZ / 200); // fade out as it passes
+            else if(relativeZ < -2000) op = 1 - ((-relativeZ - 2000) / 1000); // fade in from distance
+            art.style.opacity = op;
+            
+            // Subtle blur in distance
+            if(relativeZ < -1500) art.style.filter = `blur(${(-relativeZ - 1500)/100}px)`;
+            else art.style.filter = 'blur(0px)';
+          }
+        });
+
+        // Trigger footstep sound based on velocity
+        if(audioInit && !isMuted && Math.abs(velocityZ) > 1) {
+          footstepAccum += Math.abs(velocityZ);
+          if(footstepAccum > 400) {
+            playFootstep();
+            footstepAccum = 0;
+          }
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    // Spotlight mouse tracking
+    window.addEventListener('mousemove', e => {
+      document.getElementById('spotlight').style.setProperty('--mx', `${e.clientX}px`);
+      document.getElementById('spotlight').style.setProperty('--my', `${e.clientY}px`);
+    });
+  }
+
+  // --- Modal Interaction ---
+  const overlay = document.getElementById('modal-overlay');
+  
+  function toggleModal(art) {
+    if(activeArt === art) {
+      // Close
+      document.body.classList.remove('modal-active');
+      art.classList.remove('focused');
+      art.style.transform = `translate3d(${art.dataset.ox}px, ${art.dataset.oy}px, ${art.dataset.oz}px) rotateY(${art.dataset.orot}deg)`;
+      activeArt = null;
+      if(audioInit && !isMuted) playClick(0.5);
+    } else {
+      // Open
+      if(activeArt) return; // only one at a time
+      activeArt = art;
+      document.body.classList.add('modal-active');
+      art.classList.add('focused');
+      
+      // Calculate position to bring it to center of viewport relative to current scroll
+      // The container is at currentZ. We want the art to be at z=-400 relative to camera.
+      // So art absolute Z should be -currentZ - 400
+      const targetZPos = -currentZ - 400;
+      art.style.transform = `translate3d(-200px, -250px, ${targetZPos}px) rotateY(0deg) scale(1.2)`;
+      if(audioInit && !isMuted) playClick(1);
+    }
+  }
+
+  overlay.addEventListener('click', () => {
+    if(activeArt) toggleModal(activeArt);
+  });
+
+  // --- Audio ---
+  let audioCtx, masterGain, isMuted = true, audioInit = false;
+  let reverbNode;
+  let footstepAccum = 0;
+
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    e.target.style.opacity = isMuted ? 0.5 : 1;
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.2, audioCtx.currentTime, 0.5);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    
+    // Huge Reverb
+    reverbNode = audioCtx.createConvolver();
+    const rate = audioCtx.sampleRate;
+    const length = rate * 4;
+    const impulse = audioCtx.createBuffer(2, length, rate);
+    for(let i=0; i<2; i++) {
+      const channel = impulse.getChannelData(i);
+      for(let j=0; j<length; j++) channel[j] = (Math.random() * 2 - 1) * Math.pow(1 - j/length, 4);
+    }
+    reverbNode.buffer = impulse;
+
+    masterGain.connect(reverbNode);
+    reverbNode.connect(audioCtx.destination);
+    
+    // Low drone
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 80;
+    const droneGain = audioCtx.createGain();
+    droneGain.gain.value = 0.05;
+    osc.connect(droneGain); droneGain.connect(masterGain);
+    osc.start();
+
+    audioInit = true;
+  }
+
+  function playFootstep() {
+    if(!audioInit || isMuted) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.1);
+    
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + 0.15);
+  }
+
+  function playClick(vol) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(vol * 0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.connect(gain); gain.connect(masterGain);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+  }
+
+</script>
+</body>
+</html>

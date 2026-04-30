@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>The Last Voicemail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-space: #020204;
+    --plastic: #1a1a1a;
+    --plastic-light: #2a2a2a;
+    --plastic-dark: #0f0f0f;
+    --led-red: #ff3333;
+    --led-off: #330000;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-space);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+  }
+
+  /* Stars Background */
+  .stars {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: transparent;
+    z-index: -1;
+  }
+
+  /* The Machine Container */
+  .machine-container {
+    position: relative;
+    width: 400px;
+    height: 300px;
+    transform-style: preserve-3d;
+    animation: float 20s infinite linear;
+  }
+
+  @keyframes float {
+    0% { transform: rotateY(0deg) rotateX(10deg) translateY(0px); }
+    25% { transform: rotateY(90deg) rotateX(15deg) translateY(-20px); }
+    50% { transform: rotateY(180deg) rotateX(10deg) translateY(0px); }
+    75% { transform: rotateY(270deg) rotateX(5deg) translateY(20px); }
+    100% { transform: rotateY(360deg) rotateX(10deg) translateY(0px); }
+  }
+
+  /* Base Box */
+  .face {
+    position: absolute;
+    background: var(--plastic);
+    border: 2px solid #333;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+  }
+
+  .front  { width: 400px; height: 100px; transform: rotateY(  0deg) translateZ(150px); top: 100px; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; }
+  .right  { width: 300px; height: 100px; transform: rotateY( 90deg) translateZ(250px); top: 100px; left: 50px; background: var(--plastic-dark); }
+  .back   { width: 400px; height: 100px; transform: rotateY(180deg) translateZ(150px); top: 100px; background: var(--plastic-dark); }
+  .left   { width: 300px; height: 100px; transform: rotateY(-90deg) translateZ(150px); top: 100px; left: 50px; background: var(--plastic-light); }
+  .top    { width: 400px; height: 300px; transform: rotateX( 90deg) translateZ(50px); top: 0; 
+            background: linear-gradient(to bottom, var(--plastic-dark), var(--plastic-light));
+            border-radius: 10px; }
+  .bottom { width: 400px; height: 300px; transform: rotateX(-90deg) translateZ(50px); top: 0; background: #000; }
+
+  /* Top details */
+  .cassette-deck {
+    position: absolute;
+    bottom: 20px; left: 20px;
+    width: 200px; height: 120px;
+    background: #111;
+    border: 3px solid #333;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 0 10px #000;
+  }
+  .cassette-window {
+    width: 150px; height: 60px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #222;
+    border-radius: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+  }
+  .spool {
+    width: 40px; height: 40px;
+    background: #222;
+    border-radius: 50%;
+    border: 2px dashed #666;
+  }
+  .spool.spinning {
+    animation: spin 2s infinite linear;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  .speaker-grill {
+    position: absolute;
+    top: 20px; right: 20px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, #222 20%, transparent 20%);
+    background-size: 8px 8px;
+    border-radius: 50%;
+    border: 2px solid #333;
+    box-shadow: inset 0 0 20px #000;
+  }
+
+  /* Front Controls */
+  .led-display {
+    width: 60px; height: 30px;
+    background: #000;
+    border: 2px solid #222;
+    border-radius: 3px;
+    font-family: 'VT323', monospace;
+    color: var(--led-red);
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-shadow: 0 0 5px var(--led-red);
+    margin-bottom: 10px;
+  }
+
+  .buttons-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 40px; height: 20px;
+    background: #444;
+    border: 2px solid #222;
+    border-radius: 2px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transform: translateZ(0.1px); /* Fix z-fighting */
+    pointer-events: auto; /* Buttons on rotating object need this to be clickable when facing forward */
+  }
+  .btn:active {
+    transform: translateY(2px);
+    box-shadow: none;
+  }
+
+  .btn-play { background: #333; }
+  .btn-play::before {
+    content: '▶';
+    font-size: 0.6rem;
+    color: #0f0;
+    display: block;
+    text-align: center;
+    line-height: 16px;
+  }
+
+  .ui-overlay {
+    position: fixed;
+    top: 2rem; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .title {
+    font-size: 1.5rem;
+    letter-spacing: 0.2em;
+    opacity: 0.5;
+  }
+  .subtitle {
+    font-size: 0.8rem;
+    opacity: 0.3;
+    margin-top: 10px;
+  }
+  
+  /* Because 3D rotating object buttons are hard to click accurately during animation, 
+     we'll overlay an invisible huge button over the screen to trigger "Play" */
+  .global-trigger {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 100;
+    cursor: pointer;
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- Box-shadow based stars -->
+  <div class="stars" id="stars"></div>
+
+  <div class="ui-overlay">
+    <div class="title">THE LAST VOICEMAIL</div>
+    <div class="subtitle">CLICK ANYWHERE TO PLAY</div>
+  </div>
+
+  <!-- Global click interceptor -->
+  <div class="global-trigger" id="trigger"></div>
+
+  <div class="machine-container">
+    <div class="face front">
+      <div class="led-display" id="led">00</div>
+      <div class="buttons-row">
+        <div class="btn btn-play"></div>
+        <div class="btn"></div>
+        <div class="btn"></div>
+      </div>
+    </div>
+    <div class="face right"></div>
+    <div class="face back"></div>
+    <div class="face left"></div>
+    <div class="face top">
+      <div class="cassette-deck">
+        <div class="cassette-window">
+          <div class="spool" id="spool1"></div>
+          <div class="spool" id="spool2"></div>
+        </div>
+      </div>
+      <div class="speaker-grill"></div>
+    </div>
+    <div class="face bottom"></div>
+  </div>
+
+<script>
+  // Generate Stars
+  const starsEl = document.getElementById('stars');
+  let shadowStr = '';
+  for(let i=0; i<200; i++) {
+    const x = Math.random() * window.innerWidth;
+    const y = Math.random() * window.innerHeight;
+    const alpha = Math.random() * 0.8 + 0.2;
+    shadowStr += `${x}px ${y}px rgba(255,255,255,${alpha}), `;
+  }
+  shadowStr = shadowStr.slice(0, -2);
+  starsEl.style.boxShadow = shadowStr;
+  starsEl.style.width = '2px';
+  starsEl.style.height = '2px';
+
+  // Procedural Poetry Generation
+  const objects = ["orbiting station", "colony ship", "dying star", "outer rim", "abandoned relay"];
+  const actions = ["feed", "disconnect", "remember", "forgive", "ignite", "abandon"];
+  const nouns = ["garden", "core", "past", "ghosts", "engine", "silence"];
+
+  function generateMessage() {
+    const obj = objects[Math.floor(Math.random() * objects.length)];
+    const act = actions[Math.floor(Math.random() * actions.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    
+    return `Hey... it's me. I am leaving the ${obj}. Please... remember to ${act} the ${noun}. And... I'm sorry.`;
+  }
+
+  // Audio & Interaction
+  let audioCtx;
+  let isPlaying = false;
+  let tapeNoiseGain;
+
+  async function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    // Tape Noise / Static
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2000;
+    
+    tapeNoiseGain = audioCtx.createGain();
+    tapeNoiseGain.gain.value = 0; // Off initially
+    
+    noise.connect(filter);
+    filter.connect(tapeNoiseGain);
+    tapeNoiseGain.connect(audioCtx.destination);
+    noise.start();
+  }
+
+  const trigger = document.getElementById('trigger');
+  const led = document.getElementById('led');
+  const spool1 = document.getElementById('spool1');
+  const spool2 = document.getElementById('spool2');
+
+  trigger.addEventListener('click', async () => {
+    if (isPlaying) return;
+    isPlaying = true;
+    
+    if (!audioCtx) await initAudio();
+    
+    // Mechanical click sound
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+    g.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+
+    // Start Tape visuals and audio hiss
+    setTimeout(() => {
+      spool1.classList.add('spinning');
+      spool2.classList.add('spinning');
+      led.innerText = "PLAY";
+      tapeNoiseGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 0.5);
+      
+      // Delay speech slightly to let tape noise build
+      setTimeout(() => {
+        playSpeech();
+      }, 1000);
+    }, 200);
+  });
+
+  function playSpeech() {
+    if (!('speechSynthesis' in window)) {
+      alert("Speech synthesis not supported in this browser.");
+      endPlayback();
+      return;
+    }
+
+    const text = generateMessage();
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Attempt to make it sound degraded/robotic
+    utterance.rate = 0.7; // Slow
+    utterance.pitch = 0.5; // Low pitch
+    
+    utterance.onend = () => {
+      // Add a bit of trailing static
+      setTimeout(() => {
+        endPlayback();
+      }, 1000);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function endPlayback() {
+    spool1.classList.remove('spinning');
+    spool2.classList.remove('spinning');
+    led.innerText = "00";
+    if (tapeNoiseGain) {
+      tapeNoiseGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+    }
+    
+    // Mechanical stop click
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    g.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+
+    setTimeout(() => { isPlaying = false; }, 1000); // Cooldown
+  }
+
+</script>
+</body>
+</html>

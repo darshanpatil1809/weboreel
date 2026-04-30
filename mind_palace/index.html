@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>mind_palace</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300&family=Playfair+Display:ital,wght@1,400&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #030308;
+    color: #fff;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+  }
+  
+  /* Typography */
+  h1, h2, h3, .poetic { font-family: 'Playfair Display', serif; font-style: italic; }
+  .label { font-family: 'Bebas Neue', sans-serif; letter-spacing: 2px; }
+  .data { font-family: 'Space Mono', monospace; }
+
+  /* Background Elements */
+  #bg-container {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2;
+    background: linear-gradient(to bottom, #030308, #0a0520, #050510);
+  }
+  .bg-orb {
+    position: absolute; border-radius: 50%; filter: blur(60px);
+    animation: drift 20s infinite alternate var(--ease);
+  }
+  @keyframes drift {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(var(--tx), var(--ty)) scale(1.2); }
+  }
+  
+  #particles {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+  }
+  .particle {
+    position: absolute; background: white; border-radius: 50%;
+    animation: float var(--dur) linear infinite;
+    opacity: var(--op); width: var(--size); height: var(--size);
+  }
+  @keyframes float {
+    0% { transform: translateY(100vh) translateX(0); }
+    100% { transform: translateY(-10vh) translateX(var(--drift)); }
+  }
+
+  /* Glassmorphism System */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+  }
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+  .glass-dark {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-light {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  /* Scroll Container */
+  #scroll-container {
+    width: 100%;
+    position: relative;
+    will-change: transform;
+  }
+  
+  .room {
+    height: 110vh;
+    width: 100vw;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+  }
+
+  /* Navigation */
+  #nav {
+    position: fixed; right: 2vw; top: 50%; transform: translateY(-50%); z-index: 100;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .nav-pill {
+    padding: 0.5rem 1rem; border-radius: 20px;
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer; transition: all 0.3s;
+    font-size: 0.8rem; text-align: right;
+  }
+  .nav-pill:hover, .nav-pill.active {
+    background: rgba(255,255,255,0.2); box-shadow: 0 0 15px rgba(255,255,255,0.3);
+  }
+
+  #mute-btn {
+    position: fixed; top: 2vw; right: 2vw; z-index: 100;
+    font-size: 1.5rem; cursor: pointer; background: none; border: none; color: white;
+  }
+
+  /* Shared Parallax Classes */
+  .plx-fast { transition: transform 0s; }
+  .plx-med { transition: transform 0s; }
+  .plx-slow { transition: transform 0s; }
+  
+  /* ROOM 1: FOYER */
+  .foyer-arch {
+    width: 70vw; height: 60vh;
+    border-radius: 50% 50% 0 0;
+    display: flex; justify-content: center; align-items: center;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+  .quote { font-size: 2.5rem; text-align: center; max-width: 80%; opacity: 0; transition: opacity 2s; }
+  .foyer-orb {
+    width: 100px; height: 100px; border-radius: 50%; position: absolute;
+    background: radial-gradient(circle, rgba(255,255,255,0.8), rgba(255,255,255,0));
+    box-shadow: 0 0 40px rgba(255,255,255,0.5);
+    animation: rotateInner 10s linear infinite;
+  }
+  @keyframes rotateInner { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
+  .side-panel {
+    position: absolute; width: 30vw; height: 50vh; top: 5vh;
+    transform: rotateY(30deg); opacity: 0.5;
+  }
+  .side-panel.left { left: -15vw; transform: rotateY(30deg); }
+  .side-panel.right { right: -15vw; transform: rotateY(-30deg); }
+  .floor-reflection {
+    position: absolute; bottom: -20vh; width: 100vw; height: 40vh;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,0.1), transparent 70%);
+    transform: rotateX(70deg);
+  }
+  .mem-orb {
+    position: absolute; width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); backdrop-filter: blur(5px);
+    display: flex; justify-content: center; align-items: center;
+    font-family: 'Space Mono'; font-size: 8px; color: white;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.5);
+    animation: floatMem var(--dur) ease-in-out infinite alternate;
+  }
+  @keyframes floatMem { 0% { transform: translateY(0); } 100% { transform: translateY(-30px); } }
+
+  /* ROOM 2: LIBRARY */
+  .library-shelf {
+    width: 80vw; height: 70vh; display: flex; flex-direction: column; justify-content: space-around;
+  }
+  .shelf-row { display: flex; gap: 10px; align-items: flex-end; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+  .book-pill { width: 10px; height: var(--h); border-radius: 5px; background: rgba(255,255,255,0.1); }
+  .floating-card {
+    position: absolute; width: 200px; height: 130px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    transform: translate(var(--tx), var(--ty)) rotate(var(--rot));
+  }
+  .reading-table {
+    position: absolute; bottom: 10vh; width: 500px; height: 200px;
+    transform: rotateX(60deg); box-shadow: 0 50px 100px rgba(0,0,0,0.8);
+  }
+  .lamp {
+    position: absolute; bottom: 200px; width: 40px; height: 80px; border-radius: 20px 20px 0 0;
+    background: linear-gradient(to bottom, rgba(255,200,100,0.8), rgba(255,255,255,0.1));
+  }
+  .lamp-glow {
+    position: absolute; bottom: 0; width: 300px; height: 300px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,200,100,0.15), transparent 70%); transform: translateY(50%);
+  }
+
+  /* ROOM 3: OBSERVATORY */
+  .dome {
+    position: absolute; top: -20vh; width: 120vw; height: 80vh;
+    border-radius: 50%; border-bottom: 2px solid rgba(255,255,255,0.2);
+    box-shadow: inset 0 20px 50px rgba(0,0,0,0.8); overflow: hidden;
+  }
+  .telescope {
+    position: absolute; bottom: 20vh; width: 60px; height: 300px;
+    transform: rotate(45deg); transform-origin: bottom center;
+    background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+  }
+  .blueprint {
+    position: absolute; width: 250px; height: 350px; transform: rotate(var(--rot)) skewX(10deg);
+    border: 1px solid rgba(100,200,255,0.3); background: rgba(0,50,100,0.1);
+    background-image: linear-gradient(rgba(100,200,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(100,200,255,0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .rainbow-streak {
+    position: absolute; width: 200px; height: 200px; border-radius: 50%;
+    background: conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red);
+    filter: blur(40px); opacity: 0.15;
+  }
+
+  /* ROOM 4: STORM */
+  .storm-room { background: rgba(0,0,0,0.3); }
+  .crack {
+    position: absolute; width: 100%; height: 100%;
+    clip-path: polygon(0 0, 45% 0, 50% 30%, 48% 50%, 55% 70%, 50% 100%, 0 100%);
+    background: rgba(255,255,255,0.02);
+  }
+  .rain-line {
+    position: absolute; width: 1px; height: 100px; background: linear-gradient(transparent, rgba(255,255,255,0.5));
+    animation: rain var(--dur) linear infinite;
+  }
+  @keyframes rain { 0% { transform: translateY(-100vh); } 100% { transform: translateY(110vh); } }
+  #lightning {
+    position: fixed; top:0; left:0; width:100vw; height:100vh; background: white;
+    opacity: 0; pointer-events: none; z-index: -1;
+  }
+  .hope-light {
+    position: absolute; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,200,100,0.2), transparent);
+    filter: blur(30px);
+  }
+
+  /* ROOM 5: MIRROR */
+  .mirror-panel {
+    position: absolute; width: 50vw; height: 60vh;
+    display: flex; justify-content: center; align-items: center;
+    border: 2px solid rgba(255,255,255,0.4);
+    box-shadow: inset 0 0 50px rgba(255,255,255,0.1), 0 0 50px rgba(255,255,255,0.1);
+  }
+  .m1 { transform: translateZ(-200px) scale(0.8); opacity: 0.6; }
+  .m2 { transform: translateZ(-400px) scale(0.6); opacity: 0.4; }
+  .m3 { transform: translateZ(-600px) scale(0.4); opacity: 0.2; }
+  
+  /* ROOM 6: GARDEN */
+  .garden-planter {
+    position: absolute; bottom: 10vh; width: 400px; height: 100px;
+  }
+  .plant-shape {
+    position: absolute; bottom: 100%; left: 50%; width: 2px; height: 150px; background: rgba(100,255,100,0.3);
+    transform-origin: bottom center;
+  }
+  .plant-leaf {
+    position: absolute; width: 40px; height: 20px; background: rgba(100,255,100,0.2); border-radius: 20px 0;
+  }
+  .fountain {
+    position: absolute; width: 80px; height: 300px; border-radius: 40px;
+    background: linear-gradient(to bottom, rgba(200,255,255,0.2), transparent);
+    overflow: hidden;
+  }
+  .drop {
+    position: absolute; width: 4px; height: 15px; background: rgba(255,255,255,0.6); border-radius: 2px;
+    animation: fall var(--dur) linear infinite;
+  }
+  @keyframes fall { 0% { transform: translateY(-50px); } 100% { transform: translateY(300px); } }
+  .petal {
+    position: absolute; width: 15px; height: 15px; background: rgba(255,200,200,0.3); border-radius: 15px 0;
+    animation: driftPetal var(--dur) linear infinite;
+  }
+  @keyframes driftPetal {
+    0% { transform: translate(0, -10vh) rotate(0deg); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: translate(var(--tx), 110vh) rotate(360deg); opacity: 0; }
+  }
+
+  @media(max-width: 768px) {
+    .glass-panel { width: 90vw !important; }
+    #nav {
+      top: auto; bottom: 0; left: 0; right: auto; width: 100vw; transform: none;
+      flex-direction: row; justify-content: center; padding: 10px; background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+      flex-wrap: wrap; gap: 5px;
+    }
+    .nav-pill { font-size: 0.6rem; padding: 0.3rem 0.6rem; }
+    .quote { font-size: 1.5rem; }
+    .room { height: 120vh; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-container">
+  <!-- Dynamic Orbs added by JS -->
+</div>
+<div id="particles"></div>
+<div id="lightning"></div>
+
+<button id="mute-btn">💎</button>
+
+<nav id="nav">
+  <div class="nav-pill label active" data-target="0">FOYER</div>
+  <div class="nav-pill label" data-target="1">LIBRARY</div>
+  <div class="nav-pill label" data-target="2">OBSERVATORY</div>
+  <div class="nav-pill label" data-target="3">STORM ROOM</div>
+  <div class="nav-pill label" data-target="4">MIRROR ROOM</div>
+  <div class="nav-pill label" data-target="5">GARDEN</div>
+</nav>
+
+<div id="scroll-container">
+  
+  <!-- 1. FOYER -->
+  <div class="room" id="room-0">
+    <div class="floor-reflection plx-slow" data-speed="0.2"></div>
+    <div class="side-panel left glass-panel plx-med" data-speed="0.5"></div>
+    <div class="side-panel right glass-panel plx-med" data-speed="0.5"></div>
+    
+    <div class="foyer-arch glass-strong plx-med" data-speed="0.7">
+      <div class="foyer-orb"></div>
+      <h1 class="quote poetic" id="foyer-quote">Every mind is a palace. Most people never find the foyer.</h1>
+    </div>
+
+    <!-- Memory Orbs -->
+    <div class="mem-orb plx-fast" data-speed="0.9" style="top:20%; left:20%; --dur:3s;">SIGHT</div>
+    <div class="mem-orb plx-fast" data-speed="1.1" style="top:15%; left:50%; --dur:4s;">SOUND</div>
+    <div class="mem-orb plx-fast" data-speed="0.8" style="top:25%; left:80%; --dur:2.5s;">TOUCH</div>
+    <div class="mem-orb plx-fast" data-speed="1.2" style="top:60%; left:15%; --dur:3.5s;">TASTE</div>
+    <div class="mem-orb plx-fast" data-speed="1.0" style="top:70%; left:85%; --dur:4.5s;">SMELL</div>
+  </div>
+
+  <!-- 2. LIBRARY -->
+  <div class="room" id="room-1">
+    <div class="library-shelf plx-med" data-speed="0.6" id="shelf-container">
+      <!-- Books injected by JS -->
+    </div>
+    
+    <div class="reading-table glass-panel plx-slow" data-speed="0.3"></div>
+    <div class="lamp plx-slow" data-speed="0.4">
+      <div class="lamp-glow"></div>
+    </div>
+
+    <!-- Floating Cards -->
+    <div class="floating-card glass-panel plx-fast" data-speed="0.8" style="--tx:-30vw; --ty:-20vh; --rot:-10deg;">
+      <div class="data">1998</div><div class="label">BICYCLE</div>
+    </div>
+    <div class="floating-card glass-panel plx-fast" data-speed="1.2" style="--tx:30vw; --ty:-30vh; --rot:15deg;">
+      <div class="data">2014</div><div class="label">RAIN</div>
+    </div>
+    <div class="floating-card glass-panel plx-fast" data-speed="0.9" style="--tx:-20vw; --ty:20vh; --rot:5deg;">
+      <div class="data">2005</div><div class="label">OCEAN</div>
+    </div>
+    <div class="floating-card glass-panel plx-fast" data-speed="1.1" style="--tx:25vw; --ty:15vh; --rot:-5deg;">
+      <div class="data">2021</div><div class="label">COFFEE</div>
+    </div>
+  </div>
+
+  <!-- 3. OBSERVATORY -->
+  <div class="room" id="room-2">
+    <div class="dome glass-panel plx-slow" data-speed="0.2"></div>
+    
+    <div class="rainbow-streak" style="top:20%; left:30%;"></div>
+    <div class="rainbow-streak" style="bottom:20%; right:30%; transform:rotate(180deg);"></div>
+
+    <div class="blueprint glass-panel plx-med" data-speed="0.8" style="left:15vw; top:30vh; --rot:-15deg;"></div>
+    <div class="blueprint glass-panel plx-med" data-speed="0.9" style="right:15vw; top:20vh; --rot:10deg;"></div>
+
+    <div class="telescope glass-strong plx-med" data-speed="0.6"></div>
+
+    <h2 class="quote poetic plx-fast" data-speed="0.85" style="opacity:1; z-index:10; font-size:3rem; text-shadow: 0 0 20px rgba(255,255,255,0.5);">Imagination is the only room with no ceiling.</h2>
+  </div>
+
+  <!-- 4. STORM ROOM -->
+  <div class="room storm-room" id="room-3">
+    <div id="rain-container" style="position:absolute; width:100%; height:100%; overflow:hidden;"></div>
+    
+    <div class="glass-dark plx-med" data-speed="0.7" style="width:70vw; height:60vh; display:flex; justify-content:center; align-items:center; position:relative; overflow:hidden;">
+      <div class="crack"></div>
+      <div class="hope-light" style="left:40%; top:40%;"></div>
+      <h2 class="quote poetic" style="opacity:1; z-index:2; text-shadow:0 0 10px #000;">Some rooms of the mind are not for visitors.</h2>
+    </div>
+  </div>
+
+  <!-- 5. MIRROR ROOM -->
+  <div class="room" id="room-4">
+    <div class="mirror-panel m3 glass-panel plx-slow" data-speed="0.3"></div>
+    <div class="mirror-panel m2 glass-panel plx-med" data-speed="0.5"></div>
+    <div class="mirror-panel m1 glass-panel plx-fast" data-speed="0.7"></div>
+    <div class="mirror-panel glass-strong plx-fast" data-speed="0.85" style="flex-direction:column; gap:2rem; padding:3rem; text-align:center;">
+      <div class="label" style="font-size:2rem;">This is the only mirror that cannot lie.</div>
+      <div class="poetic" style="font-size:1.5rem; color:#ddd;">Truth is not comfortable. That's how you know it's real.</div>
+    </div>
+  </div>
+
+  <!-- 6. GARDEN -->
+  <div class="room" id="room-5">
+    <div class="fountain glass-light plx-med" data-speed="0.6" style="left:20vw;">
+      <!-- drops added by js -->
+    </div>
+    
+    <div class="garden-planter glass-light plx-med" data-speed="0.5" style="right:10vw;">
+      <!-- plants added by js -->
+    </div>
+
+    <div class="garden-planter glass-light plx-med" data-speed="0.5" style="left:30vw; width:200px; bottom:20vh;"></div>
+
+    <h2 class="quote poetic plx-fast" data-speed="0.85" style="opacity:1; z-index:10; font-size:3rem; color:#ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.3); max-width:60%;">The palace is yours. All rooms are yours. Even the storm.</h2>
+    
+    <div id="petals-container" style="position:absolute; width:100%; height:100%; overflow:hidden;"></div>
+  </div>
+
+</div>
+
+<script>
+  // --- Smooth Scroll Engine ---
+  let current = 0, target = 0, velocity = 0;
+  const ease = 0.078;
+  const container = document.getElementById('scroll-container');
+  const rooms = document.querySelectorAll('.room');
+  const roomHeight = window.innerHeight * 1.1;
+  
+  function getMaxScroll() {
+    return document.body.scrollHeight - window.innerHeight;
+  }
+
+  // Adjust body height
+  document.body.style.height = `${rooms.length * 110}vh`;
+
+  window.addEventListener('wheel', e => {
+    e.preventDefault();
+    target += e.deltaY * 0.85;
+    target = Math.max(0, Math.min(target, getMaxScroll()));
+  }, { passive: false });
+
+  let touchStart = 0;
+  window.addEventListener('touchstart', e => {
+    touchStart = e.touches[0].clientY;
+  }, {passive: true});
+  
+  window.addEventListener('touchmove', e => {
+    e.preventDefault();
+    target += (touchStart - e.touches[0].clientY) * 1.5;
+    target = Math.max(0, Math.min(target, getMaxScroll()));
+    touchStart = e.touches[0].clientY;
+  }, { passive: false });
+
+  // Parallax elements
+  const plxElements = document.querySelectorAll('[class*="plx-"]');
+
+  function tick() {
+    velocity = (target - current) * ease;
+    current += velocity;
+    
+    container.style.transform = `translateY(${-current}px)`;
+
+    plxElements.forEach(el => {
+      const speed = parseFloat(el.getAttribute('data-speed'));
+      // relative to viewport center
+      const rect = el.parentElement.getBoundingClientRect();
+      const centerOffset = (rect.top + rect.height/2) - window.innerHeight/2;
+      const y = centerOffset * (1 - speed);
+      el.style.transform = `translateY(${y}px) ${el.style.transform.replace(/translateY\([^)]+\)/g, '')}`;
+    });
+
+    updateNav();
+    updateAudioContext();
+
+    // Lightning effect in room 3
+    if(activeRoom === 3 && Math.random() < 0.01) {
+      flashLightning();
+    }
+
+    requestAnimationFrame(tick);
+  }
+  
+  // --- Navigation & Active Room ---
+  let activeRoom = 0;
+  const navPills = document.querySelectorAll('.nav-pill');
+  
+  function updateNav() {
+    let newRoom = Math.round(current / roomHeight);
+    if(newRoom !== activeRoom && newRoom >= 0 && newRoom < 6) {
+      activeRoom = newRoom;
+      navPills.forEach((p, i) => {
+        p.classList.toggle('active', i === activeRoom);
+      });
+      triggerRoomAnimation(activeRoom);
+    }
+  }
+
+  navPills.forEach((pill, i) => {
+    pill.addEventListener('click', () => {
+      target = i * roomHeight;
+    });
+  });
+
+  // --- Initial Setup & Effects ---
+  
+  // Background Orbs
+  const bgColors = [
+    'rgba(0,100,255,0.1)', 'rgba(200,0,255,0.08)', 'rgba(0,255,100,0.08)',
+    'rgba(255,100,0,0.05)', 'rgba(100,100,255,0.1)'
+  ];
+  const bgContainer = document.getElementById('bg-container');
+  for(let i=0; i<8; i++) {
+    const orb = document.createElement('div');
+    orb.className = 'bg-orb';
+    const size = 200 + Math.random()*200;
+    orb.style.width = `${size}px`;
+    orb.style.height = `${size}px`;
+    orb.style.left = `${Math.random()*100}vw`;
+    orb.style.top = `${Math.random()*100}vh`;
+    orb.style.background = `radial-gradient(circle, ${bgColors[Math.floor(Math.random()*bgColors.length)]}, transparent 70%)`;
+    orb.style.setProperty('--tx', `${(Math.random()-0.5)*200}px`);
+    orb.style.setProperty('--ty', `${(Math.random()-0.5)*200}px`);
+    orb.style.animationDuration = `${15 + Math.random()*15}s`;
+    bgContainer.appendChild(orb);
+  }
+
+  // Particles
+  const partContainer = document.getElementById('particles');
+  for(let i=0; i<60; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = `${Math.random()*100}vw`;
+    p.style.setProperty('--dur', `${10 + Math.random()*20}s`);
+    p.style.setProperty('--size', `${1 + Math.random()*3}px`);
+    p.style.setProperty('--op', `${0.1 + Math.random()*0.5}`);
+    p.style.setProperty('--drift', `${(Math.random()-0.5)*100}vw`);
+    p.style.animationDelay = `-${Math.random()*20}s`;
+    partContainer.appendChild(p);
+  }
+
+  // Library Books
+  const shelfContainer = document.getElementById('shelf-container');
+  const bookColors = ['#ff8888', '#88ff88', '#8888ff', '#ffff88', '#ff88ff', '#88ffff'];
+  for(let r=0; r<4; r++) {
+    const row = document.createElement('div');
+    row.className = 'shelf-row';
+    for(let b=0; b<30; b++) {
+      if(Math.random() > 0.3) {
+        const book = document.createElement('div');
+        book.className = 'book-pill';
+        book.style.setProperty('--h', `${30 + Math.random()*40}px`);
+        book.style.background = `rgba(${hexToRgb(bookColors[Math.floor(Math.random()*bookColors.length)])}, 0.2)`;
+        if(Math.random()>0.8) book.style.transform = `rotate(${(Math.random()-0.5)*20}deg)`;
+        row.appendChild(book);
+      } else {
+        const gap = document.createElement('div');
+        gap.style.width = `${10+Math.random()*20}px`;
+        row.appendChild(gap);
+      }
+    }
+    shelfContainer.appendChild(row);
+  }
+
+  function hexToRgb(hex) {
+    const bigint = parseInt(hex.slice(1), 16);
+    return `${(bigint >> 16) & 255}, ${(bigint >> 8) & 255}, ${bigint & 255}`;
+  }
+
+  // Storm Rain
+  const rainContainer = document.getElementById('rain-container');
+  for(let i=0; i<50; i++) {
+    const r = document.createElement('div');
+    r.className = 'rain-line';
+    r.style.left = `${Math.random()*100}%`;
+    r.style.setProperty('--dur', `${0.5 + Math.random()*0.5}s`);
+    r.style.animationDelay = `-${Math.random()}s`;
+    rainContainer.appendChild(r);
+  }
+
+  function flashLightning() {
+    const l = document.getElementById('lightning');
+    l.style.opacity = '0.3';
+    setTimeout(() => l.style.opacity = '0', 50);
+    setTimeout(() => {
+      if(Math.random()>0.5) {
+        l.style.opacity = '0.4';
+        setTimeout(() => l.style.opacity = '0', 50);
+      }
+    }, 100);
+  }
+
+  // Garden Plants & Fountain
+  const planters = document.querySelectorAll('.garden-planter');
+  planters.forEach(p => {
+    for(let i=0; i<3; i++) {
+      const stem = document.createElement('div');
+      stem.className = 'plant-shape';
+      stem.style.left = `${20 + i*30}%`;
+      stem.style.transform = `rotate(${(i-1)*15}deg)`;
+      for(let l=0; l<4; l++) {
+        const leaf = document.createElement('div');
+        leaf.className = 'plant-leaf';
+        leaf.style.bottom = `${20 + l*25}%`;
+        leaf.style.left = l%2===0 ? '2px' : '-40px';
+        leaf.style.transform = `rotate(${l%2===0 ? 30 : -30}deg)`;
+        stem.appendChild(leaf);
+      }
+      p.appendChild(stem);
+    }
+  });
+
+  const fountain = document.querySelector('.fountain');
+  if (fountain) {
+      for(let i=0; i<10; i++) {
+        const d = document.createElement('div');
+        d.className = 'drop';
+        d.style.left = `${Math.random()*100}%`;
+        d.style.setProperty('--dur', `${0.5 + Math.random()*0.5}s`);
+        d.style.animationDelay = `-${Math.random()}s`;
+        fountain.appendChild(d);
+      }
+  }
+
+  const petalsContainer = document.getElementById('petals-container');
+  for(let i=0; i<30; i++) {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    p.style.left = `${Math.random()*100}%`;
+    p.style.setProperty('--dur', `${5 + Math.random()*5}s`);
+    p.style.setProperty('--tx', `${(Math.random()-0.5)*200}px`);
+    p.style.animationDelay = `-${Math.random()*10}s`;
+    petalsContainer.appendChild(p);
+  }
+
+  // Text Animation Foyer
+  setTimeout(() => {
+    document.getElementById('foyer-quote').style.opacity = 1;
+  }, 1000);
+
+  function triggerRoomAnimation(index) {
+    if(index === 0) {
+      // already handled
+    }
+    // Web Audio ping handled in updateAudioContext
+  }
+
+  // --- Web Audio API ---
+  let audioCtx;
+  let masterGain;
+  let reverbNode;
+  let currentPads = [];
+  let isMuted = true;
+  let audioInit = false;
+  
+  const roomFreqs = {
+    0: [261.63, 329.63, 392.00], // Foyer: C4, E4, G4
+    1: [220.00, 277.18, 329.63], // Library: A3, C#4, E4
+    2: [783.99, 987.77],         // Observatory: G5, B5
+    3: [80.00, 100.00],          // Storm
+    4: [440.00],                 // Mirror: A4
+    5: [392.00, 493.88, 587.33]  // Garden: G4, B4, D5
+  };
+
+  const muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', () => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    muteBtn.style.opacity = isMuted ? 0.5 : 1;
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.05, audioCtx.currentTime, 0.5);
+    }
+  });
+
+  async function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    
+    // Create Reverb
+    reverbNode = audioCtx.createConvolver();
+    // Generate impulse response
+    const rate = audioCtx.sampleRate;
+    const length = rate * 3;
+    const impulse = audioCtx.createBuffer(2, length, rate);
+    for(let i=0; i<2; i++) {
+      const channel = impulse.getChannelData(i);
+      for(let j=0; j<length; j++) {
+        channel[j] = (Math.random() * 2 - 1) * Math.pow(1 - j/length, 3);
+      }
+    }
+    reverbNode.buffer = impulse;
+
+    masterGain.connect(reverbNode);
+    reverbNode.connect(audioCtx.destination);
+    
+    // Base ambient
+    createPad([110, 165, 220], 0.02, true);
+    
+    audioInit = true;
+    updateAudioContext(true);
+  }
+
+  function createPad(freqs, vol, isBase=false) {
+    const nodes = freqs.map(f => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.value = 0;
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      return { osc, gain, vol };
+    });
+    if(!isBase) currentPads.push(...nodes);
+    return nodes;
+  }
+
+  let lastRoomAudio = -1;
+  function updateAudioContext(force=false) {
+    if(!audioInit || isMuted) return;
+    
+    if(activeRoom !== lastRoomAudio || force) {
+      // fade out old
+      currentPads.forEach(n => {
+        n.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 1);
+        setTimeout(() => { n.osc.stop(); n.gain.disconnect(); }, 2000);
+      });
+      currentPads = [];
+      
+      // play new pads
+      if(roomFreqs[activeRoom]) {
+        const nodes = createPad(roomFreqs[activeRoom], 0.03);
+        nodes.forEach(n => n.gain.gain.setTargetAtTime(n.vol, audioCtx.currentTime, 1));
+      }
+
+      // chime
+      if(!force) playChime();
+      
+      lastRoomAudio = activeRoom;
+    }
+  }
+
+  function playChime() {
+    const freqs = [1046.50, 1318.51]; // C6, E6
+    freqs.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, audioCtx.currentTime + i*0.1);
+      gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + i*0.1 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 1.5);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start(audioCtx.currentTime + i*0.1);
+      osc.stop(audioCtx.currentTime + i*0.1 + 2);
+    });
+  }
+
+  // Start loop
+  requestAnimationFrame(tick);
+
+</script>
+</body>
+</html>

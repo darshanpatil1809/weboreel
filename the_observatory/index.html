@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>The Observatory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,400&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0a0c;
+    --brass: #b5a642;
+    --brass-dark: #3a3212;
+    --wood: #1f1410;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--wood);
+    color: var(--brass);
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Wood background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 20px);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* The Telescope Housing */
+  .telescope-housing {
+    position: relative;
+    width: 90vmin;
+    height: 90vmin;
+    max-width: 800px;
+    max-height: 800px;
+    border-radius: 50%;
+    background: var(--bg-dark);
+    box-shadow: 
+      0 0 0 40px var(--brass-dark),
+      0 0 0 42px #000,
+      0 0 0 60px var(--wood),
+      inset 0 0 100px rgba(0,0,0,1),
+      0 30px 50px rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* Clips the canvas to the circle */
+    cursor: grab;
+  }
+
+  .telescope-housing:active {
+    cursor: grabbing;
+  }
+
+  /* Inner brass ring */
+  .lens-ring {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 10px solid var(--brass);
+    box-shadow: inset 0 0 50px rgba(181, 166, 66, 0.2);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Canvas Sky */
+  canvas#sky {
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%; /* Make it larger than viewport to allow panning */
+    z-index: 1;
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  /* Crosshairs */
+  .crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 100%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 15;
+    opacity: 0.2;
+  }
+  .crosshair::before {
+    content: ''; position: absolute;
+    top: 50%; left: 0; width: 100%; height: 1px;
+    background: var(--brass);
+  }
+  .crosshair::after {
+    content: ''; position: absolute;
+    top: 0; left: 50%; width: 1px; height: 100%;
+    background: var(--brass);
+  }
+  .center-dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px; height: 4px;
+    background: var(--brass);
+    border-radius: 50%;
+  }
+
+  /* UI Layer */
+  .ui-panel {
+    position: absolute;
+    bottom: 2rem;
+    left: 2rem;
+    pointer-events: none;
+  }
+  .coords {
+    font-size: 1.2rem;
+    text-shadow: 0 0 10px #000;
+  }
+  .instruction {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: rgba(181, 166, 66, 0.5);
+    margin-top: 0.5rem;
+  }
+
+  .audio-toggle {
+    position: absolute;
+    bottom: 2rem; right: 2rem;
+    background: rgba(10,10,12,0.8);
+    border: 1px solid var(--brass);
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    color: var(--brass);
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+
+  <div class="ui-panel">
+    <div class="coords" id="coords">RA: 00h 00m 00s | DEC: +00° 00' 00"</div>
+    <div class="instruction">DRAG TO PAN THE HEAVENS</div>
+  </div>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">🔭</button>
+
+  <div class="telescope-housing" id="viewport">
+    <canvas id="sky"></canvas>
+    <div class="lens-ring"></div>
+    <div class="crosshair"><div class="center-dot"></div></div>
+  </div>
+
+<script>
+  // Sky Canvas Generation
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  
+  // We make the canvas very large to simulate an infinite sky
+  const skySize = 3000;
+  canvas.width = skySize;
+  canvas.height = skySize;
+
+  const stars = [];
+  const nebulas = [];
+
+  // Generate Stars
+  for(let i=0; i<3000; i++) {
+    stars.push({
+      x: Math.random() * skySize,
+      y: Math.random() * skySize,
+      r: Math.random() * 1.5 + 0.1,
+      alpha: Math.random(),
+      twinkleSpeed: Math.random() * 0.05 + 0.01
+    });
+  }
+
+  // Generate Nebulas (procedural gradient blobs)
+  for(let i=0; i<15; i++) {
+    nebulas.push({
+      x: Math.random() * skySize,
+      y: Math.random() * skySize,
+      r: Math.random() * 300 + 100,
+      hue: Math.random() * 60 + 200 // Blues/purples
+    });
+  }
+
+  // Draw Static Sky
+  function drawSky() {
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, skySize, skySize);
+
+    // Draw Nebulas
+    nebulas.forEach(n => {
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      grad.addColorStop(0, `hsla(${n.hue}, 80%, 30%, 0.15)`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    // Draw Stars
+    stars.forEach(s => {
+      ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+  
+  // Initial draw
+  drawSky();
+
+  // Panning Logic
+  const viewport = document.getElementById('viewport');
+  const coordsDisplay = document.getElementById('coords');
+  
+  let isDragging = false;
+  let startX, startY;
+  let panX = 0;
+  let panY = 0;
+  // Center initially
+  panX = -(skySize/2) + (viewport.clientWidth/2);
+  panY = -(skySize/2) + (viewport.clientHeight/2);
+  
+  function updateTransform() {
+    canvas.style.transform = `translate(${panX}px, ${panY}px)`;
+    
+    // Abstract Coordinate Math
+    const ra = Math.abs(panX % 360).toFixed(0);
+    const dec = ((panY / skySize) * 180 - 90).toFixed(2);
+    coordsDisplay.innerText = `RA: ${ra}h | DEC: ${dec > 0 ? '+' : ''}${dec}°`;
+  }
+  updateTransform();
+
+  viewport.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+    if(!audioInit && !isMuted) initAudio();
+    if(audioInit && !isMuted) gearGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.1);
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    
+    // Bounds checking
+    const maxPanX = viewport.clientWidth * 0.5;
+    const minPanX = -skySize + viewport.clientWidth * 1.5;
+    const maxPanY = viewport.clientHeight * 0.5;
+    const minPanY = -skySize + viewport.clientHeight * 1.5;
+    
+    if (panX > maxPanX) panX = maxPanX;
+    if (panX < minPanX) panX = minPanX;
+    if (panY > maxPanY) panY = maxPanY;
+    if (panY < minPanY) panY = minPanY;
+
+    updateTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+    if(audioInit && !isMuted) gearGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+  });
+  
+  viewport.addEventListener('mouseleave', () => {
+    isDragging = false;
+    if(audioInit && !isMuted) gearGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+  });
+
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain, windGain, gearGain;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Cosmic Wind (Filtered Pink Noise)
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 300;
+    
+    windGain = audioCtx.createGain();
+    windGain.gain.value = isMuted ? 0 : 0.2;
+    
+    noise.connect(filter);
+    filter.connect(windGain);
+    windGain.connect(masterGain);
+    noise.start();
+
+    // Gear Hum for panning
+    const gearOsc = audioCtx.createOscillator();
+    gearOsc.type = 'sawtooth';
+    gearOsc.frequency.value = 60;
+    
+    const gearFilter = audioCtx.createBiquadFilter();
+    gearFilter.type = 'lowpass';
+    gearFilter.frequency.value = 150;
+    
+    gearGain = audioCtx.createGain();
+    gearGain.gain.value = 0; // Only plays when dragging
+    
+    gearOsc.connect(gearFilter);
+    gearFilter.connect(gearGain);
+    gearGain.connect(masterGain);
+    gearOsc.start();
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (windGain) windGain.gain.value = isMuted ? 0 : 0.2;
+    if (gearGain && !isDragging) gearGain.gain.value = 0;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔭';
+  }
+
+</script>
+</body>
+</html>

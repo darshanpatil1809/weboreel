@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>weather_god</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-blur: 20px;
+    --text-main: #fff;
+    --sky-top: #4a90e2;
+    --sky-bot: #87ceeb;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: linear-gradient(to bottom, var(--sky-top), var(--sky-bot));
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    transition: background 1s ease;
+  }
+
+  /* Environment */
+  #environment {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -2;
+  }
+  #particles-canvas {
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none;
+  }
+  #clouds-layer {
+    position: absolute; top: 0; left: 0; width: 200vw; height: 100vh;
+    background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 1  0 1 0 0 1  0 0 1 0 1  1 0 0 0 0" in="noise"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.5"/></svg>');
+    opacity: 0; transition: opacity 0.5s;
+    animation: panClouds var(--cloud-speed, 100s) linear infinite;
+    mix-blend-mode: overlay; pointer-events: none;
+  }
+  @keyframes panClouds { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+  .celestial {
+    position: absolute; width: 150px; height: 150px; border-radius: 50%;
+    transition: all 1s ease; left: 20vw; top: 20vh;
+  }
+  #sun {
+    background: radial-gradient(circle, #fff, #ffdf00);
+    box-shadow: 0 0 100px #ffdf00; opacity: 1;
+  }
+  #moon {
+    background: radial-gradient(circle, #fff, #e0e0e0);
+    box-shadow: 0 0 50px #fff, inset -20px -20px 0 0 rgba(0,0,0,0.1);
+    opacity: 0;
+  }
+
+  /* Post-processing effects */
+  #fx-overlay {
+    position: fixed; top:0; left:0; width:100vw; height:100vh; pointer-events: none; z-index: -1;
+    transition: all 0.5s;
+  }
+  .fx-heat { backdrop-filter: blur(2px) contrast(1.2); }
+  .fx-frost { box-shadow: inset 0 0 100px rgba(255,255,255,0.8); backdrop-filter: blur(5px); }
+
+  #lightning {
+    position: fixed; top:0; left:0; width:100vw; height:100vh; background: #fff;
+    opacity: 0; pointer-events: none; z-index: 100;
+  }
+
+  /* Glassmorphism UI */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    border-radius: 20px;
+  }
+
+  /* Layout */
+  .top-left { position: absolute; top: 40px; left: 40px; }
+  .temp-display { font-family: 'DM Serif Display', serif; font-size: 8rem; line-height: 1; text-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+  .temp-desc { font-size: 1.2rem; font-weight: 300; letter-spacing: 2px; margin-top: 10px; text-transform: uppercase; }
+
+  .top-right { position: absolute; top: 40px; right: 40px; text-align: right; }
+  .domain { font-size: 0.9rem; letter-spacing: 3px; font-weight: 700; opacity: 0.8; margin-bottom: 20px; }
+  
+  .forecast-cards { display: flex; flex-direction: column; gap: 15px; }
+  .f-card { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; width: 250px; }
+  .f-day { font-weight: 500; }
+  .f-temp { font-weight: 700; }
+
+  /* Control Panel */
+  .control-panel {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    padding: 30px; width: 600px; max-width: 90vw;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .cp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cp-title { font-weight: 700; letter-spacing: 2px; font-size: 0.9rem; }
+  
+  .slider-group { display: flex; flex-direction: column; gap: 8px; }
+  .slider-labels { display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.8; font-weight: 500;}
+  
+  /* Custom Range Slider */
+  input[type=range] {
+    -webkit-appearance: none; width: 100%; background: transparent;
+  }
+  input[type=range]:focus { outline: none; }
+  input[type=range]::-webkit-slider-runnable-track {
+    width: 100%; height: 6px; cursor: pointer;
+    background: rgba(255,255,255,0.2); border-radius: 3px;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    height: 20px; width: 20px; border-radius: 50%;
+    background: #fff; cursor: pointer; -webkit-appearance: none;
+    margin-top: -7px; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  #mute-btn { background: none; border: none; color: inherit; font-size: 1.2rem; cursor: pointer; transition: 0.3s; opacity:0.5; }
+  #mute-btn:hover { opacity: 1; }
+
+  @media(max-width: 768px) {
+    .temp-display { font-size: 5rem; }
+    .top-right { top: auto; bottom: 300px; right: 20px; }
+    .f-card { width: 150px; padding: 10px; font-size: 0.8rem; }
+    .control-panel { bottom: 20px; padding: 20px; width: calc(100vw - 40px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="environment">
+  <div id="sun" class="celestial"></div>
+  <div id="moon" class="celestial"></div>
+  <div id="clouds-layer"></div>
+  <canvas id="particles-canvas"></canvas>
+</div>
+<div id="fx-overlay"></div>
+<div id="lightning"></div>
+
+<div class="top-left">
+  <div class="temp-display"><span id="val-temp">22</span>°</div>
+  <div class="temp-desc" id="lbl-weather">Clear Sky</div>
+</div>
+
+<div class="top-right">
+  <div class="domain">DOMAIN: TOKYO</div>
+  <button id="mute-btn">🎵</button>
+  <div class="forecast-cards" style="margin-top: 20px;">
+    <div class="f-card glass"><span class="f-day">TOMORROW</span><span class="f-temp">24°</span></div>
+    <div class="f-card glass"><span class="f-day">WEDNESDAY</span><span class="f-temp">18°</span></div>
+    <div class="f-card glass"><span class="f-day">THURSDAY</span><span class="f-temp">15°</span></div>
+  </div>
+</div>
+
+<div class="control-panel glass">
+  <div class="cp-header">
+    <div class="cp-title">ENVIRONMENT CONTROLS</div>
+  </div>
+  
+  <div class="slider-group">
+    <div class="slider-labels"><span>TEMPERATURE</span><span id="lbl-t-val">22°C</span></div>
+    <input type="range" id="sl-temp" min="-20" max="45" value="22">
+  </div>
+  
+  <div class="slider-group">
+    <div class="slider-labels"><span>CLOUD COVER</span><span id="lbl-c-val">0%</span></div>
+    <input type="range" id="sl-clouds" min="0" max="100" value="0">
+  </div>
+  
+  <div class="slider-group">
+    <div class="slider-labels"><span>TIME OF DAY</span><span id="lbl-time-val">12:00</span></div>
+    <input type="range" id="sl-time" min="0" max="24" value="12" step="0.1">
+  </div>
+</div>
+
+<script>
+  // --- State ---
+  let state = {
+    temp: 22,
+    clouds: 0,
+    time: 12
+  };
+
+  // --- Elements ---
+  const elTemp = document.getElementById('val-temp');
+  const elWeather = document.getElementById('lbl-weather');
+  const elSun = document.getElementById('sun');
+  const elMoon = document.getElementById('moon');
+  const elClouds = document.getElementById('clouds-layer');
+  const elFx = document.getElementById('fx-overlay');
+  const root = document.documentElement;
+
+  // --- Update Logic ---
+  function updateEnvironment() {
+    // 1. Time of Day (0-24)
+    // Map time to colors
+    let topColor, botColor, isNight = false;
+    if(state.time >= 6 && state.time <= 18) {
+      // Day
+      const progress = Math.abs(state.time - 12) / 6; // 0 at noon, 1 at dawn/dusk
+      topColor = interpolateColor([74,144,226], [255,100,50], progress);
+      botColor = interpolateColor([135,206,235], [255,200,100], progress);
+      elSun.style.opacity = 1;
+      elMoon.style.opacity = 0;
+      // Arc position
+      elSun.style.left = `${(state.time - 6)/12 * 80 + 10}vw`;
+      elSun.style.top = `${progress * 40 + 10}vh`;
+    } else {
+      // Night
+      isNight = true;
+      const progress = state.time < 6 ? Math.abs(state.time) / 6 : Math.abs(state.time - 24) / 6; // 0 at midnight, 1 at dawn/dusk
+      topColor = interpolateColor([2,8,20], [20,10,30], progress);
+      botColor = interpolateColor([10,20,40], [50,30,60], progress);
+      elSun.style.opacity = 0;
+      elMoon.style.opacity = 1;
+      let timeForMoon = state.time < 6 ? state.time + 24 : state.time; // 18 to 30
+      elMoon.style.left = `${(timeForMoon - 18)/12 * 80 + 10}vw`;
+      elMoon.style.top = `${(1 - Math.abs(timeForMoon - 24)/6) * -40 + 50}vh`;
+    }
+
+    // Apply Cloud darkness
+    const darkness = state.clouds / 100 * 0.6;
+    topColor = topColor.map(c => c * (1 - darkness));
+    botColor = botColor.map(c => c * (1 - darkness));
+
+    root.style.setProperty('--sky-top', `rgb(${topColor.join(',')})`);
+    root.style.setProperty('--sky-bot', `rgb(${botColor.join(',')})`);
+    
+    // Text color adjustment based on brightness
+    const brightness = (topColor[0]+topColor[1]+topColor[2])/3;
+    root.style.setProperty('--text-main', brightness > 180 ? '#333' : '#fff');
+    root.style.setProperty('--glass-bg', brightness > 180 ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)');
+    root.style.setProperty('--glass-border', brightness > 180 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)');
+
+    // 2. Clouds (0-100)
+    elClouds.style.opacity = state.clouds / 100 * 0.8;
+    root.style.setProperty('--cloud-speed', `${100 - state.clouds * 0.5}s`);
+
+    // 3. Temperature (-20 to 45)
+    elTemp.innerText = Math.round(state.temp);
+    
+    // FX Overlay
+    elFx.className = '';
+    if(state.temp > 35) elFx.classList.add('fx-heat');
+    else if(state.temp < 0) elFx.classList.add('fx-frost');
+
+    // Weather Description Logic
+    let desc = "Clear Sky";
+    if(state.clouds > 80 && state.temp > 20) desc = "Thunderstorm";
+    else if(state.clouds > 50 && state.temp > 0) desc = "Rain";
+    else if(state.clouds > 50 && state.temp <= 0) desc = "Snow";
+    else if(state.clouds > 20) desc = "Partly Cloudy";
+    else if(state.temp > 35) desc = "Extreme Heat";
+    else if(state.temp < 0) desc = "Freezing";
+    elWeather.innerText = desc;
+
+    updateAudioParams();
+  }
+
+  function interpolateColor(c1, c2, factor) {
+    return [
+      Math.round(c1[0] + (c2[0] - c1[0]) * factor),
+      Math.round(c1[1] + (c2[1] - c1[1]) * factor),
+      Math.round(c1[2] + (c2[2] - c1[2]) * factor)
+    ];
+  }
+
+  // --- Sliders ---
+  const formatTime = (t) => {
+    const h = Math.floor(t);
+    const m = Math.floor((t - h) * 60);
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+  };
+
+  document.getElementById('sl-temp').addEventListener('input', e => {
+    state.temp = parseFloat(e.target.value);
+    document.getElementById('lbl-t-val').innerText = `${Math.round(state.temp)}°C`;
+    updateEnvironment();
+  });
+  
+  document.getElementById('sl-clouds').addEventListener('input', e => {
+    state.clouds = parseFloat(e.target.value);
+    document.getElementById('lbl-c-val').innerText = `${Math.round(state.clouds)}%`;
+    updateEnvironment();
+  });
+  
+  document.getElementById('sl-time').addEventListener('input', e => {
+    state.time = parseFloat(e.target.value);
+    document.getElementById('lbl-time-val').innerText = formatTime(state.time);
+    updateEnvironment();
+  });
+
+  // --- Particle Engine ---
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function createParticle() {
+    let p = { x: Math.random() * canvas.width, y: -10, type: 'none' };
+    
+    if(state.clouds > 50) {
+      if(state.temp <= 0) {
+        p.type = 'snow';
+        p.size = Math.random() * 3 + 1;
+        p.vy = Math.random() * 2 + 1;
+        p.vx = (Math.random() - 0.5) * 1;
+      } else {
+        p.type = 'rain';
+        p.size = Math.random() * 1.5 + 0.5;
+        p.vy = Math.random() * 10 + 10;
+        p.vx = Math.random() * 2;
+      }
+    } else if (state.temp > 30) {
+      p.type = 'dust';
+      p.x = Math.random() * canvas.width;
+      p.y = Math.random() * canvas.height;
+      p.size = Math.random() * 2;
+      p.vy = (Math.random() - 0.5) * 0.5;
+      p.vx = (Math.random() - 0.5) * 0.5;
+      p.life = 100;
+    }
+    return p;
+  }
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Spawn logic
+    const intensity = state.clouds / 100;
+    if(state.clouds > 50 && particles.length < intensity * 500) {
+      for(let i=0; i<10; i++) particles.push(createParticle());
+    } else if (state.temp > 30 && state.clouds < 20 && particles.length < 50) {
+      particles.push(createParticle());
+    }
+
+    // Thunder logic
+    if(state.clouds > 90 && state.temp > 20 && Math.random() < 0.005) {
+      triggerThunder();
+    }
+
+    for(let i = particles.length - 1; i >= 0; i--) {
+      let p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if(p.type === 'snow') {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+      } else if (p.type === 'rain') {
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = p.size;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx*2, p.y - p.vy*2); ctx.stroke();
+      } else if (p.type === 'dust') {
+        ctx.fillStyle = `rgba(255,200,100,${p.life/100 * 0.5})`;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+        p.life--;
+      }
+
+      if(p.y > canvas.height || p.x < 0 || p.x > canvas.width || (p.type==='dust' && p.life <= 0)) {
+        particles.splice(i, 1);
+      }
+    }
+
+    requestAnimationFrame(drawParticles);
+  }
+  drawParticles();
+
+  function triggerThunder() {
+    const l = document.getElementById('lightning');
+    l.style.opacity = 0.8;
+    setTimeout(() => l.style.opacity = 0, 50);
+    setTimeout(() => { if(Math.random()>0.5) { l.style.opacity = 1; setTimeout(() => l.style.opacity = 0, 100); } }, 150);
+    if(audioInit && !isMuted) playThunderSound();
+  }
+
+  // --- Web Audio API ---
+  let audioCtx, masterGain, isMuted = true, audioInit = false;
+  let droneOsc, noiseNode, noiseGain, bellOsc, bellGain;
+
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    if(!audioInit) initAudio();
+    isMuted = !isMuted;
+    e.target.style.opacity = isMuted ? 0.5 : 1;
+    if(masterGain) {
+      masterGain.gain.setTargetAtTime(isMuted ? 0 : 0.5, audioCtx.currentTime, 0.5);
+    }
+  });
+
+  function initAudio() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+    
+    // 1. Temperature Drone (Pitch changes with temp)
+    droneOsc = audioCtx.createOscillator();
+    droneOsc.type = 'sawtooth';
+    const droneFilter = audioCtx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    const droneGain = audioCtx.createGain();
+    droneGain.gain.value = 0.1;
+    droneOsc.connect(droneFilter); droneFilter.connect(droneGain); droneGain.connect(masterGain);
+    droneOsc.start();
+
+    // 2. Cloud Noise (Pink noise for wind/rain)
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        let white = Math.random() * 2 - 1;
+        output[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = output[i];
+        output[i] *= 3.5;
+    }
+    noiseNode = audioCtx.createBufferSource();
+    noiseNode.buffer = noiseBuffer;
+    noiseNode.loop = true;
+    
+    const noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseGain = audioCtx.createGain();
+    
+    noiseNode.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(masterGain);
+    noiseNode.start();
+
+    // 3. Time Bell
+    bellOsc = audioCtx.createOscillator();
+    bellOsc.type = 'sine';
+    bellGain = audioCtx.createGain();
+    bellGain.gain.value = 0;
+    bellOsc.connect(bellGain); bellGain.connect(masterGain);
+    bellOsc.start();
+
+    audioInit = true;
+    updateAudioParams();
+  }
+  let lastOut = 0;
+
+  function updateAudioParams() {
+    if(!audioInit) return;
+    const t = audioCtx.currentTime;
+
+    // Temp maps to drone frequency (Cold = low, Hot = high)
+    const dFreq = 40 + ((state.temp + 20) / 65) * 100; 
+    droneOsc.frequency.setTargetAtTime(dFreq, t, 0.5);
+
+    // Clouds map to noise volume and filter freq
+    const nVol = (state.clouds / 100) * 0.3;
+    noiseGain.gain.setTargetAtTime(nVol, t, 0.5);
+
+    // Time maps to bell sequence
+    if(state.time > 6 && state.time < 18) {
+      if(bellGain.gain.value === 0) {
+        // start day sequence
+        bellOsc.frequency.setValueAtTime(880, t);
+        bellGain.gain.setTargetAtTime(0.05, t, 1);
+      }
+    } else {
+      bellGain.gain.setTargetAtTime(0, t, 1);
+    }
+  }
+
+  function playThunderSound() {
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(500, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 2);
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+    
+    noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+    noise.start();
+  }
+
+  // Init
+  updateEnvironment();
+
+</script>
+</body>
+</html>

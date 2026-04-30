@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>The Infinite Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0806;
+    --wood: #2b1d14;
+    --wood-dark: #140d08;
+    --gold: #d4af37;
+    --book-1: #4a2b25;
+    --book-2: #1e3a35;
+    --book-3: #1a2035;
+    --book-4: #3d1b1b;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: #e0d8c8;
+    font-family: 'Cormorant Garamond', serif;
+    overflow-x: hidden;
+    height: 100vh;
+  }
+
+  /* Fake scroll height to drive animation */
+  #scroll-dummy {
+    height: 20000px;
+    width: 1px;
+  }
+
+  /* 3D Viewport */
+  .viewport {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    perspective: 1000px;
+    perspective-origin: 50% 50%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* The Hall that moves forward */
+  .hall {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    will-change: transform;
+    pointer-events: auto;
+  }
+
+  .shelf-wall {
+    position: absolute;
+    top: -1500px;
+    height: 3000px;
+    width: 800px;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--wood-dark) 0,
+      var(--wood-dark) 20px,
+      var(--wood) 20px,
+      var(--wood) 200px
+    );
+    border: 2px solid #000;
+  }
+
+  .shelf-left {
+    left: -1200px;
+    transform: rotateY(90deg);
+  }
+
+  .shelf-right {
+    left: 400px;
+    transform: rotateY(-90deg);
+  }
+
+  /* Procedural Books Grid */
+  .books-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    padding: 20px 10px;
+    gap: 5px;
+  }
+
+  .book-spine {
+    width: calc(10% - 5px);
+    height: 150px;
+    margin-bottom: 30px; /* aligns with shelf gap */
+    border-radius: 2px;
+    box-shadow: inset 2px 0 5px rgba(0,0,0,0.5), inset -2px 0 5px rgba(0,0,0,0.5), 5px 0 10px rgba(0,0,0,0.8);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.05);
+    /* Color set in JS */
+  }
+
+  .book-spine:hover {
+    transform: translateZ(20px) scale(1.05);
+    box-shadow: inset 2px 0 5px rgba(0,0,0,0.5), inset -2px 0 5px rgba(0,0,0,0.5), 15px 0 20px rgba(0,0,0,0.9), 0 0 15px rgba(212,175,55,0.3);
+    z-index: 10;
+  }
+
+  .spine-decor {
+    position: absolute;
+    top: 10px; left: 10%; width: 80%; height: 5px;
+    background: var(--gold);
+    opacity: 0.5;
+  }
+  .spine-decor.bottom {
+    top: auto; bottom: 10px;
+  }
+
+  /* Dust Particles */
+  canvas#dust {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 5;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+
+  /* Vignette Overlay */
+  .vignette {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at center, transparent 30%, rgba(5,3,2,0.9) 100%);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* UI Layer */
+  .ui-layer {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .instruction {
+    position: absolute;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: rgba(212,175,55,0.6);
+    letter-spacing: 0.2em;
+    text-shadow: 0 0 10px rgba(0,0,0,1);
+    pointer-events: auto;
+  }
+
+  /* Glassmorphism Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(15px);
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .book-modal {
+    background: rgba(30, 25, 20, 0.85);
+    border: 1px solid rgba(212,175,55,0.2);
+    box-shadow: 0 30px 100px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,255,255,0.05);
+    border-radius: 4px;
+    padding: 4rem;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+    transform: translateY(50px) scale(0.95);
+    transition: transform 0.5s cubic-bezier(0.1, 0.8, 0.2, 1);
+    position: relative;
+  }
+
+  .modal-overlay.active .book-modal {
+    transform: translateY(0) scale(1);
+  }
+
+  .book-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2.2rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .book-author {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    color: rgba(224, 216, 200, 0.7);
+    margin-bottom: 3rem;
+  }
+
+  .book-first-sentence {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    line-height: 1.6;
+    color: #e0d8c8;
+    position: relative;
+  }
+
+  .book-first-sentence::before {
+    content: '“';
+    font-size: 4rem;
+    color: rgba(212,175,55,0.2);
+    position: absolute;
+    top: -30px; left: -20px;
+    font-family: serif;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+  .close-btn:hover { color: white; }
+
+  .audio-toggle {
+    position: absolute;
+    top: 30px; right: 30px;
+    background: none;
+    border: 1px solid rgba(212,175,55,0.3);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    color: var(--gold);
+    cursor: pointer;
+    pointer-events: auto;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+  }
+</style>
+</head>
+<body>
+
+  <div id="scroll-dummy"></div>
+
+  <canvas id="dust"></canvas>
+
+  <div class="viewport">
+    <div class="hall" id="hall">
+      <!-- Generated via JS to have infinite segments -->
+    </div>
+  </div>
+
+  <div class="vignette"></div>
+
+  <div class="ui-layer">
+    <div class="instruction">SCROLL DEEPER INTO THE STACKS</div>
+    <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">📖</button>
+  </div>
+
+  <div class="modal-overlay" id="modal" onclick="closeBook(event)">
+    <div class="book-modal" onclick="event.stopPropagation()">
+      <button class="close-btn" onclick="closeBook(event)">&times;</button>
+      <div class="book-title" id="m-title">The Book of Sand</div>
+      <div class="book-author" id="m-author">by Jorge Luis Borges</div>
+      <div class="book-first-sentence" id="m-sentence">The line is made up of an infinite number of points.</div>
+    </div>
+  </div>
+
+<script>
+  // Generative Text Data
+  const titles_1 = ["The History of", "A Treatise on", "The Fall of", "Memoirs of", "An Introduction to", "The Architecture of", "Lost Words of", "The Secret of"];
+  const titles_2 = ["Forgotten Concepts", "the Abstract Place", "Silence", "Infinite Mirrors", "the Glass City", "Sorrow", "Time", "the Labyrinth", "Shadows", "Echoes"];
+  
+  const authors_first = ["Aurelius", "Elara", "Tiberius", "Cassandra", "Valerius", "Seraphina", "Octavian", "Isolde", "Balthazar"];
+  const authors_last = ["Vane", "Blackwood", "Frost", "Dusk", "Crow", "Voss", "Thorne", "Ash", "Sterling"];
+
+  const sentences_1 = ["realized too late that", "awoke to find that", "always suspected that", "wrote in their diary that", "whispered to the dark that"];
+  const sentences_2 = ["the key", "the doorway", "the mirror", "the shadow", "the city", "the contract", "the memory"];
+  const sentences_3 = ["was actually a reflection.", "had never existed at all.", "was waiting for them.", "was made of glass.", "belonged to someone else.", "was a lie.", "was infinite."];
+
+  function generateBook() {
+    const title = `${titles_1[Math.floor(Math.random() * titles_1.length)]} ${titles_2[Math.floor(Math.random() * titles_2.length)]}`;
+    const author = `${authors_first[Math.floor(Math.random() * authors_first.length)]} ${authors_last[Math.floor(Math.random() * authors_last.length)]}`;
+    const name = authors_first[Math.floor(Math.random() * authors_first.length)];
+    const sentence = `${name} ${sentences_1[Math.floor(Math.random() * sentences_1.length)]} ${sentences_2[Math.floor(Math.random() * sentences_2.length)]} ${sentences_3[Math.floor(Math.random() * sentences_3.length)]}`;
+    return { title, author, sentence };
+  }
+
+  // 3D Hall Generation
+  const hall = document.getElementById('hall');
+  const segmentLength = 2000;
+  const numSegments = 10;
+  const bookColors = ['var(--book-1)', 'var(--book-2)', 'var(--book-3)', 'var(--book-4)', '#333', '#111'];
+
+  function createShelfWall(side, zOffset) {
+    const wall = document.createElement('div');
+    wall.className = `shelf-wall ${side}`;
+    wall.style.transform = `${side === 'shelf-left' ? 'rotateY(90deg)' : 'rotateY(-90deg)'} translateZ(${zOffset}px)`;
+    
+    const booksContainer = document.createElement('div');
+    booksContainer.className = 'books-container';
+    
+    // Fill with books
+    for(let i=0; i<80; i++) {
+      const book = document.createElement('div');
+      book.className = 'book-spine';
+      book.style.background = bookColors[Math.floor(Math.random() * bookColors.length)];
+      book.style.width = `calc(${Math.random() * 5 + 5}% - 5px)`; // random width
+      
+      const d1 = document.createElement('div'); d1.className = 'spine-decor';
+      const d2 = document.createElement('div'); d2.className = 'spine-decor bottom';
+      book.appendChild(d1); book.appendChild(d2);
+      
+      book.onclick = () => openBook();
+      booksContainer.appendChild(book);
+    }
+    
+    wall.appendChild(booksContainer);
+    return wall;
+  }
+
+  for(let i=0; i<numSegments; i++) {
+    const zLeft = i * segmentLength - 600; // offset based on width 800
+    const zRight = -(i * segmentLength + 200);
+    // 3D math trick: because the walls are rotated 90deg, translateZ pushes them along the hall's Z axis.
+    // Actually simpler: position them absolute, translate them back along Z.
+    
+    const left = document.createElement('div');
+    left.className = `shelf-wall shelf-left`;
+    left.style.transform = `rotateY(90deg) translateZ(-400px) translateX(${i * -800}px)`; // Fix to align seamlessly
+    // The geometry is tricky. Let's make long walls instead of segments for performance.
+  }
+  
+  // Simplified Geometry: 2 very long walls
+  hall.innerHTML = '';
+  const longLeft = document.createElement('div');
+  longLeft.className = 'shelf-wall shelf-left';
+  longLeft.style.width = '20000px';
+  longLeft.style.height = '1200px';
+  longLeft.style.top = '-600px';
+  longLeft.style.left = '-10000px';
+  longLeft.style.transform = 'translateZ(0) translateX(0) rotateY(90deg) translateZ(-400px)';
+  
+  const booksContainerL = document.createElement('div');
+  booksContainerL.className = 'books-container';
+  for(let i=0; i<1500; i++) {
+    const book = document.createElement('div');
+    book.className = 'book-spine';
+    book.style.background = bookColors[Math.floor(Math.random() * bookColors.length)];
+    book.style.width = `${Math.random() * 30 + 10}px`;
+    book.style.marginRight = '5px';
+    book.onclick = () => openBook();
+    booksContainerL.appendChild(book);
+  }
+  longLeft.appendChild(booksContainerL);
+
+  const longRight = document.createElement('div');
+  longRight.className = 'shelf-wall shelf-right';
+  longRight.style.width = '20000px';
+  longRight.style.height = '1200px';
+  longRight.style.top = '-600px';
+  longRight.style.left = '-10000px';
+  longRight.style.transform = 'translateZ(0) translateX(0) rotateY(-90deg) translateZ(-400px)';
+  
+  const booksContainerR = document.createElement('div');
+  booksContainerR.className = 'books-container';
+  for(let i=0; i<1500; i++) {
+    const book = document.createElement('div');
+    book.className = 'book-spine';
+    book.style.background = bookColors[Math.floor(Math.random() * bookColors.length)];
+    book.style.width = `${Math.random() * 30 + 10}px`;
+    book.style.marginRight = '5px';
+    book.onclick = () => openBook();
+    booksContainerR.appendChild(book);
+  }
+  longRight.appendChild(booksContainerR);
+
+  hall.appendChild(longLeft);
+  hall.appendChild(longRight);
+
+  // Smooth Scroll Interpolation
+  let targetZ = 0;
+  let currentZ = 0;
+  let ease = 0.05;
+
+  function renderLoop() {
+    targetZ = window.scrollY; // 1px scroll = 1px deep
+    currentZ += (targetZ - currentZ) * ease;
+    
+    // Move hall towards camera
+    hall.style.transform = `translateZ(${currentZ}px) translate-x(-50%) translate-y(-50%)`;
+    
+    requestAnimationFrame(renderLoop);
+  }
+  requestAnimationFrame(renderLoop);
+
+  // Dust Canvas
+  const dCanvas = document.getElementById('dust');
+  const dCtx = dCanvas.getContext('2d');
+  let motes = [];
+
+  function resizeDust() {
+    dCanvas.width = window.innerWidth;
+    dCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeDust);
+  resizeDust();
+
+  class Mote {
+    constructor() {
+      this.x = Math.random() * dCanvas.width;
+      this.y = Math.random() * dCanvas.height;
+      this.s = Math.random() * 1.5;
+      this.vx = (Math.random() - 0.5) * 0.2;
+      this.vy = (Math.random() - 0.5) * 0.2;
+      this.alpha = Math.random() * 0.5;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0) this.x = dCanvas.width;
+      if (this.x > dCanvas.width) this.x = 0;
+      if (this.y < 0) this.y = dCanvas.height;
+      if (this.y > dCanvas.height) this.y = 0;
+    }
+    draw() {
+      dCtx.fillStyle = `rgba(212, 175, 55, ${this.alpha})`;
+      dCtx.beginPath();
+      dCtx.arc(this.x, this.y, this.s, 0, Math.PI*2);
+      dCtx.fill();
+    }
+  }
+  for(let i=0; i<150; i++) motes.push(new Mote());
+
+  function animateDust() {
+    dCtx.clearRect(0, 0, dCanvas.width, dCanvas.height);
+    motes.forEach(m => { m.update(); m.draw(); });
+    requestAnimationFrame(animateDust);
+  }
+  animateDust();
+
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain;
+  let roomToneGain;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Deep silence room tone
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 150; // very muffled
+    
+    roomToneGain = audioCtx.createGain();
+    roomToneGain.gain.value = isMuted ? 0 : 0.05;
+    
+    noise.connect(filter);
+    filter.connect(roomToneGain);
+    roomToneGain.connect(masterGain);
+    noise.start();
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (roomToneGain) roomToneGain.gain.value = isMuted ? 0 : 0.05;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '📖';
+  }
+
+  function playBookSound() {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    // Thwump
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.2);
+    
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 0.2);
+
+    // Paper Rustle
+    setTimeout(() => {
+      const bufferSize = audioCtx.sampleRate * 0.3;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 2500;
+      
+      const nGain = audioCtx.createGain();
+      nGain.gain.setValueAtTime(0, t+0.1);
+      nGain.gain.linearRampToValueAtTime(0.05, t+0.15);
+      nGain.gain.exponentialRampToValueAtTime(0.001, t+0.4);
+      
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(masterGain);
+      noise.start(t+0.1);
+    }, 50);
+  }
+
+  // Modal Logic
+  const modal = document.getElementById('modal');
+  const mTitle = document.getElementById('m-title');
+  const mAuthor = document.getElementById('m-author');
+  const mSentence = document.getElementById('m-sentence');
+
+  function openBook() {
+    if(!audioInit && !isMuted) initAudio();
+    playBookSound();
+    
+    const data = generateBook();
+    mTitle.innerText = data.title;
+    mAuthor.innerText = `by ${data.author}`;
+    mSentence.innerText = data.sentence;
+    
+    modal.classList.add('active');
+  }
+
+  function closeBook(e) {
+    e.stopPropagation();
+    modal.classList.remove('active');
+  }
+
+  document.body.addEventListener('click', () => {
+    if(!audioInit && !isMuted) initAudio();
+  }, {once:true});
+
+</script>
+</body>
+</html>

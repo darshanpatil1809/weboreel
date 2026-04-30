@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-width=1.0">
+<title>Digital Monument</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #030303;
+    --concrete: #4a4a4a;
+    --concrete-light: #5a5a5a;
+    --concrete-dark: #3a3a3a;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body, html {
+    background-color: var(--bg-dark);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    overflow: hidden;
+    height: 100vh;
+    perspective: 1200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* SVG Noise Filter */
+  .noise-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.15;
+  }
+
+  /* Monument Container */
+  .scene {
+    width: 300px;
+    height: 600px;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(-10deg) rotateY(0deg);
+    transition: transform 0.1s ease-out;
+    will-change: transform;
+  }
+
+  .obelisk {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    transform-style: preserve-3d;
+    animation: slowRotate 60s infinite linear;
+  }
+
+  @keyframes slowRotate {
+    0% { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+  }
+
+  /* Faces */
+  .face {
+    position: absolute;
+    width: 300px;
+    height: 600px;
+    background: var(--concrete);
+    border: 2px solid #222;
+    /* Brutalist concrete texture via gradients */
+    background-image: 
+      linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1)),
+      linear-gradient(45deg, rgba(0,0,0,0.1) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.1));
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 60px;
+    gap: 10px;
+    padding: 20px;
+    align-content: start;
+    cursor: pointer;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+    transition: filter 0.3s;
+  }
+
+  .face:hover {
+    filter: brightness(1.2);
+  }
+
+  .front  { transform: rotateY(  0deg) translateZ(150px); background-color: var(--concrete); }
+  .right  { transform: rotateY( 90deg) translateZ(150px); background-color: var(--concrete-dark); }
+  .back   { transform: rotateY(180deg) translateZ(150px); background-color: #2a2a2a; }
+  .left   { transform: rotateY(-90deg) translateZ(150px); background-color: var(--concrete-light); }
+  .top    { transform: rotateX( 90deg) translateZ(150px); width: 300px; height: 300px; background-color: #6a6a6a; }
+  .bottom { transform: rotateX(-90deg) translateZ(450px); width: 300px; height: 300px; background-color: #1a1a1a; }
+
+  /* Carved Initials */
+  .carving {
+    font-family: 'Anton', sans-serif;
+    font-size: 2.5rem;
+    color: #4a4a4a; /* Matches concrete */
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 60px;
+    /* Inset shadow trick for carved look */
+    text-shadow: 
+      1px 1px 1px rgba(255,255,255,0.2),
+      -1px -1px 2px rgba(0,0,0,0.8),
+      inset 0 0 5px rgba(0,0,0,0.8);
+    background: transparent;
+    pointer-events: none;
+  }
+
+  /* Input Modal */
+  .modal {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.9);
+    backdrop-filter: blur(10px);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .modal.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-title {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    letter-spacing: 0.2em;
+    color: #aaa;
+  }
+
+  .initial-input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #555;
+    color: white;
+    font-family: 'Anton', sans-serif;
+    font-size: 5rem;
+    text-align: center;
+    width: 200px;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .initial-input:focus {
+    border-color: #fff;
+  }
+
+  .btn-carve {
+    margin-top: 3rem;
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    padding: 1rem 3rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    transition: background 0.3s;
+  }
+
+  .btn-carve:hover {
+    background: #444;
+  }
+
+  /* Audio Toggle */
+  .audio-toggle {
+    position: absolute;
+    top: 30px; right: 30px;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 20;
+  }
+
+  .instruction {
+    position: absolute;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.2em;
+    pointer-events: none;
+  }
+
+</style>
+</head>
+<body>
+
+  <!-- SVG Noise for Concrete texture globally -->
+  <svg class="noise-overlay" xmlns="http://www.w3.org/2000/svg">
+    <filter id="noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noise)"/>
+  </svg>
+
+  <button class="audio-toggle" onclick="toggleMute()" id="mute-btn">⬛</button>
+  <div class="instruction">CLICK TO CARVE</div>
+
+  <div class="scene" id="scene">
+    <div class="obelisk" id="obelisk">
+      <div class="face front" data-face="front"></div>
+      <div class="face right" data-face="right"></div>
+      <div class="face back" data-face="back"></div>
+      <div class="face left" data-face="left"></div>
+      <div class="face top"></div>
+      <div class="face bottom"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-title">ENTER THREE INITIALS</div>
+    <input type="text" class="initial-input" id="initials" maxlength="3" autocomplete="off" spellcheck="false">
+    <button class="btn-carve" onclick="submitCarving()">CARVE</button>
+  </div>
+
+<script>
+  // Mouse Parallax
+  const scene = document.getElementById('scene');
+  let mouseX = 0;
+  let mouseY = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth) - 0.5;
+    mouseY = (e.clientY / window.innerHeight) - 0.5;
+    
+    // Rotate scene slightly based on mouse, obelisk handles spinning
+    const rotX = -10 - (mouseY * 30);
+    const rotY = mouseX * 30;
+    scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+  });
+
+  // Data persistence
+  const faces = document.querySelectorAll('.face');
+  let activeFace = null;
+  const input = document.getElementById('initials');
+  const modal = document.getElementById('modal');
+
+  // Load existing carvings from local storage
+  function loadCarvings() {
+    const data = JSON.parse(localStorage.getItem('monument_carvings') || '{}');
+    ['front', 'right', 'back', 'left'].forEach(faceName => {
+      const faceEl = document.querySelector(`.face.${faceName}`);
+      faceEl.innerHTML = ''; // clear
+      const list = data[faceName] || [];
+      list.forEach(initials => {
+        const div = document.createElement('div');
+        div.className = 'carving';
+        div.innerText = initials;
+        faceEl.appendChild(div);
+      });
+    });
+  }
+  loadCarvings();
+
+  faces.forEach(f => {
+    f.addEventListener('click', () => {
+      if(f.classList.contains('top') || f.classList.contains('bottom')) return;
+      if(!audioInit && !isMuted) initAudio();
+      
+      const faceName = f.getAttribute('data-face');
+      const data = JSON.parse(localStorage.getItem('monument_carvings') || '{}');
+      const list = data[faceName] || [];
+      if (list.length >= 27) {
+        alert("This face is full.");
+        return;
+      }
+      
+      activeFace = faceName;
+      modal.classList.add('active');
+      input.value = '';
+      input.focus();
+    });
+  });
+
+  function submitCarving() {
+    const val = input.value.trim().toUpperCase();
+    if (val.length === 0) {
+      modal.classList.remove('active');
+      return;
+    }
+    
+    const data = JSON.parse(localStorage.getItem('monument_carvings') || '{}');
+    if (!data[activeFace]) data[activeFace] = [];
+    data[activeFace].push(val);
+    localStorage.setItem('monument_carvings', JSON.stringify(data));
+    
+    modal.classList.remove('active');
+    loadCarvings();
+    
+    playCarveSound();
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitCarving();
+    if (e.key === 'Escape') modal.classList.remove('active');
+  });
+
+  // Audio System
+  let audioCtx;
+  let isMuted = false;
+  let audioInit = false;
+  let masterGain, humGain;
+  let convolver;
+
+  async function initAudio() {
+    if (audioInit) return;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(audioCtx.destination);
+
+    // Heavy Reverb
+    convolver = audioCtx.createConvolver();
+    const rate = audioCtx.sampleRate;
+    const length = rate * 5; // 5s reverb tail
+    const impulse = audioCtx.createBuffer(2, length, rate);
+    for (let i = 0; i < length; i++) {
+      const decay = Math.exp(-i / (rate * 1.0));
+      impulse.getChannelData(0)[i] = (Math.random() * 2 - 1) * decay;
+      impulse.getChannelData(1)[i] = (Math.random() * 2 - 1) * decay;
+    }
+    convolver.buffer = impulse;
+    convolver.connect(masterGain);
+    
+    const dry = audioCtx.createGain();
+    dry.gain.value = 0.7;
+    dry.connect(masterGain);
+
+    // Deep Sub-Bass Hum
+    const humOsc = audioCtx.createOscillator();
+    humOsc.type = 'sawtooth';
+    humOsc.frequency.value = 40; // very low
+    
+    const humFilter = audioCtx.createBiquadFilter();
+    humFilter.type = 'lowpass';
+    humFilter.frequency.value = 100;
+    
+    humGain = audioCtx.createGain();
+    humGain.gain.value = isMuted ? 0 : 0.15;
+    
+    humOsc.connect(humFilter);
+    humFilter.connect(humGain);
+    humGain.connect(convolver); // mostly wet
+    humGain.connect(dry);
+    humOsc.start();
+    
+    audioInit = true;
+  }
+
+  function toggleMute() {
+    if (!audioInit) initAudio();
+    isMuted = !isMuted;
+    if (humGain) humGain.gain.value = isMuted ? 0 : 0.15;
+    document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '⬛';
+  }
+
+  function playCarveSound() {
+    if (!audioInit || isMuted) return;
+    const t = audioCtx.currentTime;
+    
+    // Impact (Chisel strike)
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(400, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+    
+    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(convolver);
+    osc.start(t);
+    osc.stop(t + 0.1);
+
+    // Stone dust / grinding noise
+    setTimeout(() => {
+      const bufferSize = audioCtx.sampleRate * 0.5;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1200;
+      
+      const nGain = audioCtx.createGain();
+      nGain.gain.setValueAtTime(0, t+0.05);
+      nGain.gain.linearRampToValueAtTime(0.2, t+0.1);
+      nGain.gain.exponentialRampToValueAtTime(0.001, t+0.5);
+      
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(convolver);
+      noise.start(t+0.05);
+    }, 50);
+    
+    // Sub rumble
+    const subOsc = audioCtx.createOscillator();
+    const subGain = audioCtx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(60, t);
+    subOsc.frequency.exponentialRampToValueAtTime(20, t + 1);
+    
+    subGain.gain.setValueAtTime(0.8, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+    
+    subOsc.connect(subGain);
+    subGain.connect(convolver);
+    subOsc.start(t);
+    subOsc.stop(t + 1.5);
+  }
+
+  document.body.addEventListener('click', () => {
+    if(!audioInit && !isMuted) initAudio();
+  }, {once:true});
+
+</script>
+</body>
+</html>
