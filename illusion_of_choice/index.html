@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>illusion_of_choice</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+body, html { margin: 0; padding: 0; background: #f4f4f4; color: #111; font-family: 'Cinzel', serif; overflow-x: hidden; height: 400vh; }
+.screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: opacity 1s; }
+.title { font-size: 3rem; margin-bottom: 40px; }
+.options { display: flex; gap: 40px; }
+.btn { padding: 15px 40px; border: 1px solid #111; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s; background: transparent; color: #111; font-family: 'Cinzel', serif; }
+.btn:hover { background: #111; color: #fff; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; }
+.hidden { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+
+<div class="screen" id="s1">
+  <div class="title">Choose Your Path</div>
+  <div class="options">
+    <button class="btn" onclick="next(1)">The Light</button>
+    <button class="btn" onclick="next(1)">The Dark</button>
+  </div>
+</div>
+
+<div class="screen hidden" id="s2">
+  <div class="title">You chose freely. Now, select your fate.</div>
+  <div class="options">
+    <button class="btn" onclick="next(2)">Wealth</button>
+    <button class="btn" onclick="next(2)">Wisdom</button>
+    <button class="btn" onclick="next(2)">Power</button>
+  </div>
+</div>
+
+<div class="screen hidden" id="s3">
+  <div class="title">All paths end here.</div>
+  <div class="options" style="font-size:2rem;">Oblivion</div>
+</div>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playChime(note) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'triangle'; o.frequency.value = note;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 2);
+  o.start(); o.stop(actx.currentTime + 2);
+}
+
+function next(step) {
+  if(step === 1) {
+    document.getElementById('s1').classList.add('hidden');
+    setTimeout(() => document.getElementById('s2').classList.remove('hidden'), 1000);
+    playChime(330);
+  } else if (step === 2) {
+    document.getElementById('s2').classList.add('hidden');
+    setTimeout(() => document.getElementById('s3').classList.remove('hidden'), 1000);
+    playChime(220); // Dissonant drop
+    setTimeout(() => {
+      document.body.style.background = "#000";
+      document.body.style.color = "#fff";
+    }, 1000);
+  }
+}
+
+// Fallback if they scroll instead of click
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  if(progress > 0.3 && !document.getElementById('s1').classList.contains('hidden')) next(1);
+  if(progress > 0.7 && !document.getElementById('s2').classList.contains('hidden')) next(2);
+});
+</script>
+</body>
+</html>

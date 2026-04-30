@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>memory_overflow</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital@1&display=swap');
+body, html { margin: 0; padding: 0; background: #0a0a0a; color: #fff; font-family: 'Cormorant Garamond', serif; overflow-x: hidden; height: 1000vh; }
+.memory { position: fixed; font-size: 2rem; opacity: 0; transition: opacity 2s, filter 2s, transform 5s; filter: blur(0px); white-space: nowrap; mix-blend-mode: screen; pointer-events: none; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 50%; width: 50px; height: 50px; cursor: pointer; }
+.overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle, transparent 0%, #0a0a0a 100%); pointer-events: none; z-index: 50; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="overlay"></div>
+<script>
+const memories = [
+  "The smell of rain on asphalt", "Her laughing at that stupid joke", "The drive home in silence", "Cold hands in winter", "A song I can't remember the name of", "Sunlight through the blinds", "The taste of cheap coffee", "A shadow moving in the hall", "We were so young", "I should have stayed", "The last time I saw him", "Red tail lights bleeding in the rain", "It fades so fast", "I'm trying to hold on", "Too much"
+];
+
+let actx, master, delay, feedback;
+let isMuted = true;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) {
+    actx = new AudioContext(); 
+    master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    delay = actx.createDelay(); delay.delayTime.value = 0.5;
+    feedback = actx.createGain(); feedback.gain.value = 0.6;
+    delay.connect(feedback); feedback.connect(delay); delay.connect(master);
+  }
+  isMuted = !isMuted;
+};
+
+function playWhisper(progress) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = 200 + Math.random()*200;
+  o.connect(g); g.connect(master); g.connect(delay);
+  g.gain.setValueAtTime(0.1, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 1);
+  o.start(); o.stop(actx.currentTime + 1);
+  
+  if(feedback) feedback.gain.value = Math.min(0.9, 0.5 + progress * 0.4); // Echo increases
+}
+
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let maxScroll = document.body.scrollHeight - window.innerHeight;
+  let progress = y / maxScroll;
+  
+  if(Math.abs(y - lastScroll) > 50 - (progress*40)) { // Spawns faster as you scroll
+    let m = document.createElement('div');
+    m.className = 'memory';
+    m.innerText = memories[Math.floor(Math.random() * memories.length)];
+    m.style.left = Math.random() * 100 + 'vw';
+    m.style.top = Math.random() * 100 + 'vh';
+    m.style.color = \`hsl(\${Math.random()*60 + 20}, \${30+progress*50}%, \${50+progress*30}%)\`;
+    
+    document.body.appendChild(m);
+    
+    // Animate in
+    setTimeout(() => {
+      m.style.opacity = 0.2 + progress * 0.8;
+      m.style.transform = \`scale(\${1 + progress*2})\`;
+      m.style.filter = \`blur(\${progress * 10}px)\`;
+    }, 50);
+    
+    playWhisper(progress);
+    lastScroll = y;
+    
+    // Clean up to prevent DOM overload, but keep a lot to create chaos
+    if(document.querySelectorAll('.memory').length > 50 + progress*100) {
+      document.querySelector('.memory').remove();
+    }
+  }
+});
+</script>
+</body>
+</html>

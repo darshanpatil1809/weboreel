@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>online_persona_builder</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500&display=swap');
+body, html { margin: 0; padding: 0; background: #eef2f5; font-family: 'Outfit', sans-serif; overflow-x: hidden; height: 700vh; }
+.profile-card { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 350px; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); overflow: hidden; padding-bottom: 20px; transition: all 0.5s; }
+.cover { width: 100%; height: 120px; background: #ddd; transition: all 1s; }
+.avatar-wrapper { text-align: center; margin-top: -40px; }
+.avatar { width: 80px; height: 80px; border-radius: 50%; border: 4px solid white; background: #eee; display: inline-block; transition: all 1s; overflow: hidden; position: relative; }
+.avatar::after { content: ''; position: absolute; top:0;left:0;right:0;bottom:0; background: inherit; filter: var(--filter); transition: filter 1s; }
+.info { text-align: center; padding: 20px; opacity: 0; transition: opacity 1s; transform: translateY(10px); }
+.name { font-weight: 500; font-size: 1.2rem; margin-bottom: 5px; }
+.bio { font-size: 0.9rem; color: #666; margin-bottom: 15px; }
+.stats { display: flex; justify-content: center; gap: 20px; border-top: 1px solid #eee; padding-top: 15px; opacity: 0; transition: opacity 1s; }
+.stat { text-align: center; }
+.stat-val { font-weight: 500; }
+.stat-lbl { font-size: 0.7rem; color: #999; text-transform: uppercase; }
+.badges { display: flex; justify-content: center; gap: 10px; margin-top: 15px; opacity: 0; transition: opacity 1s; }
+.badge { width: 24px; height: 24px; background: gold; border-radius: 50%; }
+
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; font-size: 24px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="profile-card" id="card">
+  <div class="cover" id="cover"></div>
+  <div class="avatar-wrapper"><div class="avatar" id="avatar" style="--filter: none;"></div></div>
+  <div class="info" id="info">
+    <div class="name" id="name">User19283</div>
+    <div class="bio" id="bio">...</div>
+    <div class="badges" id="badges"></div>
+  </div>
+  <div class="stats" id="stats">
+    <div class="stat"><div class="stat-val" id="posts">0</div><div class="stat-lbl">Posts</div></div>
+    <div class="stat"><div class="stat-val" id="followers">0</div><div class="stat-lbl">Followers</div></div>
+  </div>
+</div>
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.2; master.connect(actx.destination); playAmbience(); }
+  isMuted = !isMuted;
+  master.gain.setTargetAtTime(isMuted ? 0 : 0.2, actx.currentTime, 0.5);
+};
+
+function playAmbience() {
+  const freqs = [220, 277.18, 329.63, 440];
+  setInterval(() => {
+    if(!isMuted) {
+      let o = actx.createOscillator(); let g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = freqs[Math.floor(Math.random()*freqs.length)];
+      o.connect(g).connect(master);
+      g.gain.setValueAtTime(0, actx.currentTime); g.gain.linearRampToValueAtTime(0.1, actx.currentTime + 2); g.gain.linearRampToValueAtTime(0, actx.currentTime + 4);
+      o.start(); o.stop(actx.currentTime + 4);
+    }
+  }, 1000);
+}
+
+function playDing() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'triangle'; o.frequency.value = 880;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.2, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 1);
+  o.start(); o.stop(actx.currentTime + 1);
+}
+
+const steps = [
+  { p: 0.1, action: () => { document.getElementById('name').innerText = "Alex Chen"; document.getElementById('info').style.opacity = 1; document.getElementById('info').style.transform = 'translateY(0)'; playDing(); } },
+  { p: 0.2, action: () => { document.getElementById('avatar').style.background = 'url("data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'80\\' height=\\'80\\'%3E%3Crect width=\\'100%25\\' height=\\'100%25\\' fill=\\'%23a2d2ff\\'/%3E%3Ccircle cx=\\'40\\' cy=\\'35\\' r=\\'15\\' fill=\\'white\\'/%3E%3Cpath d=\\'M20 80 Q40 50 60 80\\' stroke=\\'white\\' stroke-width=\\'10\\' fill=\\'none\\'/%3E%3C/svg%3E")'; playDing(); } },
+  { p: 0.3, action: () => { document.getElementById('bio').innerText = "Coffee addict ☕ | Digital Creator | NYC"; playDing(); } },
+  { p: 0.4, action: () => { document.getElementById('cover').style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)'; playDing(); } },
+  { p: 0.5, action: () => { document.getElementById('stats').style.opacity = 1; playDing(); } },
+  { p: 0.6, action: () => { document.getElementById('followers').innerText = "10.5K"; playDing(); } },
+  { p: 0.7, action: () => { document.getElementById('badges').style.opacity = 1; document.getElementById('badges').innerHTML = '<div class="badge" style="background:#1da1f2"></div><div class="badge" style="background:#e1306c"></div>'; playDing(); } },
+  { p: 0.8, action: () => { document.getElementById('avatar').style.setProperty('--filter', 'contrast(1.2) saturate(1.5)'); playDing(); } },
+  { p: 0.9, action: () => { document.getElementById('card').style.boxShadow = '0 30px 60px rgba(255,154,158,0.4)'; document.getElementById('name').innerHTML = "Alex Chen <span style='color:#1da1f2'>✔</span>"; playDing(); } }
+];
+
+let executed = new Array(steps.length).fill(false);
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  steps.forEach((step, i) => {
+    if(progress > step.p && !executed[i]) {
+      step.action();
+      executed[i] = true;
+    } else if (progress < step.p && executed[i]) {
+      // Revert logic could go here, but for simplicity we just build forward
+    }
+  });
+});
+</script>
+</body>
+</html>

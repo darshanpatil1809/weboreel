@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>digital_void</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: monospace; overflow-x: hidden; height: 1000vh; }
+.void-element { position: fixed; opacity: 0; transition: opacity 2s; color: rgba(255,255,255,0.1); font-size: 14px; pointer-events: none; mix-blend-mode: screen; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); padding: 10px; cursor: pointer; border-radius: 20px; transition: 0.5s; }
+#mute-btn:hover { color: #fff; border-color: #fff; }
+.center-glow { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 0; height: 0; border-radius: 50%; box-shadow: 0 0 100px 0px rgba(255,255,255,0); transition: box-shadow 3s; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Listen</button>
+<div class="center-glow" id="glow"></div>
+<script>
+let actx, master, noise, filter;
+let isMuted = true;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) {
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+    noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 50; // Deep rumble
+    noise.connect(filter).connect(master);
+    noise.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.value = isMuted ? 0 : 0.5;
+};
+
+const words = ["null", "void", "empty", "space", "dark", "0000", "0101", "silence", "abyss"];
+
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let progress = y / (document.body.scrollHeight - window.innerHeight);
+  
+  if(Math.abs(y - lastScroll) > 20) {
+    let el = document.createElement('div');
+    el.className = 'void-element';
+    el.innerText = words[Math.floor(Math.random() * words.length)];
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.top = Math.random() * 100 + 'vh';
+    el.style.transform = \`scale(\${Math.random() * 2 + 0.5})\`;
+    document.body.appendChild(el);
+    
+    setTimeout(() => el.style.opacity = progress, 50);
+    setTimeout(() => { el.style.opacity = 0; setTimeout(()=>el.remove(), 2000); }, 3000);
+    
+    lastScroll = y;
+  }
+  
+  document.getElementById('glow').style.boxShadow = \`0 0 \${progress*500}px \${progress*50}px rgba(255,255,255,\${progress*0.1})\`;
+  
+  if(filter && !isMuted) {
+    filter.frequency.value = 50 + progress * 200; // Brightens slightly
+  }
+});
+</script>
+</body>
+</html>

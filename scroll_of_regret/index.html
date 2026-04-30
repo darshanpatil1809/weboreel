@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>scroll_of_regret</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&display=swap');
+body, html { margin: 0; padding: 0; background: #2b2b2b; color: #d4d4d4; font-family: 'Crimson Text', serif; overflow-x: hidden; }
+.section { height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; position: relative; }
+.choice { font-size: 2rem; margin-bottom: 2rem; color: #fff; }
+.consequence { font-size: 1.5rem; font-style: italic; opacity: 0; transform: translateY(50px); transition: all 1s; max-width: 600px; text-align: center; }
+.consequence.visible { opacity: 1; transform: translateY(0); }
+.line { position: absolute; width: 2px; background: #555; left: 50%; top: 60%; height: 0; transition: height 1s; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: none; background: transparent; color: #888; cursor: pointer; font-size: 1.5rem; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+
+<div class="section">
+  <div class="choice">"I'll tell her tomorrow."</div>
+  <div class="consequence" id="c1">Tomorrow never came. The flight left at 6 AM.</div>
+  <div class="line" id="l1"></div>
+</div>
+<div class="section">
+  <div class="choice">"It's just one more drink."</div>
+  <div class="consequence" id="c2">The car repair cost $4,000. The trust repair cost everything.</div>
+  <div class="line" id="l2"></div>
+</div>
+<div class="section">
+  <div class="choice">"I'm too busy to visit this weekend."</div>
+  <div class="consequence" id="c3">That was the last weekend he remembered your face.</div>
+  <div class="line" id="l3"></div>
+</div>
+<div class="section">
+  <div class="choice">"I don't need to save right now."</div>
+  <div class="consequence" id="c4">Ten years later, the trap is locked from the outside.</div>
+</div>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playNote(freq) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.2, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 3);
+  o.start(); o.stop(actx.currentTime + 3);
+}
+
+const triggers = [
+  { el: 'c1', line: 'l1', f: 220, done: false },
+  { el: 'c2', line: 'l2', f: 196, done: false },
+  { el: 'c3', line: 'l3', f: 174, done: false },
+  { el: 'c4', line: null, f: 146, done: false }
+];
+
+window.addEventListener('scroll', () => {
+  let vh = window.innerHeight;
+  triggers.forEach((t, i) => {
+    let c = document.getElementById(t.el);
+    let rect = c.getBoundingClientRect();
+    if(rect.top < vh * 0.8) {
+      if(!t.done) {
+        c.classList.add('visible');
+        if(t.line) document.getElementById(t.line).style.height = '40vh';
+        playNote(t.f);
+        t.done = true;
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

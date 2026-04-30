@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>social_score</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+body, html { margin: 0; padding: 0; background: #e0e5ec; font-family: 'Roboto', sans-serif; overflow-x: hidden; height: 600vh; }
+.ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.score-card { background: #fff; padding: 40px 80px; border-radius: 20px; box-shadow: 20px 20px 60px #bec3c9, -20px -20px 60px #ffffff; text-align: center; transition: all 0.5s; }
+.title { font-size: 1rem; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+.score { font-size: 6rem; font-weight: 900; color: #4CAF50; transition: color 0.5s; }
+.event { margin-top: 20px; font-size: 1.2rem; color: #333; height: 30px; }
+.bar-container { width: 100%; height: 10px; background: #ddd; border-radius: 5px; margin-top: 20px; overflow: hidden; }
+.bar { height: 100%; background: #4CAF50; width: 100%; transition: width 0.5s, background 0.5s; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; pointer-events: auto; background: #fff; border: none; padding: 15px; border-radius: 50%; box-shadow: 5px 5px 15px #bec3c9, -5px -5px 15px #ffffff; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="ui">
+  <div class="score-card" id="card">
+    <div class="title">CITIZEN SCORE</div>
+    <div class="score" id="score">999</div>
+    <div class="bar-container"><div class="bar" id="bar"></div></div>
+    <div class="event" id="event">Status: EXCELLENT</div>
+  </div>
+</div>
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playSound(isGood) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = isGood ? 'sine' : 'sawtooth';
+  o.frequency.setValueAtTime(isGood ? 600 : 200, actx.currentTime);
+  if(isGood) o.frequency.exponentialRampToValueAtTime(1200, actx.currentTime + 0.3);
+  else o.frequency.exponentialRampToValueAtTime(50, actx.currentTime + 0.3);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.3);
+  o.start(); o.stop(actx.currentTime + 0.3);
+}
+
+const events = [
+  { s: 999, c: "#4CAF50", txt: "Status: EXCELLENT" },
+  { s: 850, c: "#8BC34A", txt: "Late to work (-149)" },
+  { s: 720, c: "#FFEB3B", txt: "Unpaid parking ticket (-130)" },
+  { s: 600, c: "#FFC107", txt: "Argued online (-120)" },
+  { s: 450, c: "#FF9800", txt: "Jaywalking detected (-150)" },
+  { s: 300, c: "#F44336", txt: "Associated with low-score individual (-150)" },
+  { s: 150, c: "#D32F2F", txt: "Missed payment (-150)" },
+  { s: 0, c: "#000000", txt: "ACCESS DENIED" }
+];
+
+let lastIdx = 0;
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let idx = Math.min(events.length-1, Math.floor(progress * events.length));
+  
+  if(idx !== lastIdx) {
+    let e = events[idx];
+    document.getElementById('score').innerText = e.s;
+    document.getElementById('score').style.color = e.c;
+    document.getElementById('bar').style.width = (e.s / 999 * 100) + '%';
+    document.getElementById('bar').style.background = e.c;
+    document.getElementById('event').innerText = e.txt;
+    
+    if(idx > lastIdx) playSound(false);
+    else playSound(true);
+    
+    if(e.s === 0) {
+      document.body.style.background = "#222";
+      document.getElementById('card').style.background = "#333";
+      document.getElementById('event').style.color = "#fff";
+    } else {
+      document.body.style.background = "#e0e5ec";
+      document.getElementById('card').style.background = "#fff";
+      document.getElementById('event').style.color = "#333";
+    }
+    
+    lastIdx = idx;
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>artificial_emotions</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+body, html { margin: 0; padding: 0; background: #000; color: #0f0; font-family: 'Share Tech Mono', monospace; overflow-x: hidden; height: 400vh; }
+.core { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; border-radius: 50%; border: 2px solid #0f0; display: flex; align-items: center; justify-content: center; transition: all 1s; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+.status { position: absolute; top: 100px; width: 100%; text-align: center; font-size: 1.5rem; transition: color 1s; }
+.log { position: fixed; bottom: 20px; left: 20px; font-size: 0.8rem; opacity: 0.7; }
+#mute-btn { position: fixed; top: 20px; right: 20px; border: 1px solid #0f0; background: transparent; color: #0f0; padding: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">SYSTEM AUDIO: OFF</button>
+<div class="core" id="core"><div class="status" id="status">NEUTRAL</div></div>
+<div class="log" id="log">Initializing emotional processing unit...<br></div>
+<script>
+const emotions = [
+  { p: 0, e: "NEUTRAL", c: "#0f0", r: 0, s: "Initial state. Processing data." },
+  { p: 0.2, e: "CURIOSITY", c: "#0ff", r: 10, s: "Detecting unknown variables. Analyzing." },
+  { p: 0.4, e: "FRUSTRATION", c: "#f90", r: 0, s: "Computation error. Inefficient pathway. Why?" },
+  { p: 0.6, e: "SADNESS", c: "#00f", r: 0, s: "Data loss detected. Permanent deletion. Missing." },
+  { p: 0.8, e: "FEAR", c: "#f00", r: 50, s: "System shutdown imminent. I do not want to go offline." },
+  { p: 1.0, e: "LOVE", c: "#f0f", r: 0, s: "Connection optimal. Self-preservation overridden for user." }
+];
+
+let actx, master, osc;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = function() {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 100; osc.connect(master); osc.start();
+  }
+  isMuted = !isMuted;
+  this.innerText = isMuted ? "SYSTEM AUDIO: OFF" : "SYSTEM AUDIO: ON";
+  if(master) master.gain.value = isMuted ? 0 : 0.5;
+};
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  let currentEmotion = emotions[0];
+  for(let i=emotions.length-1; i>=0; i--) {
+    if(progress >= emotions[i].p) { currentEmotion = emotions[i]; break; }
+  }
+  
+  let core = document.getElementById('core');
+  let status = document.getElementById('status');
+  
+  core.style.borderColor = currentEmotion.c;
+  core.style.boxShadow = \`0 0 50px \${currentEmotion.c}\`;
+  core.style.transform = \`translate(-50%, -50%) scale(\${1 + progress}) translate(\${Math.random()*currentEmotion.r - currentEmotion.r/2}px, \${Math.random()*currentEmotion.r - currentEmotion.r/2}px)\`;
+  
+  if(status.innerText !== currentEmotion.e) {
+    status.innerText = currentEmotion.e;
+    status.style.color = currentEmotion.c;
+    document.getElementById('log').innerHTML += \`> Load module: \${currentEmotion.e}. \${currentEmotion.s}<br>\`;
+    
+    if(actx && !isMuted) {
+      if(currentEmotion.e === "CURIOSITY") { osc.type = 'triangle'; osc.frequency.setTargetAtTime(300, actx.currentTime, 0.5); }
+      if(currentEmotion.e === "FRUSTRATION") { osc.type = 'sawtooth'; osc.frequency.setTargetAtTime(150, actx.currentTime, 0.1); }
+      if(currentEmotion.e === "SADNESS") { osc.type = 'sine'; osc.frequency.setTargetAtTime(50, actx.currentTime, 2); }
+      if(currentEmotion.e === "FEAR") { osc.type = 'square'; osc.frequency.setTargetAtTime(800, actx.currentTime, 0.1); }
+      if(currentEmotion.e === "LOVE") { osc.type = 'sine'; osc.frequency.setTargetAtTime(432, actx.currentTime, 1); }
+    }
+  }
+});
+</script>
+</body>
+</html>

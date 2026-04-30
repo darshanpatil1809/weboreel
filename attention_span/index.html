@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>attention_span</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');
+body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Space Grotesk', sans-serif; overflow-x: hidden; height: 2000vh; }
+.content-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.text { font-size: 3vw; transition: all 0.1s; }
+.image-flash { width: 60vw; height: 40vh; background: #fff; margin-top: 20px; transition: all 0.1s; display: flex; align-items: center; justify-content: center; color: #000; font-size: 5vw; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: transparent; border: 2px solid #fff; color: #fff; border-radius: 50%; width: 50px; height: 50px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🔊</button>
+<div class="content-box" id="box">
+  <div class="text" id="txt">At first, you can read a whole paragraph. You take your time. You absorb the meaning.</div>
+  <div class="image-flash" id="img">Image</div>
+</div>
+<script>
+const words = ["FAST", "NOW", "NEXT", "MORE", "SKIP", "BUY", "LOOK", "CLICK", "SWIPE", "LIKE"];
+let actx, master, osc;
+let isMuted = true;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.2; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playZap(intensity) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(100 + intensity*1000, actx.currentTime);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + (1-intensity)*0.1 + 0.01);
+  o.start(); o.stop(actx.currentTime + (1-intensity)*0.1 + 0.01);
+}
+
+let lastY = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let maxScroll = document.body.scrollHeight - window.innerHeight;
+  let progress = y / maxScroll; // 0 to 1
+  
+  if(Math.abs(y - lastY) > (1-progress)*100 + 10) {
+    playZap(progress);
+    lastY = y;
+    
+    let txt = document.getElementById('txt');
+    let img = document.getElementById('img');
+    
+    if(progress < 0.3) {
+      txt.innerText = "Then it gets a little shorter. Just sentences.";
+      txt.style.fontSize = "4vw";
+      img.style.height = "30vh";
+    } else if (progress < 0.6) {
+      txt.innerText = "Shorter.";
+      txt.style.fontSize = "8vw";
+      img.style.height = "20vh";
+    } else if (progress < 0.8) {
+      txt.innerText = words[Math.floor(Math.random()*words.length)];
+      txt.style.fontSize = "15vw";
+      img.style.height = "10vh";
+      img.style.background = \`hsl(\${Math.random()*360}, 100%, 50%)\`;
+      img.innerText = "";
+    } else {
+      txt.innerText = words[Math.floor(Math.random()*words.length)];
+      txt.style.fontSize = "25vw";
+      img.style.display = "none";
+      document.body.style.background = Math.random() > 0.5 ? '#fff' : '#000';
+      txt.style.color = document.body.style.background === 'rgb(255, 255, 255)' ? '#000' : '#fff';
+    }
+  }
+});
+</script>
+</body>
+</html>

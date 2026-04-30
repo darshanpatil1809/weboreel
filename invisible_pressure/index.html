@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>invisible_pressure</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300&display=swap');
+body, html { margin: 0; padding: 0; background: #fff; color: #000; font-family: 'Inter', sans-serif; overflow-x: hidden; height: 500vh; transition: background 0.5s; }
+.content { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.text { font-size: 2rem; text-align: center; max-width: 600px; padding: 20px; transition: transform 0.1s, letter-spacing 0.1s; }
+#mute-btn { position: fixed; top: 20px; right: 20px; border: 1px solid #000; background: transparent; cursor: pointer; padding: 10px; border-radius: 20px; z-index: 100; }
+.walls { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 0px solid #000; transition: border-width 0.1s; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="walls" id="walls"></div>
+<div class="content">
+  <div class="text" id="txt">Breathe in. Everything is fine.</div>
+</div>
+<script>
+let actx, master, osc;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) {
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0; master.connect(actx.destination);
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 40; osc.connect(master); osc.start();
+  }
+  isMuted = !isMuted;
+};
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  let txt = document.getElementById('txt');
+  let walls = document.getElementById('walls');
+  
+  // Visual compression
+  txt.style.transform = \`scaleY(\${1 - progress * 0.8}) scaleX(\${1 - progress * 0.5})\`;
+  txt.style.letterSpacing = \`-\${progress * 5}px\`;
+  txt.style.fontWeight = 300 + Math.floor(progress * 600);
+  
+  // Physical walls closing in
+  walls.style.borderWidth = \`\${progress * window.innerHeight/2.1}px \${progress * window.innerWidth/2.1}px\`;
+  
+  if(progress < 0.3) txt.innerText = "Breathe in. Everything is fine.";
+  else if (progress < 0.6) txt.innerText = "It feels a bit heavy.";
+  else if (progress < 0.9) txt.innerText = "Too close.";
+  else txt.innerText = "Crush.";
+  
+  // Darken
+  let c = Math.floor(255 - progress * 255);
+  document.body.style.background = \`rgb(\${c},\${c},\${c})\`;
+  txt.style.color = \`rgb(\${255-c},\${255-c},\${255-c})\`;
+  document.getElementById('mute-btn').style.borderColor = txt.style.color;
+  document.getElementById('mute-btn').style.color = txt.style.color;
+  
+  // Audio pressure
+  if(actx && !isMuted) {
+    master.gain.value = progress; // Volume up
+    osc.frequency.value = 40 + progress * 60; // Pitch slightly up
+    osc.type = progress > 0.7 ? 'sawtooth' : 'sine'; // Harshness
+  }
+});
+</script>
+</body>
+</html>

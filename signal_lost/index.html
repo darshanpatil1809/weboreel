@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>signal_lost</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; color: #0f0; font-family: monospace; overflow-x: hidden; height: 1000vh; }
+.signal-bars { position: fixed; top: 20px; left: 20px; display: flex; align-items: flex-end; gap: 4px; height: 30px; }
+.bar { width: 8px; background: #0f0; transition: height 0.5s, opacity 0.5s; }
+.b1 { height: 10px; } .b2 { height: 15px; } .b3 { height: 22px; } .b4 { height: 30px; }
+.data-stream { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; word-break: break-all; opacity: 1; transition: opacity 0.1s, letter-spacing 0.5s; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #0f0; background: #000; color: #0f0; padding: 10px; cursor: pointer; }
+.static { position: fixed; top:0; left:0; width:100%; height:100%; background: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E'); opacity: 0; pointer-events: none; mix-blend-mode: screen; transition: opacity 0.1s; z-index: 50; }
+</style>
+</head>
+<body>
+<button id="mute-btn">ACTIVATE_COMMS</button>
+<div class="signal-bars">
+  <div class="bar b1" id="bar1"></div>
+  <div class="bar b2" id="bar2"></div>
+  <div class="bar b3" id="bar3"></div>
+  <div class="bar b4" id="bar4"></div>
+</div>
+<div class="data-stream" id="stream">RECEIVING TELEMETRY DATA... 100% SECURE CONNECTION ESTABLISHED. ALL SYSTEMS NOMINAL. ORBITAL PATHWAY CLEAR.</div>
+<div class="static" id="static"></div>
+
+<script>
+let actx, master, osc, noise, filter;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1000; osc.connect(master); osc.start();
+    
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+    noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    
+    let noiseGain = actx.createGain(); noiseGain.gain.value = 0;
+    noise.connect(noiseGain).connect(master);
+    noise.start();
+    window.noiseGain = noiseGain;
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.value = isMuted ? 0 : 0.5;
+};
+
+setInterval(() => {
+  if(document.getElementById('stream').innerText.length > 50) {
+    document.getElementById('stream').innerText += Math.random().toString(36).substring(7).toUpperCase() + " ";
+  }
+}, 500);
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight); // 0 to 1
+  
+  let stream = document.getElementById('stream');
+  let stat = document.getElementById('static');
+  
+  // UI Fades
+  if(progress > 0.2) document.getElementById('bar4').style.opacity = 0;
+  if(progress > 0.4) document.getElementById('bar3').style.opacity = 0;
+  if(progress > 0.6) document.getElementById('bar2').style.opacity = 0;
+  if(progress > 0.8) { document.getElementById('bar1').style.opacity = 0; stream.innerText = "NO SIGNAL"; }
+  
+  // Data distortion
+  if(progress < 0.8) {
+    stream.style.opacity = 1 - progress;
+    stream.style.letterSpacing = (progress * 10) + 'px';
+  } else {
+    stream.style.letterSpacing = 'normal';
+    stream.style.opacity = 0.1;
+  }
+  
+  // Static visual
+  stat.style.opacity = progress * 0.5;
+  
+  // Audio distortion
+  if(actx && !isMuted) {
+    osc.frequency.value = 1000 - progress * 800; // Pitch drops
+    window.noiseGain.gain.value = progress * 0.5; // Static increases
+    master.gain.value = (1 - progress) * 0.5; // Overall volume fades to silence
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>unseen_algorithm</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'JetBrains Mono', monospace; overflow-x: hidden; height: 800vh; }
+.content-layer { position: fixed; top: 0; left: 0; width: 50%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; color: #000; z-index: 2; transition: width 0.5s; overflow: hidden; }
+.algo-layer { position: fixed; top: 0; right: 0; width: 50%; height: 100%; background: #001100; color: #0f0; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; z-index: 1; font-size: 14px; white-space: pre-wrap; transition: width 0.5s; }
+.post { font-family: sans-serif; background: #f0f0f0; padding: 20px; border-radius: 8px; margin-bottom: 20px; width: 80%; text-align: center; font-size: 1.5rem; transition: all 0.3s; }
+#mute-btn { position: fixed; bottom: 20px; left: 20px; z-index: 100; background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">SYS_AUDIO</button>
+<div class="content-layer" id="content">
+  <div class="post" id="postText">A cute puppy video</div>
+</div>
+<div class="algo-layer" id="algo">
+[SYS] Init connection.
+[ALGO] Target user identified.
+[ALGO] Baseline established.
+</div>
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.2; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playMech(intensity) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'square'; o.frequency.value = 50 + Math.random()*100 + intensity*200;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.1);
+  o.start(); o.stop(actx.currentTime + 0.1);
+}
+
+const feed = [
+  { p: "Cute puppy", a: "[ALGO] Inject positive stimulus (0.9).\n[ALGO] Monitor retention." },
+  { p: "Friend's vacation", a: "[ALGO] Inject social comparison.\n[ALGO] Detect envy spike." },
+  { p: "Political outrage", a: "[ALGO] Switch to high arousal.\n[ALGO] Anger generates 4x engagement.\n[ALGO] Deploying outrage module." },
+  { p: "Targeted Ad", a: "[ALGO] User vulnerable.\n[ALGO] Serve targeted advertisement.\n[ALGO] Conversion probability: 87%." },
+  { p: "Echo chamber news", a: "[ALGO] Reinforce existing bias.\n[ALGO] Isolate from dissenting views." },
+  { p: "Doomscrolling content", a: "[ALGO] User attempting to leave.\n[ALGO] Deploy infinite scroll trap.\n[ALGO] Retention successful." }
+];
+
+let lastIdx = 0;
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let idx = Math.min(feed.length-1, Math.floor(progress * feed.length));
+  
+  // Shift split
+  document.getElementById('content').style.width = (100 - progress*80) + '%';
+  document.getElementById('algo').style.width = (progress*80 + 20) + '%';
+  
+  if(idx !== lastIdx) {
+    document.getElementById('postText').innerText = feed[idx].p;
+    document.getElementById('algo').innerHTML += "\n\n" + feed[idx].a;
+    playMech(progress);
+    lastIdx = idx;
+    
+    let contentEl = document.getElementById('content');
+    contentEl.style.filter = \`invert(\${progress})\`;
+  }
+});
+</script>
+</body>
+</html>

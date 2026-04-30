@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>virtual_loneliness</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+body, html { margin: 0; padding: 0; background: #121212; font-family: 'Inter', sans-serif; overflow-x: hidden; height: 1000vh; }
+.container { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+.chat-bubble { position: absolute; background: #222; color: #fff; padding: 12px 20px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity 2s, transform 5s; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.chat-bubble.sent { background: #0084ff; }
+.user { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; border-radius: 50%; background: #444; z-index: 10; border: 4px solid #121212; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888; text-align: center; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #333; background: #111; color: #888; padding: 10px; border-radius: 20px; cursor: pointer; pointer-events: auto; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="user">Online</div>
+<div class="container" id="cont"></div>
+<script>
+const messages = ["Hey", "Haha yeah", "Nice", "Busy rn", "👍", "Seen 11:42", "...", "Group: 42 unread", "New Follower", "Can't make it", "Maybe next time"];
+
+let actx, master, osc, gainNode;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    playPad();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+function playPad() {
+  if(!actx) return;
+  const chord = [220, 261.63, 329.63]; // A minor
+  chord.forEach(f => {
+    let o = actx.createOscillator(); let g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    o.connect(g).connect(master);
+    g.gain.value = 0.1;
+    o.start();
+  });
+}
+
+let lastY = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let progress = y / (document.body.scrollHeight - window.innerHeight);
+  
+  if(Math.abs(y - lastY) > 50) {
+    // Spawn chat
+    let b = document.createElement('div');
+    b.className = 'chat-bubble';
+    b.innerText = messages[Math.floor(Math.random() * messages.length)];
+    
+    // Position around the edges, avoiding center
+    let x, ty;
+    if(Math.random() > 0.5) { x = Math.random()*20; } else { x = 70 + Math.random()*20; }
+    ty = Math.random() * 90;
+    
+    b.style.left = x + 'vw';
+    b.style.top = ty + 'vh';
+    
+    document.getElementById('cont').appendChild(b);
+    
+    setTimeout(() => { b.style.opacity = 0.3 + progress*0.5; }, 10);
+    
+    // Zoom out effect
+    document.querySelector('.user').style.transform = \`translate(-50%, -50%) scale(\${1 - progress*0.5})\`;
+    
+    lastY = y;
+  }
+});
+</script>
+</body>
+</html>

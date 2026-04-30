@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>digital_decay</title>
+<style>
+body, html { margin: 0; padding: 0; background: #fff; color: #222; font-family: Arial, sans-serif; height: 500vh; overflow-x: hidden; }
+.header { padding: 20px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; }
+.content { max-width: 800px; margin: 40px auto; padding: 0 20px; transition: all 0.1s; }
+.article { margin-bottom: 40px; }
+.title { font-size: 2rem; font-weight: bold; margin-bottom: 10px; }
+.text { line-height: 1.6; }
+.image { width: 100%; height: 200px; background: #eee; margin-top: 10px; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #000; background: #fff; padding: 10px; cursor: pointer; }
+</style>
+</head>
+<body id="bdy">
+<button id="mute-btn">🎵</button>
+
+<div class="header" id="hdr">
+  <div><strong>NewsPortal</strong></div>
+  <div>Login | Subscribe</div>
+</div>
+
+<div class="content" id="cont">
+  <div class="article">
+    <div class="title">Global Markets Reach Record Highs</div>
+    <div class="text">Investors are seeing unprecedented returns this quarter. Analysts predict...</div>
+    <div class="image"></div>
+  </div>
+  <div class="article">
+    <div class="title">New Technology Promises Cleaner Energy</div>
+    <div class="text">Scientists have made a breakthrough in renewable resource management.</div>
+    <div class="image"></div>
+  </div>
+</div>
+
+<script>
+let actx, master, osc, noise, filter;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    
+    // Clean tone
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 440; 
+    
+    // Noise
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+    noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    
+    // Degradation filter
+    filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 20000;
+    
+    osc.connect(filter); noise.connect(filter); filter.connect(master);
+    osc.start(); noise.start();
+    
+    // Noise is initially silent
+    noise.gainNode = actx.createGain(); noise.disconnect(); noise.connect(noise.gainNode); noise.gainNode.connect(filter);
+    noise.gainNode.gain.value = 0;
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.value = isMuted ? 0 : 0.5;
+};
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  let bdy = document.getElementById('bdy');
+  let cont = document.getElementById('cont');
+  
+  // Visual Decay
+  if(progress > 0.2) {
+    bdy.style.letterSpacing = (progress - 0.2) * 5 + 'px';
+  }
+  if(progress > 0.4) {
+    cont.style.transform = \`rotate(\${(progress-0.4)*10}deg) skewX(\${(progress-0.4)*20}deg)\`;
+    bdy.style.filter = \`contrast(\${1 + progress*5}) invert(\${progress})\`;
+  }
+  if(progress > 0.6) {
+    document.querySelectorAll('.image').forEach(img => {
+      img.style.background = Math.random() > 0.5 ? 'red' : 'blue';
+    });
+  }
+  if(progress > 0.8) {
+    bdy.style.fontFamily = 'Impact, sans-serif';
+    document.querySelectorAll('div').forEach(d => {
+      if(Math.random() < 0.1) d.style.display = 'none';
+    });
+  }
+  
+  // Audio Decay
+  if(actx && !isMuted) {
+    osc.frequency.value = 440 - progress * 200; // Pitch drops
+    osc.type = progress > 0.5 ? 'sawtooth' : 'sine'; // Becomes harsh
+    filter.frequency.value = 20000 - progress * 19000; // Muffled
+    noise.gainNode.gain.value = progress; // Noise increases
+  }
+});
+</script>
+</body>
+</html>
