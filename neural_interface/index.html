@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>neural_interface</title>
+<style>
+body, html { margin: 0; padding: 0; background: #020202; color: #0f0; font-family: monospace; overflow-x: hidden; height: 500vh; }
+canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+.ui { position: fixed; top: 20px; left: 20px; z-index: 10; font-size: 14px; pointer-events: none; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; background: #000; color: #0f0; border: 1px solid #0f0; padding: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">LINK AUDIO</button>
+<div class="ui" id="ui">AWAITING NEURAL SYNC...<br>SCROLL TO INITIATE.</div>
+<canvas id="canvas"></canvas>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playPulse(freq) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.2, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.2);
+  o.start(); o.stop(actx.currentTime + 0.2);
+}
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let w, h;
+function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+const nodes = [];
+for(let i=0; i<50; i++) {
+  nodes.push({ x: Math.random()*w, y: Math.random()*h, active: false });
+}
+
+let scrollP = 0;
+let animatedP = 0;
+window.addEventListener('scroll', () => {
+  scrollP = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+});
+
+function draw() {
+  animatedP += (scrollP - animatedP) * 0.1;
+  ctx.clearRect(0, 0, w, h);
+  
+  let activeCount = Math.floor(animatedP * nodes.length);
+  document.getElementById('ui').innerHTML = \`NEURAL SYNC: \${(animatedP*100).toFixed(1)}%<br>ACTIVE NODES: \${activeCount}/\${nodes.length}\`;
+  
+  for(let i=0; i<nodes.length; i++) {
+    let n = nodes[i];
+    let isActive = i < activeCount;
+    
+    if(isActive && !n.active) { n.active = true; playPulse(200 + i*10); }
+    if(!isActive && n.active) { n.active = false; }
+    
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, isActive ? 4 : 2, 0, Math.PI*2);
+    ctx.fillStyle = isActive ? '#0f0' : '#222';
+    ctx.fill();
+    
+    if(isActive) {
+      for(let j=0; j<i; j++) {
+        let n2 = nodes[j];
+        let d = Math.hypot(n.x - n2.x, n.y - n2.y);
+        if(d < 200) {
+          ctx.beginPath();
+          ctx.moveTo(n.x, n.y); ctx.lineTo(n2.x, n2.y);
+          ctx.strokeStyle = \`rgba(0, 255, 0, \${1 - d/200})\`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

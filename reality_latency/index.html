@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>reality_latency</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Helvetica Neue', sans-serif; overflow-x: hidden; height: 500vh; overscroll-behavior: none; }
+.fixed-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; }
+.text-layer { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; font-size: 4rem; font-weight: bold; will-change: transform; transition: opacity 0.5s; mix-blend-mode: difference; }
+.visual-layer { position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; will-change: transform; filter: blur(0px); transition: filter 0.2s; }
+.box { width: 40vw; height: 40vh; background: linear-gradient(45deg, #f0f, #0ff); margin-top: 30vh; border-radius: 20px; box-shadow: 0 0 50px rgba(0,255,255,0.5); }
+.word { margin-top: 30vh; margin-bottom: 70vh; opacity: 0.8; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #fff; background: transparent; color: #fff; padding: 10px; cursor: pointer; pointer-events: auto; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="fixed-container">
+  <div class="visual-layer" id="vis">
+    <div class="box"></div>
+    <div class="box" style="background: linear-gradient(45deg, #ff0, #f00);"></div>
+    <div class="box" style="background: linear-gradient(45deg, #0f0, #00f);"></div>
+  </div>
+  <div class="text-layer" id="txt">
+    <div class="word">WAKE UP</div>
+    <div class="word">IT'S DELAYED</div>
+    <div class="word">LAGGING</div>
+  </div>
+</div>
+
+<script>
+let actx, master, delay, filter;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    delay = actx.createDelay(); delay.delayTime.value = 0.5;
+    let feedback = actx.createGain(); feedback.gain.value = 0.4;
+    delay.connect(feedback); feedback.connect(delay); delay.connect(master);
+    
+    filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 1000;
+    filter.connect(master); filter.connect(delay);
+  }
+  isMuted = !isMuted;
+};
+
+function playTone(v) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = 200 + Math.abs(v) * 10;
+  o.connect(g).connect(filter);
+  g.gain.setValueAtTime(0.1, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.1);
+  o.start(); o.stop(actx.currentTime + 0.1);
+}
+
+let scrollY = 0;
+let txtY = 0;
+let visY = 0;
+
+window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+function loop() {
+  // Text catches up fast (low latency)
+  txtY += (scrollY - txtY) * 0.1;
+  // Visuals lag behind (high latency)
+  visY += (scrollY - visY) * 0.02;
+  
+  document.getElementById('txt').style.transform = \`translateY(\${-txtY}px)\`;
+  document.getElementById('vis').style.transform = \`translateY(\${-visY}px)\`;
+  
+  let diff = Math.abs(txtY - visY);
+  document.getElementById('vis').style.filter = \`blur(\${diff * 0.05}px)\`;
+  
+  if(diff > 50 && Math.random() < 0.1) playTone(diff);
+  
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

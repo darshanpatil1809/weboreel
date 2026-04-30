@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>time_glitch_diary</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital@1&family=Space+Mono&display=swap');
+body, html { margin: 0; padding: 0; background: #eae6df; color: #2b2b2b; overflow-x: hidden; height: 400vh; scroll-snap-type: y mandatory; }
+.entry { height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 0 20%; scroll-snap-align: start; position: relative; transition: all 0.3s; }
+.date { font-family: 'Space Mono', monospace; font-size: 0.9rem; margin-bottom: 20px; color: #888; }
+.text { font-family: 'Lora', serif; font-size: 1.5rem; line-height: 1.8; }
+.glitch-text { font-family: 'Space Mono', monospace; color: #d32f2f; font-size: 1.5rem; line-height: 1.8; position: absolute; opacity: 0; mix-blend-mode: multiply; pointer-events: none; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; opacity: 0.5; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="entry" id="e1">
+  <div class="date">October 14, 2018</div>
+  <div class="text">The leaves are turning orange. Everything feels peaceful. I hope it stays this way.</div>
+  <div class="glitch-text">CRITICAL SYSTEM FAILURE. OXYGEN DEPLETED.</div>
+</div>
+<div class="entry" id="e2">
+  <div class="date">March 2, 2019</div>
+  <div class="text">Had coffee with Sarah today. We laughed until we cried.</div>
+  <div class="glitch-text">NO HUMAN CONTACT IN 400 DAYS. ALONE.</div>
+</div>
+<div class="entry" id="e3">
+  <div class="date">December 25, 2021</div>
+  <div class="text">A quiet Christmas. Snow is falling gently outside the window.</div>
+  <div class="glitch-text">ASH FALLING. THE SKY IS BURNING.</div>
+</div>
+<div class="entry" id="e4">
+  <div class="date">???</div>
+  <div class="text">I don't remember writing this.</div>
+  <div class="glitch-text">END OF LOG.</div>
+</div>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playGlitch() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(800, actx.currentTime); o.frequency.exponentialRampToValueAtTime(50, actx.currentTime + 0.2);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.3, actx.currentTime); g.gain.linearRampToValueAtTime(0, actx.currentTime + 0.2);
+  o.start(); o.stop(actx.currentTime + 0.2);
+}
+
+function playTick() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'square'; o.frequency.value = 1000;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.1, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.05);
+  o.start(); o.stop(actx.currentTime + 0.05);
+}
+
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let progress = y / window.innerHeight;
+  
+  if(Math.abs(y - lastScroll) > 10) {
+    if(Math.random() < 0.1) playTick();
+  }
+  
+  document.querySelectorAll('.entry').forEach((el, index) => {
+    let distance = Math.abs(progress - index);
+    let glitch = el.querySelector('.glitch-text');
+    let text = el.querySelector('.text');
+    
+    if(distance > 0.1 && distance < 0.5) {
+      if(Math.random() < distance * 2) {
+        glitch.style.opacity = 1;
+        glitch.style.transform = \`translate(\${Math.random()*10-5}px, \${Math.random()*10-5}px)\`;
+        text.style.opacity = 0;
+        playGlitch();
+      } else {
+        glitch.style.opacity = 0;
+        text.style.opacity = 1;
+      }
+    } else {
+      glitch.style.opacity = 0;
+      text.style.opacity = 1;
+    }
+  });
+  lastScroll = y;
+});
+</script>
+</body>
+</html>

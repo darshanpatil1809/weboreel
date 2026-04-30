@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>digital_pulse</title>
+<style>
+body, html { margin: 0; padding: 0; background: #0a0a0a; color: #fff; font-family: sans-serif; overflow-x: hidden; height: 500vh; display: flex; align-items: center; justify-content: center; }
+.heartbeat-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; will-change: transform, filter; transition: transform 0.1s, filter 0.1s; }
+.circle { width: 30vw; height: 30vw; border-radius: 50%; background: radial-gradient(circle, #ff3366 0%, transparent 70%); filter: blur(20px); }
+.text { position: absolute; font-size: 2rem; font-weight: bold; letter-spacing: 5px; text-transform: uppercase; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: 1px solid #fff; background: transparent; color: #fff; cursor: pointer; padding: 10px; border-radius: 20px; }
+.vignette { position: fixed; top:0; left:0; width:100%; height:100%; box-shadow: inset 0 0 100px rgba(255,0,0,0); transition: box-shadow 0.1s; pointer-events: none; }
+</style>
+</head>
+<body>
+<button id="mute-btn">ENABLE LIFE</button>
+<div class="vignette" id="vig"></div>
+<div class="heartbeat-layer" id="layer">
+  <div class="circle"></div>
+  <div class="text">PULSE</div>
+</div>
+<script>
+let actx, master;
+let isMuted = true;
+let bpm = 60;
+let lastBeat = 0;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.8; master.connect(actx.destination); 
+    requestAnimationFrame(beatLoop);
+  }
+  isMuted = !isMuted;
+};
+
+function playBeat() {
+  if(!actx || isMuted) return;
+  // Sub bass kick
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(150, actx.currentTime); o.frequency.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.5);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(1, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.5);
+  o.start(); o.stop(actx.currentTime + 0.5);
+  
+  // Visual pulse
+  let layer = document.getElementById('layer');
+  layer.style.transform = \`scale(\${1 + bpm/200})\`;
+  layer.style.filter = \`brightness(\${1 + bpm/100})\`;
+  document.getElementById('vig').style.boxShadow = \`inset 0 0 \${bpm*2}px rgba(255,0,0,\${bpm/300})\`;
+  
+  setTimeout(() => {
+    layer.style.transform = 'scale(1)';
+    layer.style.filter = 'brightness(1)';
+    document.getElementById('vig').style.boxShadow = \`inset 0 0 0px rgba(255,0,0,0)\`;
+  }, 100);
+}
+
+function beatLoop(time) {
+  if(time - lastBeat > (60 / bpm) * 1000) {
+    playBeat();
+    lastBeat = time;
+  }
+  requestAnimationFrame(beatLoop);
+}
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  bpm = 60 + (progress * 120); // 60 to 180 bpm
+});
+</script>
+</body>
+</html>

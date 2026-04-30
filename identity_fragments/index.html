@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>identity_fragments</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;500&display=swap');
+body, html { margin: 0; padding: 0; background: #fff; color: #111; font-family: 'Outfit', sans-serif; overflow-x: hidden; height: 600vh; }
+.container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.fragment { position: absolute; font-size: 3rem; font-weight: 500; opacity: 0; transform: scale(2); filter: blur(20px); transition: opacity 1s, transform 1.5s cubic-bezier(0.165, 0.84, 0.44, 1), filter 1.5s; white-space: nowrap; }
+.fragment.visible { opacity: 1; transform: scale(1); filter: blur(0px); }
+.fragment.past { opacity: 0.1; transform: scale(0.8); filter: blur(2px); }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; pointer-events: auto; font-size: 1.5rem; opacity: 0.5; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="container" id="cont">
+  <div class="fragment">Darshan Patil</div>
+  <div class="fragment">Developer</div>
+  <div class="fragment">Brother</div>
+  <div class="fragment">Student</div>
+  <div class="fragment">Dreamer</div>
+  <div class="fragment">Just a human</div>
+</div>
+
+<script>
+let actx, master, pad;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    
+    pad = actx.createGain(); pad.gain.value = 0.2; pad.connect(master);
+    [261.63, 329.63, 392.00].forEach(f => {
+      let o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(pad); o.start();
+    });
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.5, actx.currentTime, 0.5);
+};
+
+const fragments = document.querySelectorAll('.fragment');
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let total = fragments.length;
+  let currentIdx = Math.floor(progress * total);
+  
+  fragments.forEach((f, i) => {
+    if(i === currentIdx) {
+      f.classList.add('visible');
+      f.classList.remove('past');
+    } else if (i < currentIdx) {
+      f.classList.remove('visible');
+      f.classList.add('past');
+      // Position past fragments randomly around
+      if(!f.dataset.placed) {
+        f.style.top = (Math.random()*80 + 10) + '%';
+        f.style.left = (Math.random()*80 + 10) + '%';
+        f.dataset.placed = true;
+      }
+    } else {
+      f.classList.remove('visible');
+      f.classList.remove('past');
+      f.style.top = '50%'; f.style.left = '50%';
+      f.style.transform = 'translate(-50%, -50%) scale(2)';
+    }
+  });
+});
+</script>
+</body>
+</html>

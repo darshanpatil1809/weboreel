@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>emotion_gradient</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Helvetica Neue', sans-serif; overflow-x: hidden; height: 500vh; }
+.bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, #ffb347 0%, #ffcc33 100%); transition: background 1s ease-out; z-index: -1; }
+.section { height: 100vh; display: flex; align-items: center; justify-content: center; font-size: 4rem; font-weight: bold; letter-spacing: 10px; text-transform: uppercase; mix-blend-mode: overlay; opacity: 0.8; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: rgba(255,255,255,0.2); color: #fff; padding: 15px; border-radius: 50%; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="bg" id="bg"></div>
+<div class="section" id="s1">Joy</div>
+<div class="section" id="s2">Melancholy</div>
+<div class="section" id="s3">Anger</div>
+<div class="section" id="s4">Calm</div>
+<div class="section" id="s5">Apathy</div>
+
+<script>
+let actx, master, osc1, osc2;
+let isMuted = true;
+
+const emotions = [
+  { colors: ['#ffb347', '#ffcc33'], chord: [523.25, 659.25] }, // Joy (C E)
+  { colors: ['#4b6cb7', '#182848'], chord: [440.00, 523.25] }, // Melancholy (A C)
+  { colors: ['#cb2d3e', '#ef473a'], chord: [311.13, 349.23] }, // Anger (Eb F dissonant)
+  { colors: ['#a8e063', '#56ab2f'], chord: [392.00, 493.88] }, // Calm (G B)
+  { colors: ['#bdc3c7', '#2c3e50'], chord: [200.00, 200.00] }  // Apathy (drone)
+];
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    osc1 = actx.createOscillator(); osc2 = actx.createOscillator();
+    osc1.type = 'sine'; osc2.type = 'sine';
+    osc1.connect(master); osc2.connect(master);
+    osc1.start(); osc2.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let idx = Math.min(4, Math.floor(progress * 5));
+  let emotion = emotions[idx];
+  
+  document.getElementById('bg').style.background = \`linear-gradient(180deg, \${emotion.colors[0]} 0%, \${emotion.colors[1]} 100%)\`;
+  
+  if(actx && !isMuted) {
+    osc1.frequency.setTargetAtTime(emotion.chord[0], actx.currentTime, 1);
+    osc2.frequency.setTargetAtTime(emotion.chord[1], actx.currentTime, 1);
+    
+    if(idx === 2) { osc1.type = 'sawtooth'; osc2.type = 'sawtooth'; } // Anger
+    else { osc1.type = 'sine'; osc2.type = 'sine'; }
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>digital_soul_map</title>
+<style>
+body, html { margin: 0; padding: 0; background: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; height: 600vh; }
+.map-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+svg { width: 100vmin; height: 100vmin; will-change: transform; transform-origin: center center; }
+.node text { font-size: 10px; fill: #e2e8f0; text-anchor: middle; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+.node circle { fill: rgba(56, 189, 248, 0.2); stroke: #38bdf8; stroke-width: 1; transition: all 0.3s; }
+.node.visible text { opacity: 1; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #38bdf8; background: transparent; color: #38bdf8; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="map-container">
+  <svg viewBox="-100 -100 200 200" id="soul-map">
+    <!-- Layer 0 -->
+    <g class="node visible" id="n0">
+      <circle cx="0" cy="0" r="80" />
+      <text x="0" y="-85">SURFACE</text>
+    </g>
+    <!-- Layer 1 -->
+    <g class="node" id="n1_1"><circle cx="-30" cy="-30" r="20" /><text x="-30" y="-30">Logic</text></g>
+    <g class="node" id="n1_2"><circle cx="30" cy="-30" r="20" /><text x="30" y="-30">Emotion</text></g>
+    <g class="node" id="n1_3"><circle cx="0" cy="40" r="25" /><text x="0" y="40">Instinct</text></g>
+    <!-- Layer 2 (inside Logic) -->
+    <g class="node" id="n2_1"><circle cx="-35" cy="-35" r="4" /><text x="-35" y="-35" font-size="3">Math</text></g>
+    <g class="node" id="n2_2"><circle cx="-25" cy="-25" r="5" /><text x="-25" y="-25" font-size="3">Code</text></g>
+    <!-- Layer 3 (deep core) -->
+    <g class="node" id="n3_1"><circle cx="-25" cy="-25" r="1" fill="#f43f5e" stroke="none"/><text x="-25" y="-25" font-size="0.5" fill="#f43f5e">Fear</text></g>
+  </svg>
+</div>
+
+<script>
+let actx, master, osc;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 100;
+    osc.connect(master); osc.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+let map = document.getElementById('soul-map');
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  // Scale from 1 to 200 exponentially
+  let scale = Math.pow(200, progress);
+  // Pan towards node n2_2 (cx=-25, cy=-25)
+  let panX = progress * 25 * scale;
+  let panY = progress * 25 * scale;
+  
+  map.style.transform = \`translate(\${panX}px, \${panY}px) scale(\${scale})\`;
+  
+  // Visibility thresholds
+  document.getElementById('n0').classList.toggle('visible', progress < 0.3);
+  document.getElementById('n1_1').classList.toggle('visible', progress > 0.1 && progress < 0.6);
+  document.getElementById('n1_2').classList.toggle('visible', progress > 0.1 && progress < 0.4);
+  document.getElementById('n1_3').classList.toggle('visible', progress > 0.1 && progress < 0.4);
+  document.getElementById('n2_1').classList.toggle('visible', progress > 0.4 && progress < 0.8);
+  document.getElementById('n2_2').classList.toggle('visible', progress > 0.4);
+  document.getElementById('n3_1').classList.toggle('visible', progress > 0.7);
+  
+  // Audio evolution
+  if(actx && !isMuted) {
+    // Pitch drops as we go deeper
+    osc.frequency.setTargetAtTime(100 - progress * 50, actx.currentTime, 0.1);
+    // Add harmonic as we hit core
+    if(progress > 0.8) osc.type = 'triangle'; else osc.type = 'sine';
+  }
+});
+</script>
+</body>
+</html>

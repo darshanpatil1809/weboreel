@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>broken_timeline</title>
+<style>
+body, html { margin: 0; padding: 0; background: #fafafa; color: #333; font-family: monospace; overflow-x: hidden; }
+.timeline { width: 4px; background: #ddd; position: absolute; left: 50px; top: 0; height: 100%; z-index: 0; }
+.container { padding: 100px 20px 100px 80px; display: flex; flex-direction: column; gap: 200px; position: relative; z-index: 1; }
+.event { position: relative; opacity: 0; transform: translateX(-20px); transition: all 0.5s; }
+.event::before { content: ''; position: absolute; left: -34px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #333; border: 4px solid #fafafa; }
+.event.visible { opacity: 1; transform: translateX(0); }
+.event.missing { opacity: 0.3; }
+.event.missing::before { background: #fafafa; border: 4px dashed #ccc; }
+.year { font-weight: bold; font-size: 1.2rem; margin-bottom: 5px; }
+.desc { max-width: 400px; line-height: 1.5; color: #666; }
+.placeholder { width: 100%; height: 10px; background: #eee; margin-top: 5px; border-radius: 5px; overflow: hidden; position: relative; }
+.placeholder::after { content: ''; position: absolute; top:0; left:0; height:100%; width:50%; background: linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent); animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🔊</button>
+<div class="timeline"></div>
+<div class="container" id="cont">
+  <div class="event visible"><div class="year">2010</div><div class="desc">The foundation was laid. Initial structural integrity at 100%.</div></div>
+  <div class="event missing" data-year="2012" data-desc="First major anomaly detected in sector 4. Data corrupted."><div class="year">____</div><div class="desc"><div class="placeholder"></div><div class="placeholder" style="width:80%"></div></div></div>
+  <div class="event visible"><div class="year">2015</div><div class="desc">System reboot successful. Resuming normal operations.</div></div>
+  <div class="event missing" data-year="2018" data-desc="Complete blackout for 72 hours. No logs available."><div class="year">____</div><div class="desc"><div class="placeholder"></div><div class="placeholder"></div><div class="placeholder" style="width:60%"></div></div></div>
+  <div class="event visible"><div class="year">2020</div><div class="desc">Containment protocols engaged.</div></div>
+  <div class="event missing" data-year="2023" data-desc="The breach. They are inside."><div class="year">____</div><div class="desc"><div class="placeholder"></div></div></div>
+</div>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playRecover() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(400, actx.currentTime); o.frequency.linearRampToValueAtTime(800, actx.currentTime + 0.3);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.3, actx.currentTime); g.gain.linearRampToValueAtTime(0, actx.currentTime + 0.3);
+  o.start(); o.stop(actx.currentTime + 0.3);
+}
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting && entry.intersectionRatio > 0.5) {
+      if(entry.target.classList.contains('missing')) {
+        setTimeout(() => {
+          entry.target.classList.remove('missing');
+          entry.target.querySelector('.year').innerText = entry.target.dataset.year;
+          entry.target.querySelector('.desc').innerText = entry.target.dataset.desc;
+          playRecover();
+        }, 1000); // 1 second delay to simulate recovering data
+      } else {
+        entry.target.classList.add('visible');
+      }
+    }
+  });
+}, { threshold: 0.6 });
+
+document.querySelectorAll('.event').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

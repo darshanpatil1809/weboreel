@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mind_loader</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; color: #0f0; font-family: monospace; overflow-x: hidden; height: 300vh; }
+.container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; max-width: 600px; }
+.loader-group { margin-bottom: 30px; }
+.label { margin-bottom: 5px; font-size: 14px; display: flex; justify-content: space-between; }
+.bar-bg { width: 100%; height: 2px; background: #222; position: relative; }
+.bar-fill { height: 100%; background: #0f0; width: 0%; transition: width 0.1s linear; }
+.glitch { animation: flash 0.1s infinite; }
+@keyframes flash { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #0f0; background: #000; color: #0f0; padding: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">SYS_AUDIO</button>
+<div class="container">
+  <div class="loader-group">
+    <div class="label"><span>Parsing Memories...</span><span id="p1">0%</span></div>
+    <div class="bar-bg"><div class="bar-fill" id="b1"></div></div>
+  </div>
+  <div class="loader-group">
+    <div class="label"><span>Synthesizing Emotions...</span><span id="p2">0%</span></div>
+    <div class="bar-bg"><div class="bar-fill" id="b2"></div></div>
+  </div>
+  <div class="loader-group">
+    <div class="label"><span>Constructing Identity...</span><span id="p3">0%</span></div>
+    <div class="bar-bg"><div class="bar-fill" id="b3"></div></div>
+  </div>
+</div>
+
+<script>
+let actx, master, synth;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.1; master.connect(actx.destination); 
+    synth = actx.createOscillator(); synth.type = 'sawtooth'; synth.frequency.value = 50; synth.connect(master); synth.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.1, actx.currentTime, 0.5);
+};
+
+function playReset() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(1000, actx.currentTime); o.frequency.exponentialRampToValueAtTime(100, actx.currentTime + 0.2);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.linearRampToValueAtTime(0, actx.currentTime + 0.2);
+  o.start(); o.stop(actx.currentTime + 0.2);
+}
+
+let loaders = [
+  { val: 0, target: 0, rate: 0.05, id: 'b1', pid: 'p1' },
+  { val: 0, target: 0, rate: 0.03, id: 'b2', pid: 'p2' },
+  { val: 0, target: 0, rate: 0.01, id: 'b3', pid: 'p3' }
+];
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight); // 0 to 1
+  loaders.forEach(l => { l.target = progress * 100; });
+});
+
+function loop() {
+  let totalVal = 0;
+  loaders.forEach(l => {
+    if(l.val < l.target) l.val += l.rate * (l.target - l.val + 1); // ease towards target
+    
+    // Unexpected reset logic
+    if(l.val > 80 && Math.random() < 0.005) {
+      l.val = 10;
+      document.getElementById(l.pid).parentElement.classList.add('glitch');
+      setTimeout(() => document.getElementById(l.pid).parentElement.classList.remove('glitch'), 500);
+      playReset();
+    }
+    
+    document.getElementById(l.id).style.width = l.val + '%';
+    document.getElementById(l.pid).innerText = Math.floor(l.val) + '%';
+    totalVal += l.val;
+  });
+  
+  if(actx && !isMuted) {
+    // Pitch increases as overall progress increases
+    synth.frequency.setTargetAtTime(50 + totalVal, actx.currentTime, 0.1);
+  }
+  
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

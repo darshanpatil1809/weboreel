@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>parallel_scroll</title>
+<style>
+body, html { margin: 0; padding: 0; background: #111; overflow-x: hidden; height: 500vh; display: flex; font-family: sans-serif; }
+.half { position: fixed; top: 0; width: 50%; height: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+#left { left: 0; background: #fdfdfd; color: #111; border-right: 1px solid #ccc; }
+#right { right: 0; background: #111; color: #fdfdfd; }
+.content-strip { position: absolute; width: 80%; top: 50vh; display: flex; flex-direction: column; gap: 50vh; }
+.block { height: 30vh; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; text-align: center; }
+#mute-btn { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; border: none; background: #777; color: #fff; padding: 10px 20px; cursor: pointer; border-radius: 20px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="half" id="left">
+  <div class="content-strip" id="stripL">
+    <div class="block">Sunlight</div><div class="block">Noise</div><div class="block">Chaos</div><div class="block">Creation</div>
+  </div>
+</div>
+<div class="half" id="right">
+  <div class="content-strip" id="stripR">
+    <div class="block">Moonlight</div><div class="block">Silence</div><div class="block">Order</div><div class="block">Destruction</div>
+  </div>
+</div>
+<script>
+let actx, master, panL, panR, filterL, filterR;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    
+    // Left channel audio
+    panL = actx.createStereoPanner(); panL.pan.value = -1;
+    filterL = actx.createBiquadFilter(); filterL.type = 'highpass'; filterL.frequency.value = 1000;
+    let oscL = actx.createOscillator(); oscL.type = 'sawtooth'; oscL.frequency.value = 200;
+    oscL.connect(filterL).connect(panL).connect(master); oscL.start();
+    
+    // Right channel audio
+    panR = actx.createStereoPanner(); panR.pan.value = 1;
+    filterR = actx.createBiquadFilter(); filterR.type = 'lowpass'; filterR.frequency.value = 500;
+    let oscR = actx.createOscillator(); oscR.type = 'sine'; oscR.frequency.value = 100;
+    oscR.connect(filterR).connect(panR).connect(master); oscR.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.5, actx.currentTime, 0.5);
+};
+
+let stripL = document.getElementById('stripL');
+let stripR = document.getElementById('stripR');
+
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  // Left scrolls slightly faster, right slightly slower
+  stripL.style.transform = \`translateY(\${-y * 1.1}px)\`;
+  stripR.style.transform = \`translateY(\${-y * 0.9}px)\`;
+  
+  if(actx && !isMuted) {
+    let progress = y / (document.body.scrollHeight - window.innerHeight);
+    filterL.frequency.setTargetAtTime(1000 + progress*2000, actx.currentTime, 0.1);
+    filterR.frequency.setTargetAtTime(500 - progress*300, actx.currentTime, 0.1);
+  }
+});
+</script>
+</body>
+</html>

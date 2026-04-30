@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>thought_cascade</title>
+<style>
+body, html { margin: 0; padding: 0; background: #0f111a; color: #fff; overflow-x: hidden; height: 500vh; }
+canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.ui { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-family: 'Times New Roman', serif; opacity: 0.5; font-size: 2rem; transition: opacity 0.5s; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px; cursor: pointer; border-radius: 4px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="ui" id="ui">Scroll to control the downpour.</div>
+<canvas id="canvas"></canvas>
+
+<script>
+let actx, master, noiseNode, filterNode, gainNode;
+let isMuted = true;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    
+    // Pink noise approximation for rain
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0; i<bufSize; i++) {
+        let white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+        data[i] *= 0.11;
+        b6 = white * 0.115926;
+    }
+    noiseNode = actx.createBufferSource(); noiseNode.buffer = buf; noiseNode.loop = true;
+    filterNode = actx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 1000;
+    gainNode = actx.createGain(); gainNode.gain.value = 0.2;
+    
+    noiseNode.connect(filterNode).connect(gainNode).connect(master);
+    noiseNode.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.5, actx.currentTime, 0.5);
+};
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let w, h;
+function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+const words = ["why", "maybe", "tomorrow", "if only", "falling", "heavy", "forget", "breathe", "wait"];
+let particles = [];
+for(let i=0; i<100; i++) {
+  particles.push({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    s: Math.random() * 2 + 0.5, // speed multiplier
+    w: words[Math.floor(Math.random()*words.length)],
+    fs: Math.floor(Math.random()*14 + 10), // font size
+    op: Math.random() * 0.5 + 0.1
+  });
+}
+
+let scrollSpeed = 0;
+let lastY = 0;
+
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  scrollSpeed = Math.abs(y - lastY);
+  lastY = y;
+  
+  if(scrollSpeed > 0) document.getElementById('ui').style.opacity = 0;
+});
+
+function draw() {
+  ctx.fillStyle = 'rgba(15, 17, 26, 0.3)';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Base falling speed + scroll speed boost
+  let currentSpeed = 1 + scrollSpeed * 0.1;
+  scrollSpeed *= 0.9; // decay
+  
+  // Audio sync
+  if(actx && !isMuted) {
+    filterNode.frequency.setTargetAtTime(1000 + currentSpeed * 200, actx.currentTime, 0.1);
+    gainNode.gain.setTargetAtTime(0.2 + currentSpeed * 0.02, actx.currentTime, 0.1);
+  }
+  
+  for(let i=0; i<particles.length; i++) {
+    let p = particles[i];
+    p.y += p.s * currentSpeed;
+    
+    if(p.y > h) {
+      p.y = -20;
+      p.x = Math.random() * w;
+    }
+    
+    ctx.fillStyle = \`rgba(255, 255, 255, \${p.op})\`;
+    ctx.font = \`\${p.fs}px "Times New Roman"\`;
+    ctx.fillText(p.w, p.x, p.y);
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

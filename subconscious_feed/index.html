@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>subconscious_feed</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300&display=swap');
+body, html { margin: 0; padding: 0; background: #080808; color: #eee; font-family: 'Cormorant Garamond', serif; overflow-x: hidden; scroll-behavior: smooth; }
+.feed { display: flex; flex-direction: column; align-items: center; padding: 50vh 0; }
+.thought { width: 60%; text-align: center; font-size: 2.5rem; margin: 30vh 0; opacity: 0; transform: translateY(50px); transition: opacity 1.5s ease-out, transform 2s ease-out; line-height: 1.4; letter-spacing: 1px; }
+.thought.visible { opacity: 0.8; transform: translateY(0); }
+#mute-btn { position: fixed; top: 20px; left: 20px; border: none; background: transparent; color: #444; cursor: pointer; transition: color 0.3s; z-index: 100; }
+#mute-btn:hover { color: #ccc; }
+</style>
+</head>
+<body>
+<button id="mute-btn">listen</button>
+<div class="feed" id="feed"></div>
+<script>
+const thoughts = [
+  "Did I lock the door?", "The smell of rain in 2004.", "Why did she look at me like that?", "I should call him.", "It's fading.", "A white room with no windows.", "Falling. Just falling.", "I forgot the melody.", "Not enough time.", "I am exactly where I need to be."
+];
+
+let actx, master, loopSource;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.2; master.connect(actx.destination); 
+    
+    // Create a continuous drone
+    let o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = 55; // Deep A1
+    let g = actx.createGain(); g.gain.value = 0.5;
+    o.connect(g).connect(master);
+    o.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.2, actx.currentTime, 0.5);
+};
+
+function playWhisper() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'triangle'; o.frequency.value = 200 + Math.random()*200;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.1, actx.currentTime); g.gain.linearRampToValueAtTime(0, actx.currentTime + 2);
+  o.start(); o.stop(actx.currentTime + 2);
+}
+
+const feed = document.getElementById('feed');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      playWhisper();
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.5 });
+
+function addThoughts(count) {
+  for(let i=0; i<count; i++) {
+    let el = document.createElement('div');
+    el.className = 'thought';
+    el.innerText = thoughts[Math.floor(Math.random() * thoughts.length)];
+    feed.appendChild(el);
+    observer.observe(el);
+  }
+}
+
+addThoughts(5);
+
+window.addEventListener('scroll', () => {
+  if(window.scrollY + window.innerHeight >= document.body.offsetHeight - 500) {
+    addThoughts(3);
+  }
+});
+</script>
+</body>
+</html>

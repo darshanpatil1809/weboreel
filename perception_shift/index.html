@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>perception_shift</title>
+<style>
+body, html { margin: 0; padding: 0; background: #e9ecef; color: #343a40; font-family: -apple-system, sans-serif; overflow-x: hidden; height: 500vh; perspective: 1000px; }
+.viewport { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform-style: preserve-3d; transition: transform 0.1s; }
+.card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 400px; max-width: 90vw; text-align: center; }
+h1 { margin-top: 0; font-size: 2rem; }
+p { color: #6c757d; line-height: 1.6; }
+.btn { background: #007bff; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🔊</button>
+<div class="viewport" id="vp">
+  <div class="card">
+    <h1>Perception</h1>
+    <p>Everything seems perfectly normal. The angles are right, the depth is flat. But scroll down, and watch the dimensions unfold.</p>
+    <button class="btn">Click Me</button>
+  </div>
+</div>
+<script>
+let actx, master, osc, filter;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 200;
+    filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 500;
+    osc.connect(filter).connect(master);
+    osc.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+let vp = document.getElementById('vp');
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  // 3D Distortions
+  let rotX = progress * 60; 
+  let rotY = progress * -45;
+  let rotZ = progress * 10;
+  let translateZ = progress * -500;
+  
+  vp.style.transform = \`translateZ(\${translateZ}px) rotateX(\${rotX}deg) rotateY(\${rotY}deg) rotateZ(\${rotZ}deg)\`;
+  
+  // Audio Distortion
+  if(actx && !isMuted) {
+    osc.type = progress > 0.5 ? 'triangle' : 'sine';
+    osc.frequency.setTargetAtTime(200 + progress*400, actx.currentTime, 0.1);
+    filter.frequency.setTargetAtTime(500 + progress*2000, actx.currentTime, 0.1);
+    // Add detune
+    osc.detune.setTargetAtTime(progress * 500, actx.currentTime, 0.1);
+  }
+});
+</script>
+</body>
+</html>

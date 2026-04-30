@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>echo_scroll</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; color: #fff; height: 500vh; overflow-x: hidden; }
+.item { width: 100px; height: 100px; background: #fff; position: absolute; top: 50vh; left: 50vw; margin: -50px 0 0 -50px; border-radius: 10px; will-change: transform; }
+.echo { background: transparent; border: 2px solid #fff; pointer-events: none; mix-blend-mode: screen; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: 1px solid #fff; background: transparent; color: #fff; cursor: pointer; padding: 10px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="item" id="main"></div>
+<div class="item echo" id="e1"></div>
+<div class="item echo" id="e2"></div>
+<div class="item echo" id="e3"></div>
+
+<script>
+let actx, master, delayNode, filterNode;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    delayNode = actx.createDelay(); delayNode.delayTime.value = 0.2; // 200ms visual echo sync
+    let feedback = actx.createGain(); feedback.gain.value = 0.6;
+    filterNode = actx.createBiquadFilter(); filterNode.type = 'lowpass'; filterNode.frequency.value = 2000;
+    
+    delayNode.connect(filterNode).connect(feedback).connect(delayNode);
+    delayNode.connect(master);
+  }
+  isMuted = !isMuted;
+};
+
+function playPluck(velocity) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'triangle'; o.frequency.value = 400 + velocity * 5;
+  o.connect(g).connect(delayNode); o.connect(g).connect(master); // dry + wet
+  g.gain.setValueAtTime(Math.min(velocity * 0.01, 0.5), actx.currentTime); 
+  g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.1);
+  o.start(); o.stop(actx.currentTime + 0.1);
+}
+
+let y = 0, e1y = 0, e2y = 0, e3y = 0;
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  y = window.scrollY;
+  let vel = Math.abs(y - lastScroll);
+  if(vel > 10) playPluck(vel);
+  lastScroll = y;
+});
+
+function loop() {
+  // Main follows scroll instantly
+  document.getElementById('main').style.transform = \`translateY(\${y}px) rotate(\${y*0.2}deg)\`;
+  
+  // Echoes lag behind
+  e1y += (y - e1y) * 0.1;
+  e2y += (e1y - e2y) * 0.1;
+  e3y += (e2y - e3y) * 0.1;
+  
+  document.getElementById('e1').style.transform = \`translateY(\${e1y}px) scale(1.2) rotate(\${e1y*0.2}deg)\`;
+  document.getElementById('e2').style.transform = \`translateY(\${e2y}px) scale(1.4) rotate(\${e2y*0.2}deg)\`;
+  document.getElementById('e3').style.transform = \`translateY(\${e3y}px) scale(1.6) rotate(\${e3y*0.2}deg)\`;
+  
+  document.getElementById('e1').style.opacity = 0.6;
+  document.getElementById('e2').style.opacity = 0.3;
+  document.getElementById('e3').style.opacity = 0.1;
+  
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

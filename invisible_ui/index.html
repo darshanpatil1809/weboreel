@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>invisible_ui</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;400;600&display=swap');
+body, html { margin: 0; padding: 0; background: #fff; color: #111; font-family: 'Inter', sans-serif; height: 400vh; overflow-x: hidden; scroll-behavior: smooth; }
+.fixed-center { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.reveal-item { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
+.reveal-item.visible { opacity: 1; transform: translateY(0); }
+.title { font-size: 4rem; font-weight: 200; letter-spacing: -1px; }
+.btn { border: 1px solid #111; padding: 12px 30px; border-radius: 30px; cursor: pointer; font-size: 14px; background: transparent; transition: all 0.3s; }
+.btn:hover { background: #111; color: #fff; }
+.shape { width: 50px; height: 50px; border-radius: 50%; border: 1px solid #111; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; color: #aaa; transition: color 0.3s; }
+#mute-btn:hover { color: #111; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="fixed-center">
+  <div class="reveal-item title" id="t1">Breathe.</div>
+  <div class="reveal-item shape" id="t2"></div>
+  <div class="reveal-item btn" id="t3">Interact</div>
+</div>
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playClick() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(800, actx.currentTime); o.frequency.exponentialRampToValueAtTime(100, actx.currentTime + 0.1);
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.3, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.1);
+  o.start(); o.stop(actx.currentTime + 0.1);
+}
+
+let items = [
+  { id: 't1', trigger: 0.1, state: false },
+  { id: 't2', trigger: 0.4, state: false },
+  { id: 't3', trigger: 0.7, state: false }
+];
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  items.forEach(item => {
+    let el = document.getElementById(item.id);
+    if(progress > item.trigger && !item.state) {
+      el.classList.add('visible');
+      playClick();
+      item.state = true;
+    } else if (progress < item.trigger && item.state) {
+      el.classList.remove('visible');
+      item.state = false;
+    }
+  });
+});
+</script>
+</body>
+</html>
