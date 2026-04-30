@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>forgotten_tabs</title>
+<style>
+body, html { margin: 0; padding: 0; background: #dcdcdc; color: #555; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; height: 500vh; }
+.browser-chrome { position: fixed; top: 0; left: 0; width: 100%; height: 40px; background: #f1f1f1; border-bottom: 1px solid #ccc; display: flex; align-items: flex-end; padding-left: 10px; z-index: 10; }
+.tab { padding: 8px 15px; background: #e4e4e4; border: 1px solid #ccc; border-bottom: none; border-radius: 5px 5px 0 0; margin-right: 2px; font-size: 12px; min-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity 1s, transform 1s; transform: translateY(10px); }
+.tab.active { background: #fff; opacity: 1; transform: translateY(0); border-bottom: 1px solid #fff; margin-bottom: -1px; }
+.tab.visible { opacity: 0.6; transform: translateY(0); }
+.content { position: fixed; top: 40px; left: 0; width: 100%; height: calc(100% - 40px); background: #fff; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #ccc; z-index: 1; }
+canvas { position: fixed; top: 40px; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; opacity: 0.5; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #ccc; background: #fff; padding: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="browser-chrome" id="tabs"></div>
+<div class="content" id="cont">The page cannot be found.</div>
+<canvas id="dust"></canvas>
+
+<script>
+let actx, master, noise;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.2; master.connect(actx.destination); 
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+    noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    let filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 400;
+    noise.connect(filter).connect(master); noise.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.2, actx.currentTime, 0.5);
+};
+
+const tabTitles = ["How to make friends", "Best indie movies 2012", "Ex girlfriend facebook", "Why am I sad", "Flight tickets cheap", "New beginnings quotes", "How to forget", "Nothing matters"];
+const tabsContainer = document.getElementById('tabs');
+
+tabTitles.forEach((t, i) => {
+  let el = document.createElement('div');
+  el.className = 'tab';
+  el.innerText = t;
+  el.dataset.idx = i;
+  tabsContainer.appendChild(el);
+});
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let idx = Math.floor(progress * tabTitles.length);
+  
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    if(i === idx) { el.classList.add('active'); el.classList.remove('visible'); }
+    else if (i < idx) { el.classList.add('visible'); el.classList.remove('active'); }
+    else { el.classList.remove('active'); el.classList.remove('visible'); }
+  });
+});
+
+// Dust
+const canvas = document.getElementById('dust');
+const ctx = canvas.getContext('2d');
+let w, h;
+function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+const particles = Array.from({length:100}, () => ({x: Math.random()*1000, y: Math.random()*1000, s: Math.random()*0.5+0.1}));
+
+function drawDust() {
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#888';
+  particles.forEach(p => {
+    p.y -= p.s; p.x += Math.sin(p.y*0.01);
+    if(p.y < 0) p.y = h;
+    ctx.fillRect(p.x % w, p.y, 2, 2);
+  });
+  requestAnimationFrame(drawDust);
+}
+drawDust();
+</script>
+</body>
+</html>

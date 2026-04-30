@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>silence_experience</title>
+<style>
+body, html { margin: 0; padding: 0; background: #fafafa; color: #d0d0d0; font-family: 'Helvetica Neue', sans-serif; overflow-x: hidden; height: 300vh; }
+.dot { position: fixed; top: 50%; left: 50%; width: 2px; height: 2px; background: #000; border-radius: 50%; transform: translate(-50%, -50%); transition: transform 2s ease-out; }
+.text { position: fixed; top: 60%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; letter-spacing: 2px; opacity: 0; transition: opacity 2s; text-transform: uppercase; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; opacity: 0.1; }
+</style>
+</head>
+<body>
+<button id="mute-btn">.</button>
+<div class="dot" id="dot"></div>
+<div class="text" id="txt">Listen</div>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.1; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playPing() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = 1200;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.05, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 3);
+  o.start(); o.stop(actx.currentTime + 3);
+}
+
+let milestones = [0.2, 0.5, 0.8];
+let currentMilestone = -1;
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  let dot = document.getElementById('dot');
+  let txt = document.getElementById('txt');
+  
+  dot.style.transform = \`translate(-50%, -50%) scale(\${1 + progress * 10})\`;
+  
+  let mIdx = milestones.findIndex(m => progress > m && progress < m + 0.1);
+  if(mIdx !== -1 && mIdx > currentMilestone) {
+    currentMilestone = mIdx;
+    txt.style.opacity = 1;
+    playPing();
+    setTimeout(() => { txt.style.opacity = 0; }, 2000);
+  }
+});
+</script>
+</body>
+</html>

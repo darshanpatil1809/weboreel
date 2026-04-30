@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>digital_shadow</title>
+<style>
+body, html { margin: 0; padding: 0; background: #e0e0e0; overflow: hidden; height: 100vh; cursor: crosshair; }
+.main-dot { position: absolute; width: 20px; height: 20px; background: #000; border-radius: 50%; pointer-events: none; margin: -10px 0 0 -10px; z-index: 2; }
+.shadow-dot { position: absolute; width: 40px; height: 40px; background: rgba(0,0,0,0.1); filter: blur(5px); border-radius: 50%; pointer-events: none; margin: -20px 0 0 -20px; z-index: 1; transition: transform 0.1s; }
+.symbol { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Times New Roman', serif; font-size: 10rem; color: rgba(0,0,0,0.05); pointer-events: none; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: transparent; cursor: pointer; color: #888; }
+</style>
+</head>
+<body>
+<button id="mute-btn">AUDIO</button>
+<div class="symbol">Ω</div>
+<div class="main-dot" id="main"></div>
+<div class="shadow-dot" id="shadow"></div>
+
+<script>
+let actx, master, delayNode, filter;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    
+    // Background drone
+    let drone = actx.createOscillator(); drone.type = 'sine'; drone.frequency.value = 60;
+    drone.connect(master); drone.start();
+    
+    // Interactive filter for the drone based on shadow distance
+    filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 100;
+    drone.disconnect(); drone.connect(filter).connect(master);
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.5, actx.currentTime, 0.5);
+};
+
+let mouseX = window.innerWidth/2, mouseY = window.innerHeight/2;
+let shadowX = mouseX, shadowY = mouseY;
+
+window.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX; mouseY = e.clientY;
+});
+
+function loop() {
+  // Main follows instantly
+  document.getElementById('main').style.left = mouseX + 'px';
+  document.getElementById('main').style.top = mouseY + 'px';
+  
+  // Shadow follows with delay
+  shadowX += (mouseX - shadowX) * 0.05;
+  shadowY += (mouseY - shadowY) * 0.05;
+  
+  document.getElementById('shadow').style.left = shadowX + 'px';
+  document.getElementById('shadow').style.top = shadowY + 'px';
+  
+  let dist = Math.hypot(mouseX - shadowX, mouseY - shadowY);
+  document.getElementById('shadow').style.transform = \`scale(\${1 + dist/50})\`;
+  
+  if(actx && !isMuted && filter) {
+    filter.frequency.setTargetAtTime(100 + dist*10, actx.currentTime, 0.1);
+  }
+  
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

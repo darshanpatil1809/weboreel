@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sound_shapes</title>
+<style>
+body, html { margin: 0; padding: 0; background: #121212; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
+.shape-container { display: flex; gap: 40px; align-items: flex-end; height: 300px; }
+.shape { width: 50px; background: #fff; border-radius: 5px; box-shadow: 0 0 20px rgba(255,255,255,0.5); transition: height 0.1s ease-out, background 0.1s; }
+#mute-btn { position: fixed; top: 20px; left: 20px; z-index: 100; background: transparent; border: 1px solid #fff; color: #fff; padding: 10px 20px; cursor: pointer; border-radius: 20px; }
+.guide { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: #888; font-family: sans-serif; font-size: 14px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">START AUDIO</button>
+<div class="shape-container" id="container">
+  <!-- Generated via JS -->
+</div>
+<div class="guide">Move cursor left/right to change pitch, up/down for modulation.</div>
+
+<script>
+let actx, master, osc, lfo;
+let isMuted = true;
+
+const cont = document.getElementById('container');
+const shapes = [];
+for(let i=0; i<10; i++) {
+  let s = document.createElement('div');
+  s.className = 'shape';
+  s.style.height = '10px';
+  cont.appendChild(s);
+  shapes.push({el: s, phase: i*0.5});
+}
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 440;
+    
+    lfo = actx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 5;
+    let lfoGain = actx.createGain(); lfoGain.gain.value = 100;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    
+    osc.connect(master); osc.start(); lfo.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+window.addEventListener('mousemove', (e) => {
+  let x = e.clientX / window.innerWidth;
+  let y = e.clientY / window.innerHeight;
+  
+  let baseFreq = 100 + x * 1000;
+  let modFreq = y * 20;
+  
+  if(actx && !isMuted) {
+    osc.frequency.setTargetAtTime(baseFreq, actx.currentTime, 0.1);
+    lfo.frequency.setTargetAtTime(modFreq, actx.currentTime, 0.1);
+  }
+  
+  shapes.forEach((s, i) => {
+    // Math to make shapes dance based on x/y
+    let h = 50 + Math.sin(actx ? actx.currentTime*modFreq + s.phase : s.phase) * 50 * y;
+    h = Math.max(10, h * (1 + x));
+    s.el.style.height = h + 'px';
+    s.el.style.background = \`hsl(\${x*360 + i*10}, 100%, 60%)\`;
+  });
+});
+</script>
+</body>
+</html>

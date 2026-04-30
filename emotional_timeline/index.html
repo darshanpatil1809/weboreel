@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>emotional_timeline</title>
+<style>
+body, html { margin: 0; padding: 0; background: #111; color: #fff; font-family: sans-serif; overflow-x: hidden; }
+.timeline-line { position: fixed; top: 0; left: 50%; width: 2px; height: 100%; background: #333; transform: translateX(-50%); z-index: 1; }
+.event { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 2; transition: all 0.5s; opacity: 0.3; filter: grayscale(100%); }
+.event.active { opacity: 1; filter: grayscale(0%); }
+.dot { width: 20px; height: 20px; border-radius: 50%; background: var(--c); box-shadow: 0 0 20px var(--c); margin-bottom: 20px; }
+.label { font-size: 3rem; font-weight: bold; color: var(--c); text-transform: uppercase; }
+.desc { font-size: 1.2rem; color: #ccc; max-width: 400px; text-align: center; margin-top: 20px; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: none; background: #333; color: #fff; padding: 10px; cursor: pointer; border-radius: 4px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="timeline-line"></div>
+<div class="event" style="--c: #4ade80;" data-freq="523.25">
+  <div class="dot"></div><div class="label">Euphoria</div><div class="desc">The peak. Everything aligned perfectly.</div>
+</div>
+<div class="event" style="--c: #f87171;" data-freq="349.23">
+  <div class="dot"></div><div class="label">Panic</div><div class="desc">The sudden realization. Heart racing.</div>
+</div>
+<div class="event" style="--c: #60a5fa;" data-freq="293.66">
+  <div class="dot"></div><div class="label">Sorrow</div><div class="desc">The long winter of the soul.</div>
+</div>
+<div class="event" style="--c: #facc15;" data-freq="440.00">
+  <div class="dot"></div><div class="label">Hope</div><div class="desc">A single light in the dark.</div>
+</div>
+<div class="event" style="--c: #a78bfa;" data-freq="493.88">
+  <div class="dot"></div><div class="label">Acceptance</div><div class="desc">Breathing out. Letting go.</div>
+</div>
+
+<script>
+let actx, master, osc;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.connect(master); osc.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting) {
+      entry.target.classList.add('active');
+      if(actx && !isMuted) {
+        osc.frequency.setTargetAtTime(parseFloat(entry.target.dataset.freq), actx.currentTime, 0.5);
+      }
+    } else {
+      entry.target.classList.remove('active');
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('.event').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

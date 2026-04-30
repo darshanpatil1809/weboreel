@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>glitch_typography</title>
+<style>
+body, html { margin: 0; padding: 0; background: #fff; color: #111; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; height: 300vh; overflow-x: hidden; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 40px; }
+.item { font-size: 3rem; font-weight: 900; text-transform: uppercase; border-bottom: 2px solid #111; padding-bottom: 10px; position: relative; }
+.glitch-layer { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; mix-blend-mode: multiply; }
+.glitch-layer.red { color: red; transform: translate(-2px, 2px); }
+.glitch-layer.blue { color: blue; transform: translate(2px, -2px); }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #111; background: #fff; cursor: pointer; padding: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+<button id="mute-btn">AUDIO ON/OFF</button>
+<div class="grid" id="grid">
+  <!-- Generated -->
+</div>
+
+<script>
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playGlitch() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'sawtooth'; o.frequency.value = Math.random()*1000 + 100;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.3, actx.currentTime); g.gain.linearRampToValueAtTime(0, actx.currentTime + 0.05);
+  o.start(); o.stop(actx.currentTime + 0.05);
+}
+
+const words = ["System", "Error", "Fatal", "Crash", "Reboot", "Data", "Loss", "Corrupt", "Fragment", "Null", "Void", "End"];
+const grid = document.getElementById('grid');
+
+words.forEach(w => {
+  let div = document.createElement('div');
+  div.className = 'item';
+  div.innerHTML = \`\${w}<span class="glitch-layer red">\${w}</span><span class="glitch-layer blue">\${w}</span>\`;
+  grid.appendChild(div);
+});
+
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let speed = Math.abs(y - lastScroll);
+  lastScroll = y;
+  
+  if(speed > 5) {
+    playGlitch();
+    document.querySelectorAll('.item').forEach(item => {
+      if(Math.random() < 0.3) {
+        item.style.transform = \`skewX(\${Math.random()*20-10}deg)\`;
+        item.querySelectorAll('.glitch-layer').forEach(l => {
+          l.style.opacity = Math.random();
+          l.style.transform = \`translate(\${Math.random()*10-5}px, \${Math.random()*10-5}px)\`;
+        });
+      }
+    });
+  } else {
+    document.querySelectorAll('.item').forEach(item => {
+      item.style.transform = 'none';
+      item.querySelectorAll('.glitch-layer').forEach(l => l.style.opacity = 0);
+    });
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fading_presence</title>
+<style>
+body, html { margin: 0; padding: 0; background: #fff; overflow-x: hidden; height: 500vh; font-family: 'Helvetica Neue', sans-serif; }
+.content { max-width: 600px; margin: 100px auto; color: #222; transition: opacity 0.1s; }
+h1 { font-size: 3rem; margin-bottom: 20px; }
+p { font-size: 1.2rem; line-height: 1.8; margin-bottom: 30px; }
+.image { width: 100%; height: 300px; background: #ddd; margin-bottom: 30px; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid #222; background: #fff; color: #222; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="content" id="cont">
+  <h1>A Life Remembered</h1>
+  <p>There was a time when the colors were bright, and the sounds were clear. Every moment felt distinct, etched into the fabric of reality.</p>
+  <div class="image"></div>
+  <p>But as the years scroll by, the edges begin to soften. The sharp details of yesterday blur into the quiet hum of today.</p>
+  <p>Names slip away. Faces lose their definition.</p>
+  <div class="image"></div>
+  <p>Until eventually, there is only a feeling left behind. A whisper of something that used to be here.</p>
+</div>
+
+<script>
+let actx, master, osc, noise, noiseGain;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    
+    // Clean tone
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 440;
+    osc.connect(master); osc.start();
+    
+    // White noise (wind)
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+    noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    
+    noiseGain = actx.createGain(); noiseGain.gain.value = 0;
+    let filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 1000;
+    
+    noise.connect(filter).connect(noiseGain).connect(master);
+    noise.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.5, actx.currentTime, 0.5);
+};
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  
+  // Visual fade
+  document.getElementById('cont').style.opacity = Math.max(0, 1 - progress*1.5);
+  
+  if(actx && !isMuted) {
+    // Audio fades into wind
+    osc.frequency.setTargetAtTime(440 - progress*200, actx.currentTime, 0.1);
+    master.gain.setTargetAtTime((1 - progress) * 0.5, actx.currentTime, 0.1);
+    noiseGain.gain.setTargetAtTime(progress * 0.5, actx.currentTime, 0.1);
+  }
+});
+</script>
+</body>
+</html>

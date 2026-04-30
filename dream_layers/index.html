@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dream_layers</title>
+<style>
+body, html { margin: 0; padding: 0; background: #1a1a2e; color: #fff; font-family: 'Georgia', serif; overflow-x: hidden; height: 500vh; }
+.layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem; opacity: 0; filter: blur(20px); transform: scale(1.5); transition: opacity 1s, filter 1s, transform 1s; pointer-events: none; text-align: center; }
+.layer.active { opacity: 1; filter: blur(0px); transform: scale(1); }
+.layer.past { opacity: 0; filter: blur(20px); transform: scale(0.5); }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: #fff; padding: 10px 20px; border-radius: 20px; cursor: pointer; pointer-events: auto; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="layer active" id="l0" style="background: rgba(26, 26, 46, 0.8);">The Surface</div>
+<div class="layer" id="l1" style="background: rgba(22, 33, 62, 0.8); color: #e94560;">REM Sleep</div>
+<div class="layer" id="l2" style="background: rgba(15, 52, 96, 0.8); color: #0f3460;">Deep Mind</div>
+<div class="layer" id="l3" style="background: rgba(0, 0, 0, 0.9); color: #fff; font-size: 6rem;">The Void</div>
+
+<script>
+let actx, master, osc;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 432; // Healing frequency
+    let lfo = actx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.1;
+    let lfoGain = actx.createGain(); lfoGain.gain.value = 10;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    osc.connect(master); osc.start(); lfo.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.5, actx.currentTime, 0.5);
+};
+
+const layers = [document.getElementById('l0'), document.getElementById('l1'), document.getElementById('l2'), document.getElementById('l3')];
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let idx = Math.min(3, Math.floor(progress * 4));
+  
+  layers.forEach((l, i) => {
+    if(i === idx) {
+      l.className = 'layer active';
+    } else if (i < idx) {
+      l.className = 'layer past';
+    } else {
+      l.className = 'layer'; // future
+    }
+  });
+  
+  if(actx && !isMuted) {
+    // Pitch goes down as we go deeper
+    osc.frequency.setTargetAtTime(432 - progress*300, actx.currentTime, 1);
+  }
+});
+</script>
+</body>
+</html>

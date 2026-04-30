@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>digital_mirror_room</title>
+<style>
+body, html { margin: 0; padding: 0; background: #000; overflow: hidden; height: 100vh; perspective: 800px; color: #fff; font-family: monospace; }
+.room { width: 100%; height: 100%; position: absolute; transform-style: preserve-3d; }
+.mirror { position: absolute; width: 300px; height: 400px; top: 50%; left: 50%; margin: -200px 0 0 -150px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 0 50px rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 2rem; background: rgba(255,255,255,0.02); backdrop-filter: blur(2px); }
+.scroll-proxy { height: 1000vh; }
+#mute-btn { position: fixed; top: 20px; right: 20px; z-index: 100; border: none; background: transparent; color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<button id="mute-btn">🎵</button>
+<div class="room" id="room">
+  <!-- Generated via JS -->
+</div>
+<div class="scroll-proxy"></div>
+
+<script>
+let actx, master, osc;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { 
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.3; master.connect(actx.destination); 
+    osc = actx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 220; osc.connect(master); osc.start();
+  }
+  isMuted = !isMuted;
+  if(master) master.gain.setTargetAtTime(isMuted ? 0 : 0.3, actx.currentTime, 0.5);
+};
+
+const room = document.getElementById('room');
+for(let i=0; i<20; i++) {
+  let m = document.createElement('div');
+  m.className = 'mirror';
+  m.innerText = "ECHO";
+  m.style.transform = \`translateZ(\${-i * 150}px) scale(\${1 - i*0.02})\`;
+  m.style.opacity = 1 - (i * 0.05);
+  room.appendChild(m);
+}
+
+let targetZ = 0;
+let currentZ = 0;
+window.addEventListener('scroll', () => {
+  targetZ = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 2000;
+  
+  if(actx && !isMuted) {
+    osc.frequency.setTargetAtTime(220 + targetZ*0.1, actx.currentTime, 0.1);
+  }
+});
+
+function loop() {
+  currentZ += (targetZ - currentZ) * 0.1;
+  room.style.transform = \`translateZ(\${currentZ}px) rotateY(\${currentZ*0.05}deg)\`;
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
