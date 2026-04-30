@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>last_seen_online</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;500&display=swap');
+body, html { margin: 0; padding: 0; background: #e5ddd5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; overflow-x: hidden; }
+.header { position: fixed; top: 0; left: 0; width: 100%; background: #075e54; color: white; padding: 15px 20px; z-index: 10; box-shadow: 0 1px 5px rgba(0,0,0,0.2); display: flex; align-items: center; }
+.avatar { width: 40px; height: 40px; background: #ccc; border-radius: 50%; margin-right: 15px; }
+.user-info { display: flex; flex-direction: column; }
+.name { font-weight: 500; font-size: 16px; }
+.status { font-size: 13px; color: rgba(255,255,255,0.8); transition: opacity 0.5s; }
+.chat-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('data:image/svg+xml,%3Csvg width="100" height="100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M0 0h100v100H0z" fill="%23e5ddd5" opacity="0.5"/%3E%3C/svg%3E'); z-index: 0; }
+#scroll-area { position: absolute; top: 0; left: 0; width: 100%; height: 600vh; z-index: 1; }
+.message-container { position: relative; padding: 80px 20px 20px; max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; }
+.msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; max-width: 80%; font-size: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); opacity: 0; transform: translateY(20px); transition: all 0.5s; position: relative; }
+.msg.active { opacity: 1; transform: translateY(0); }
+.msg.out { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 0; }
+.msg.in { background: #fff; align-self: flex-start; border-top-left-radius: 0; }
+.time { display: block; font-size: 11px; color: #999; margin-top: 4px; text-align: right; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; background: #25d366; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; z-index: 100; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 20px; }
+</style>
+</head>
+<body>
+<div class="chat-bg"></div>
+<div class="header">
+  <div class="avatar"></div>
+  <div class="user-info">
+    <div class="name">A.</div>
+    <div class="status" id="status">online</div>
+  </div>
+</div>
+<div id="scroll-area">
+  <div class="message-container" id="msgs"></div>
+</div>
+<button id="mute-btn">🎵</button>
+<script>
+const chat = [
+  { t: 'in', text: "Hey, are we still on for tomorrow?", time: "10:42 AM" },
+  { t: 'out', text: "Yes! Can't wait.", time: "10:45 AM" },
+  { t: 'in', text: "Awesome. It's been too long.", time: "10:46 AM" },
+  { status: "last seen today at 11:30 AM", scrollGap: true },
+  { t: 'out', text: "I'm running a bit late, sorry!", time: "5:15 PM" },
+  { status: "last seen yesterday at 11:30 AM", scrollGap: true },
+  { t: 'out', text: "Hey, you okay? You didn't show up.", time: "Yesterday" },
+  { status: "last seen Wednesday", scrollGap: true },
+  { t: 'out', text: "Just checking in. Let me know if you need anything.", time: "Wednesday" },
+  { status: "last seen 1 week ago", scrollGap: true },
+  { t: 'out', text: "I heard what happened. I'm so sorry.", time: "Last week" },
+  { status: "last seen 1 month ago", scrollGap: true },
+  { t: 'out', text: "I miss you.", time: "Last month" },
+  { status: "last seen a long time ago", scrollGap: true },
+  { t: 'out', text: "Happy birthday. I hope wherever you are, you're at peace.", time: "Today" }
+];
+
+const container = document.getElementById('msgs');
+const statusEl = document.getElementById('status');
+
+chat.forEach((item, i) => {
+  let div = document.createElement('div');
+  if(item.text) {
+    div.className = \`msg \${item.t}\`;
+    div.innerHTML = \`\${item.text}<span class="time">\${item.time}</span>\`;
+    div.id = \`msg\${i}\`;
+    div.style.marginTop = item.scrollGap ? '100vh' : '10px';
+  } else {
+    div.className = 'status-marker';
+    div.dataset.status = item.status;
+    div.style.marginTop = '50vh';
+    div.style.height = '1px';
+    div.id = \`msg\${i}\`;
+  }
+  container.appendChild(div);
+});
+
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) { actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination); }
+  isMuted = !isMuted;
+};
+
+function playPianoChords() {
+  if(!actx || isMuted) return;
+  const freqs = [261.63, 329.63, 392.00]; // C Major
+  freqs.forEach((f, i) => {
+    setTimeout(() => {
+      let o = actx.createOscillator(); let g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = f / (1 + window.scrollY/5000); // gets deeper
+      o.connect(g).connect(master);
+      g.gain.setValueAtTime(0.1, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 3);
+      o.start(); o.stop(actx.currentTime + 3);
+    }, i * 200);
+  });
+}
+
+let lastY = 0;
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  let vh = window.innerHeight;
+  
+  if(Math.abs(y - lastY) > vh/2) {
+    playPianoChords();
+    lastY = y;
+  }
+  
+  chat.forEach((item, i) => {
+    let el = document.getElementById(\`msg\${i}\`);
+    let rect = el.getBoundingClientRect();
+    if(rect.top < vh * 0.8) {
+      if(item.text) el.classList.add('active');
+      if(item.status) statusEl.innerText = item.status;
+    }
+  });
+});
+</script>
+</body>
+</html>

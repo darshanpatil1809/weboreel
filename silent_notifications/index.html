@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>silent_notifications</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500&display=swap');
+body, html { margin: 0; padding: 0; background: #0a0a0a; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+#scroll-container { position: absolute; top: 0; left: 0; width: 100%; height: 800vh; will-change: transform; }
+.notif-wrapper { position: relative; height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; }
+.notification { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 2rem; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transform: translateY(50px); transition: all 0.5s ease-out; }
+.notification.active { opacity: 1; transform: translateY(0); }
+.header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #888; margin-bottom: 1rem; }
+.title { font-weight: 500; font-size: 1.1rem; margin-bottom: 0.5rem; }
+.body { font-size: 0.95rem; color: #ccc; line-height: 1.4; }
+#mute-btn { position: fixed; top: 2rem; right: 2rem; z-index: 20; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 50%; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+</style>
+</head>
+<body>
+<div id="mute-btn">🔔</div>
+<div id="scroll-container">
+  <!-- Filled by JS -->
+</div>
+<script>
+const messages = [
+  { time: "2m ago", title: "Messages", body: "Are you still awake?" },
+  { time: "1h ago", title: "Messages", body: "I guess we shouldn't talk anymore." },
+  { time: "Yesterday", title: "Missed Call", body: "You missed a call. No voicemail." },
+  { time: "2 days ago", title: "Photos", body: "Memory from 3 years ago: 'The last good day'." },
+  { time: "1 week ago", title: "Calendar", body: "Event passed: Coffee date that never happened." },
+  { time: "1 month ago", title: "Notes", body: "Draft deleted." },
+  { time: "1 year ago", title: "System", body: "Connection lost." }
+];
+
+const container = document.getElementById('scroll-container');
+messages.forEach((m, i) => {
+  const w = document.createElement('div'); w.className = 'notif-wrapper';
+  w.innerHTML = `<div class="notification" id="n${i}">
+    <div class="header"><span>${m.title}</span><span>${m.time}</span></div>
+    <div class="title">New Message</div>
+    <div class="body">${m.body}</div>
+  </div>`;
+  container.appendChild(w);
+});
+
+let current = 0, target = 0, velocity = 0;
+const ease = 0.08;
+
+window.addEventListener('wheel', e => { e.preventDefault(); target += e.deltaY * 0.85; target = Math.max(0, Math.min(target, (messages.length-1) * window.innerHeight)); }, { passive: false });
+let touchStart = 0;
+window.addEventListener('touchstart', e => touchStart = e.touches[0].clientY);
+window.addEventListener('touchmove', e => { e.preventDefault(); target += (touchStart - e.touches[0].clientY) * 1.5; touchStart = e.touches[0].clientY; target = Math.max(0, Math.min(target, (messages.length-1) * window.innerHeight)); }, { passive: false });
+
+let lastActive = -1;
+function tick() {
+  velocity = (target - current) * ease;
+  current += velocity;
+  container.style.transform = `translateY(-${current}px)`;
+  
+  let active = Math.floor((current + window.innerHeight/2) / window.innerHeight);
+  if(active !== lastActive && active < messages.length) {
+    if(active > lastActive) playDing(active);
+    lastActive = active;
+  }
+  
+  messages.forEach((m, i) => {
+    let el = document.getElementById(`n${i}`);
+    if(i <= active) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+  
+  requestAnimationFrame(tick);
+}
+
+// Audio
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let actx, master;
+let isMuted = true;
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) {
+    actx = new AudioContext();
+    master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    // Tick loop
+    setInterval(() => {
+      if(isMuted) return;
+      let o = actx.createOscillator(); let g = actx.createGain();
+      o.type = 'square'; o.frequency.value = 100;
+      o.connect(g).connect(master);
+      g.gain.setValueAtTime(0.01, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+0.05);
+      o.start(); o.stop(actx.currentTime+0.05);
+    }, 1000);
+  }
+  isMuted = !isMuted;
+};
+
+function playDing(index) {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.frequency.value = 800 - index * 50; // Pitch drops as you scroll
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.1, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 1);
+  o.start(); o.stop(actx.currentTime + 1);
+}
+
+tick();
+</script>
+</body>
+</html>

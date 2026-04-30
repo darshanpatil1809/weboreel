@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lost_in_tabs</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+body, html { margin: 0; padding: 0; background: #e0e5ec; font-family: 'Inter', sans-serif; overflow-x: hidden; height: 1000vh; }
+.browser-window { position: fixed; top: 10%; left: 10%; width: 80%; height: 80%; background: #fff; border-radius: 8px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; }
+.tab-bar { display: flex; background: #dfe1e5; padding: 8px 8px 0 8px; overflow-x: hidden; }
+.tab { padding: 10px 20px; background: #f1f3f4; border-radius: 8px 8px 0 0; margin-right: 2px; font-size: 12px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; border: 1px solid #ddd; border-bottom: none; display: flex; align-items: center; }
+.tab.active { background: #fff; border-bottom: 1px solid #fff; z-index: 2; margin-bottom: -1px; font-weight: 600; }
+.tab-icon { width: 14px; height: 14px; background: #ccc; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+.address-bar { background: #fff; padding: 10px; border-bottom: 1px solid #ddd; display: flex; align-items: center; }
+.url-input { flex: 1; background: #f1f3f4; border-radius: 16px; padding: 8px 16px; font-size: 14px; color: #5f6368; }
+.page-content { flex: 1; padding: 40px; overflow: hidden; position: relative; }
+.chaos-text { position: absolute; font-size: 24px; font-weight: bold; opacity: 0; transition: all 0.2s; }
+#mute-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: #fff; border: 1px solid #ddd; border-radius: 50%; width: 50px; height: 50px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+</style>
+</head>
+<body>
+<div id="mute-btn">🔊</div>
+<div class="browser-window">
+  <div class="tab-bar" id="tabs">
+    <div class="tab active"><div class="tab-icon"></div>New Tab</div>
+  </div>
+  <div class="address-bar">
+    <div class="url-input" id="url">search or type web address</div>
+  </div>
+  <div class="page-content" id="content">
+    <h1 style="color: #ccc;">Scroll to browse.</h1>
+  </div>
+</div>
+<script>
+const tabTitles = ["How to focus", "Symptoms of ADHD", "Buy coffee online", "Email Inbox (942)", "Why am I tired", "News update", "Social media feed", "To-do list", "Flight tickets", "Recipe for dinner", "Wikipedia: Random", "Meaning of life"];
+let actx, master, noiseNode;
+let isMuted = true;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) {
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.2; master.connect(actx.destination);
+    let bufferSize = actx.sampleRate * 2;
+    let buffer = actx.createBuffer(1, bufferSize, actx.sampleRate);
+    let data = buffer.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    noiseNode = actx.createBufferSource(); noiseNode.buffer = buffer; noiseNode.loop = true;
+    let filter = actx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 500;
+    noiseNode.connect(filter).connect(master);
+    noiseNode.start();
+  }
+  isMuted = !isMuted;
+  master.gain.value = isMuted ? 0 : 0.2;
+};
+
+function playKeyClack() {
+  if(!actx || isMuted) return;
+  let o = actx.createOscillator(); let g = actx.createGain();
+  o.type = 'square'; o.frequency.value = 800 + Math.random()*400;
+  o.connect(g).connect(master);
+  g.gain.setValueAtTime(0.5, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.05);
+  o.start(); o.stop(actx.currentTime + 0.05);
+}
+
+let lastScroll = 0;
+let tabCount = 1;
+const tabsContainer = document.getElementById('tabs');
+const contentContainer = document.getElementById('content');
+
+window.addEventListener('scroll', () => {
+  let y = window.scrollY;
+  if(y - lastScroll > 50) {
+    // Add tab
+    let t = document.createElement('div');
+    t.className = 'tab';
+    let title = tabTitles[Math.floor(Math.random() * tabTitles.length)];
+    t.innerHTML = `<div class="tab-icon" style="background: hsl(${Math.random()*360}, 50%, 50%)"></div>${title}`;
+    tabsContainer.appendChild(t);
+    
+    // Make tabs smaller
+    tabCount++;
+    let maxW = Math.max(20, 150 - tabCount * 2);
+    document.querySelectorAll('.tab').forEach(el => el.style.maxWidth = maxW + 'px');
+    
+    // Add chaos text
+    let ct = document.createElement('div');
+    ct.className = 'chaos-text';
+    ct.innerText = title;
+    ct.style.left = Math.random() * 80 + '%';
+    ct.style.top = Math.random() * 80 + '%';
+    ct.style.color = `hsl(${Math.random()*360}, 80%, 50%)`;
+    ct.style.transform = `scale(${1 + tabCount*0.05}) rotate(${Math.random()*20 - 10}deg)`;
+    ct.style.opacity = 1;
+    contentContainer.appendChild(ct);
+    
+    playKeyClack();
+    if(actx && !isMuted) {
+      // increase noise filter frequency
+      let filter = noiseNode._connectedTo; // Not standard, just conceptual. We'll ignore and just use volume
+      master.gain.value = Math.min(0.8, 0.2 + tabCount * 0.01);
+    }
+    
+    lastScroll = y;
+  }
+});
+</script>
+</body>
+</html>

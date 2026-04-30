@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>brain_buffering</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap');
+body, html { margin: 0; padding: 0; background: #f0f2f5; color: #1c1e21; font-family: 'DM Sans', sans-serif; overflow-x: hidden; height: 500vh; }
+.container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; max-width: 600px; text-align: center; }
+.thought { font-size: 2rem; margin-bottom: 2rem; opacity: 0; transition: opacity 0.5s; position: relative; display: inline-block; }
+.thought.active { opacity: 1; }
+.spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-top-color: #3b5998; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 10px; opacity: 0; transition: opacity 0.3s; }
+.spinner.active { opacity: 1; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.glitch-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: white; opacity: 0; pointer-events: none; z-index: 10; mix-blend-mode: difference; }
+#mute-btn { position: fixed; top: 20px; right: 20px; background: #fff; border: 1px solid #ccc; padding: 10px; border-radius: 20px; cursor: pointer; z-index: 100; }
+</style>
+</head>
+<body>
+<button id="mute-btn">Audio</button>
+<div class="glitch-overlay" id="glitch"></div>
+<div class="container" id="content"></div>
+<script>
+const thoughts = [
+  "Did I lock the door?",
+  "Wait, what was I saying...",
+  "I need to reply to that email.",
+  "Where did I put my keys?",
+  "I'm so tired but I can't sleep.",
+  "System overload."
+];
+
+const container = document.getElementById('content');
+thoughts.forEach((t, i) => {
+  let div = document.createElement('div');
+  div.className = 'thought';
+  div.id = `t${i}`;
+  div.innerHTML = `<span>${t}</span><div class="spinner" id="s${i}"></div>`;
+  container.appendChild(div);
+});
+
+let actx, master, noise;
+let isMuted = true;
+
+document.getElementById('mute-btn').onclick = () => {
+  if(!actx) {
+    actx = new AudioContext(); master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    let bufSize = actx.sampleRate * 2;
+    let buf = actx.createBuffer(1, bufSize, actx.sampleRate);
+    let data = buf.getChannelData(0);
+    for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+    noise = actx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    let filter = actx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 1000;
+    let nGain = actx.createGain(); nGain.gain.value = 0;
+    noise.connect(filter).connect(nGain).connect(master);
+    noise.start();
+    window.noiseGain = nGain;
+  }
+  isMuted = !isMuted;
+};
+
+window.addEventListener('scroll', () => {
+  let progress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  let activeIdx = Math.floor(progress * thoughts.length);
+  
+  thoughts.forEach((_, i) => {
+    let t = document.getElementById(`t${i}`);
+    let s = document.getElementById(`s${i}`);
+    if(i === activeIdx) {
+      t.classList.add('active');
+      s.classList.add('active');
+    } else {
+      t.classList.remove('active');
+      s.classList.remove('active');
+    }
+  });
+  
+  // Glitch effect based on scroll speed
+  if(window.noiseGain && !isMuted) {
+    window.noiseGain.gain.setTargetAtTime(0.1, actx.currentTime, 0.1);
+    setTimeout(() => window.noiseGain.gain.setTargetAtTime(0, actx.currentTime, 0.1), 100);
+  }
+  
+  document.getElementById('glitch').style.opacity = Math.random() > 0.8 ? 0.5 : 0;
+  setTimeout(() => document.getElementById('glitch').style.opacity = 0, 50);
+});
+</script>
+</body>
+</html>
